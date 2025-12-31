@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using nRun.Data;
 using nRun.Models;
 using nRun.Services;
 
@@ -72,11 +71,8 @@ public partial class MainForm : Form
     {
         LogDebug("Application started", "INFO");
 
-        SettingsManager.Initialize();
-        DatabaseService.Initialize();
-
         // Check database connection
-        if (!DatabaseService.IsConnected)
+        if (!ServiceContainer.Database.IsConnected)
         {
             UpdateStatus("Database not connected - click Settings to configure");
             lblStatus.ForeColor = Color.Red;
@@ -93,8 +89,8 @@ public partial class MainForm : Form
         UpdateArticleCount();
 
         // Auto-start if configured and connected
-        var settings = SettingsManager.LoadSettings();
-        if (settings.AutoStartScraping && DatabaseService.IsConnected)
+        var settings = ServiceContainer.Settings.LoadSettings();
+        if (settings.AutoStartScraping && ServiceContainer.Database.IsConnected)
         {
             LogDebug("Auto-start enabled, starting background scraper", "INFO");
             _backgroundScraper?.Start();
@@ -103,6 +99,29 @@ public partial class MainForm : Form
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
+        // Prevent closing if scraping is in progress
+        if (_backgroundScraper?.IsRunning == true)
+        {
+            var result = MessageBox.Show(
+                "A scraping operation is currently running.\n\n" +
+                "Please stop the operation first before closing the application.\n\n" +
+                "Do you want to stop the scraping operation now?",
+                "Operation In Progress",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                _backgroundScraper.Stop();
+                LogDebug("Scraping stopped by user request", "INFO");
+            }
+            else
+            {
+                e.Cancel = true;
+                return;
+            }
+        }
+
         try
         {
             // Stop and dispose background scraper
@@ -123,7 +142,7 @@ public partial class MainForm : Form
 
     private void LoadSites()
     {
-        var sites = DatabaseService.GetAllSites();
+        var sites = ServiceContainer.Database.GetAllSites();
         listBoxSites.DataSource = null;
         listBoxSites.DataSource = sites;
         listBoxSites.DisplayMember = "SiteName";
@@ -131,7 +150,7 @@ public partial class MainForm : Form
 
     private void BtnAddSite_Click(object? sender, EventArgs e)
     {
-        if (!DatabaseService.IsConnected)
+        if (!ServiceContainer.Database.IsConnected)
         {
             MessageBox.Show("Please configure database connection first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
@@ -161,7 +180,7 @@ public partial class MainForm : Form
 
             if (result == DialogResult.Yes)
             {
-                DatabaseService.DeleteSite(site.SiteId);
+                ServiceContainer.Database.DeleteSite(site.SiteId);
                 LoadSites();
                 LoadArticles();
                 UpdateArticleCount();
@@ -198,7 +217,7 @@ public partial class MainForm : Form
 
     private void BtnManageSites_Click(object? sender, EventArgs e)
     {
-        if (!DatabaseService.IsConnected)
+        if (!ServiceContainer.Database.IsConnected)
         {
             MessageBox.Show("Please configure database connection first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
@@ -219,13 +238,13 @@ public partial class MainForm : Form
 
     private void LoadArticles()
     {
-        _articles = DatabaseService.GetRecentNews(MaxDisplayedArticles);
+        _articles = ServiceContainer.Database.GetRecentNews(MaxDisplayedArticles);
         olvArticles.SetObjects(_articles);
     }
 
     private void UpdateArticleCount()
     {
-        var count = DatabaseService.GetNewsCount();
+        var count = ServiceContainer.Database.GetNewsCount();
         statusArticleCount.Text = $"{count} articles";
     }
 
@@ -300,7 +319,7 @@ public partial class MainForm : Form
         var article = GetSelectedArticle();
         if (article != null)
         {
-            DatabaseService.DeleteNews(article.Serial);
+            ServiceContainer.Database.DeleteNews(article.Serial);
             _articles.Remove(article);
             olvArticles.RemoveObject(article);
             UpdateArticleCount();
@@ -315,7 +334,7 @@ public partial class MainForm : Form
             try
             {
                 Process.Start(new ProcessStartInfo(article.NewsUrl) { UseShellExecute = true });
-                DatabaseService.MarkNewsAsRead(article.Serial);
+                ServiceContainer.Database.MarkNewsAsRead(article.Serial);
             }
             catch (Exception ex)
             {
@@ -332,7 +351,7 @@ public partial class MainForm : Form
     {
         if (_backgroundScraper == null) return;
 
-        if (!DatabaseService.IsConnected)
+        if (!ServiceContainer.Database.IsConnected)
         {
             MessageBox.Show("Please configure database connection first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
@@ -352,13 +371,13 @@ public partial class MainForm : Form
     {
         if (_backgroundScraper == null) return;
 
-        if (!DatabaseService.IsConnected)
+        if (!ServiceContainer.Database.IsConnected)
         {
             MessageBox.Show("Please configure database connection first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        // ??????? ??? ???? ??? ???
+        // Select a site to scrape
         if (listBoxSites.SelectedItem is not SiteInfo selectedSite)
         {
             MessageBox.Show("Please select a site to scrape.", "No Site Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -375,7 +394,7 @@ public partial class MainForm : Form
 
         try
         {
-            // ????????? ??????? ??? ?????? ??????? ???
+            // Run scraper for selected site only
             await _backgroundScraper.RunSiteOnceAsync(selectedSite);
             LogDebug($"[OK] Scrape completed for: {selectedSite.SiteName}", "SUCCESS");
         }
@@ -398,7 +417,7 @@ public partial class MainForm : Form
             _backgroundScraper?.UpdateInterval();
 
             // Reload if database connection changed
-            if (DatabaseService.IsConnected)
+            if (ServiceContainer.Database.IsConnected)
             {
                 LoadSites();
                 LoadArticles();
@@ -525,7 +544,7 @@ public partial class MainForm : Form
         statusLabel.Text = message;
         lblStatus.Text = message;
 
-        // ????? ??? ??? ???
+        // Determine log level based on message content
         string level = "INFO";
         if (message.Contains("Error", StringComparison.OrdinalIgnoreCase) || 
             message.Contains("Failed", StringComparison.OrdinalIgnoreCase))

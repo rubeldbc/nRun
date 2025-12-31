@@ -1,8 +1,6 @@
-using nRun.Data;
 using nRun.Models;
 using nRun.Services;
 using SkiaSharp;
-using System.Diagnostics;
 using System.Drawing.Imaging;
 
 namespace nRun.UI.Forms;
@@ -11,6 +9,7 @@ public partial class SiteEditForm : Form
 {
     private SiteInfo? _existingSite;
     private bool _isEditMode;
+    private bool _isDownloadingLogo = false;
 
     // Navigation support
     private List<SiteInfo>? _allSites;
@@ -46,6 +45,17 @@ public partial class SiteEditForm : Form
         btnPrevious.Click += BtnPrevious_Click;
         btnNext.Click += BtnNext_Click;
         txtUrl.TextChanged += TxtUrl_TextChanged;
+        this.FormClosing += SiteEditForm_FormClosing;
+    }
+
+    private void SiteEditForm_FormClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (_isDownloadingLogo)
+        {
+            MessageBox.Show("Please wait until logo download is complete.", "Download in Progress",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            e.Cancel = true;
+        }
     }
 
     private void SetupNavigationPanel()
@@ -107,7 +117,7 @@ public partial class SiteEditForm : Form
             var siteUrl = txtUrl.Text.Trim();
             if (!string.IsNullOrEmpty(siteUrl))
             {
-                logoName = LogoDownloadService.ExtractLogoNameFromUrl(siteUrl);
+                logoName = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(siteUrl);
             }
         }
 
@@ -118,7 +128,7 @@ public partial class SiteEditForm : Form
         }
 
         // Try to find local logo
-        var logoPath = LogoDownloadService.GetLogoPath(logoName);
+        var logoPath = ServiceContainer.LogoDownload.GetLogoPath(logoName);
         if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
         {
             try
@@ -165,7 +175,7 @@ public partial class SiteEditForm : Form
 
         try
         {
-            var logoData = await LogoDownloadService.GetLogoFromOnlineAsync(siteUrl);
+            var logoData = await ServiceContainer.LogoDownload.GetLogoFromOnlineAsync(siteUrl);
             if (logoData != null && logoData.Length > 0)
             {
                 // Dispose previous image if any
@@ -287,30 +297,20 @@ public partial class SiteEditForm : Form
 
     #region Navigation
 
-    private void BtnPrevious_Click(object? sender, EventArgs e)
+    private void BtnPrevious_Click(object? sender, EventArgs e) => NavigateToSite(-1);
+    private void BtnNext_Click(object? sender, EventArgs e) => NavigateToSite(1);
+
+    private void NavigateToSite(int direction)
     {
-        if (_allSites == null || _currentIndex <= 0) return;
+        if (_allSites == null) return;
+
+        var newIndex = _currentIndex + direction;
+        if (newIndex < 0 || newIndex >= _allSites.Count) return;
 
         // Save current changes if needed
         if (!SaveCurrentSiteIfNeeded()) return;
 
-        _currentIndex--;
-        _existingSite = _allSites[_currentIndex];
-        LoadSiteData();
-        LoadLogoPreview();
-        UpdateNavigationState();
-        txtTestResults.Clear();
-        Log($"Navigated to: {_existingSite.SiteName}");
-    }
-
-    private void BtnNext_Click(object? sender, EventArgs e)
-    {
-        if (_allSites == null || _currentIndex >= _allSites.Count - 1) return;
-
-        // Save current changes if needed
-        if (!SaveCurrentSiteIfNeeded()) return;
-
-        _currentIndex++;
+        _currentIndex = newIndex;
         _existingSite = _allSites[_currentIndex];
         LoadSiteData();
         LoadLogoPreview();
@@ -410,7 +410,7 @@ public partial class SiteEditForm : Form
         try
         {
             // Extract logo name from URL automatically
-            var logoName = LogoDownloadService.ExtractLogoNameFromUrl(txtUrl.Text.Trim());
+            var logoName = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(txtUrl.Text.Trim());
 
             if (_isEditMode && _existingSite != null)
             {
@@ -425,7 +425,7 @@ public partial class SiteEditForm : Form
                 _existingSite.BodySelector = txtBodySelector.Text.Trim();
                 _existingSite.IsActive = chkIsActive.Checked;
 
-                DatabaseService.UpdateSite(_existingSite);
+                ServiceContainer.Database.UpdateSite(_existingSite);
                 Log($"Updated: {_existingSite.SiteName} (logo: {logoName})");
             }
             else
@@ -444,7 +444,7 @@ public partial class SiteEditForm : Form
                     IsActive = chkIsActive.Checked
                 };
 
-                DatabaseService.AddSite(newSite);
+                ServiceContainer.Database.AddSite(newSite);
                 _existingSite = newSite;
                 _isEditMode = true;
                 Log($"Added: {newSite.SiteName} (logo: {logoName})");
@@ -470,6 +470,10 @@ public partial class SiteEditForm : Form
         if (string.IsNullOrEmpty(siteUrl) || string.IsNullOrEmpty(siteName))
             return;
 
+        _isDownloadingLogo = true;
+        btnSave.Enabled = false;
+        btnCancel.Enabled = false;
+
         try
         {
             // Show progress
@@ -479,25 +483,28 @@ public partial class SiteEditForm : Form
             var existingLogoName = _existingSite?.SiteLogo;
 
             Log($"Downloading logo for: {siteName} (file: {existingLogoName}.webp)");
-            var (logoPath, logoName) = await LogoDownloadService.DownloadLogoAsync(siteUrl, siteName, existingLogoName);
+            var (logoPath, logoName) = await ServiceContainer.LogoDownload.DownloadLogoAsync(siteUrl, siteName, existingLogoName);
 
             if (!string.IsNullOrEmpty(logoPath))
             {
-                Log($"Logo saved: {logoPath}");
+                Log($"[SUCCESS] Logo saved: {logoPath}");
                 LoadLogoPreview();
             }
             else
             {
-                Log("Could not download logo.");
+                Log("[WARN] Could not download logo - no valid favicon found.");
             }
         }
         catch (Exception ex)
         {
-            Log($"Logo download error: {ex.Message}");
+            Log($"[ERROR] Logo download failed: {ex.Message}");
         }
         finally
         {
             progressLogo.Visible = false;
+            _isDownloadingLogo = false;
+            btnSave.Enabled = true;
+            btnCancel.Enabled = true;
         }
     }
 
@@ -594,60 +601,66 @@ public partial class SiteEditForm : Form
     {
         if (string.IsNullOrWhiteSpace(txtUrl.Text))
         {
-            Log("ERROR: Please enter a URL first.");
+            Log("[ERROR] Please enter a URL first.");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(txtName.Text))
         {
-            Log("ERROR: Please enter a site name first.");
+            Log("[ERROR] Please enter a site name first.");
             return;
         }
 
+        _isDownloadingLogo = true;
         btnDownloadLogo.Enabled = false;
         btnDownloadLogo.Text = "Downloading...";
+        btnSave.Enabled = false;
+        btnCancel.Enabled = false;
         progressLogo.Visible = true;
 
         // Use logo name from database if available, otherwise extract from URL
         var existingLogoName = _existingSite?.SiteLogo;
         if (string.IsNullOrEmpty(existingLogoName))
         {
-            existingLogoName = LogoDownloadService.ExtractLogoNameFromUrl(txtUrl.Text.Trim());
+            existingLogoName = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(txtUrl.Text.Trim());
         }
 
         Log($"Downloading logo for: {txtName.Text.Trim()} (file: {existingLogoName}.webp)");
 
         try
         {
-            var (logoPath, logoName) = await LogoDownloadService.DownloadLogoAsync(txtUrl.Text.Trim(), txtName.Text.Trim(), existingLogoName);
+            var (logoPath, logoName) = await ServiceContainer.LogoDownload.DownloadLogoAsync(txtUrl.Text.Trim(), txtName.Text.Trim(), existingLogoName);
 
             if (!string.IsNullOrEmpty(logoPath))
             {
-                Log($"Logo downloaded: {logoPath}");
+                Log($"[SUCCESS] Logo downloaded: {logoPath}");
 
                 // Update site logo name in database if site exists and not yet set
                 if (_existingSite != null && string.IsNullOrEmpty(_existingSite.SiteLogo))
                 {
                     _existingSite.SiteLogo = logoName;
-                    DatabaseService.UpdateSite(_existingSite);
+                    ServiceContainer.Database.UpdateSite(_existingSite);
                 }
 
                 LoadLogoPreview();
             }
             else
             {
-                Log("Could not download logo. The website may not have a favicon.");
+                Log("[WARN] Could not download logo. The website may not have a favicon.");
             }
         }
         catch (Exception ex)
         {
-            Log($"Error downloading logo: {ex.Message}");
+            Log($"[ERROR] Logo download failed: {ex.Message}");
         }
         finally
         {
             btnDownloadLogo.Enabled = true;
             btnDownloadLogo.Text = "Download Logo";
+            btnSave.Enabled = true;
+            btnCancel.Enabled = true;
             progressLogo.Visible = false;
+            _isDownloadingLogo = false;
         }
     }
 

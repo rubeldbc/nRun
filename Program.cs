@@ -1,4 +1,3 @@
-using nRun.Data;
 using nRun.Services;
 using nRun.UI.Forms;
 
@@ -16,8 +15,10 @@ internal static class Program
 
         ApplicationConfiguration.Initialize();
 
-        // Initialize database
-        DatabaseService.Initialize();
+        // Initialize all services
+        ServiceContainer.Initialize();
+        ServiceContainer.Settings.Initialize();
+        ServiceContainer.Database.Initialize();
 
         try
         {

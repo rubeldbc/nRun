@@ -17,304 +17,269 @@ partial class DatabaseConnectionForm
 
     private void InitializeComponent()
     {
-        // GroupBox for connection settings
-        this.groupBoxConnection = new System.Windows.Forms.GroupBox();
-
-        // Labels
-        this.lblHost = new System.Windows.Forms.Label();
-        this.lblPort = new System.Windows.Forms.Label();
-        this.lblDatabase = new System.Windows.Forms.Label();
-        this.lblUsername = new System.Windows.Forms.Label();
-        this.lblPassword = new System.Windows.Forms.Label();
-
-        // TextBoxes
-        this.txtHost = new System.Windows.Forms.TextBox();
-        this.numPort = new System.Windows.Forms.NumericUpDown();
-        this.txtDatabase = new System.Windows.Forms.TextBox();
-        this.txtUsername = new System.Windows.Forms.TextBox();
-        this.txtPassword = new System.Windows.Forms.TextBox();
-
-        // Buttons
-        this.btnTest = new System.Windows.Forms.Button();
-        this.btnConnect = new System.Windows.Forms.Button();
-        this.btnCreateTables = new System.Windows.Forms.Button();
-        this.btnDeleteDatabase = new System.Windows.Forms.Button();
-        this.btnSave = new System.Windows.Forms.Button();
-        this.btnCancel = new System.Windows.Forms.Button();
-
-        // Status
-        this.lblStatus = new System.Windows.Forms.Label();
-        this.txtLog = new System.Windows.Forms.TextBox();
-
-        // Panels
-        this.panelButtons = new System.Windows.Forms.Panel();
-        this.panelActions = new System.Windows.Forms.Panel();
-
-        this.groupBoxConnection.SuspendLayout();
-        ((System.ComponentModel.ISupportInitialize)(this.numPort)).BeginInit();
-        this.panelButtons.SuspendLayout();
-        this.panelActions.SuspendLayout();
-        this.SuspendLayout();
-
-        //
+        groupBoxConnection = new GroupBox();
+        lblHost = new Label();
+        txtHost = new TextBox();
+        lblPort = new Label();
+        numPort = new NumericUpDown();
+        lblDatabase = new Label();
+        txtDatabase = new TextBox();
+        lblUsername = new Label();
+        txtUsername = new TextBox();
+        lblPassword = new Label();
+        txtPassword = new TextBox();
+        btnTest = new Button();
+        btnConnect = new Button();
+        btnCreateTables = new Button();
+        btnDeleteDatabase = new Button();
+        btnSave = new Button();
+        btnCancel = new Button();
+        lblStatus = new Label();
+        txtLog = new TextBox();
+        panelButtons = new Panel();
+        panelActions = new Panel();
+        groupBoxConnection.SuspendLayout();
+        ((System.ComponentModel.ISupportInitialize)numPort).BeginInit();
+        panelButtons.SuspendLayout();
+        panelActions.SuspendLayout();
+        SuspendLayout();
+        // 
         // groupBoxConnection
-        //
-        this.groupBoxConnection.Controls.Add(this.lblHost);
-        this.groupBoxConnection.Controls.Add(this.txtHost);
-        this.groupBoxConnection.Controls.Add(this.lblPort);
-        this.groupBoxConnection.Controls.Add(this.numPort);
-        this.groupBoxConnection.Controls.Add(this.lblDatabase);
-        this.groupBoxConnection.Controls.Add(this.txtDatabase);
-        this.groupBoxConnection.Controls.Add(this.lblUsername);
-        this.groupBoxConnection.Controls.Add(this.txtUsername);
-        this.groupBoxConnection.Controls.Add(this.lblPassword);
-        this.groupBoxConnection.Controls.Add(this.txtPassword);
-        this.groupBoxConnection.Location = new System.Drawing.Point(15, 15);
-        this.groupBoxConnection.Name = "groupBoxConnection";
-        this.groupBoxConnection.Size = new System.Drawing.Size(420, 180);
-        this.groupBoxConnection.TabIndex = 0;
-        this.groupBoxConnection.TabStop = false;
-        this.groupBoxConnection.Text = "PostgreSQL Connection Settings";
-
-        //
+        // 
+        groupBoxConnection.Controls.Add(lblHost);
+        groupBoxConnection.Controls.Add(txtHost);
+        groupBoxConnection.Controls.Add(lblPort);
+        groupBoxConnection.Controls.Add(numPort);
+        groupBoxConnection.Controls.Add(lblDatabase);
+        groupBoxConnection.Controls.Add(txtDatabase);
+        groupBoxConnection.Controls.Add(lblUsername);
+        groupBoxConnection.Controls.Add(txtUsername);
+        groupBoxConnection.Controls.Add(lblPassword);
+        groupBoxConnection.Controls.Add(txtPassword);
+        groupBoxConnection.Location = new Point(15, 15);
+        groupBoxConnection.Name = "groupBoxConnection";
+        groupBoxConnection.Size = new Size(440, 180);
+        groupBoxConnection.TabIndex = 0;
+        groupBoxConnection.TabStop = false;
+        groupBoxConnection.Text = "PostgreSQL Connection Settings";
+        // 
         // lblHost
-        //
-        this.lblHost.AutoSize = true;
-        this.lblHost.Location = new System.Drawing.Point(15, 30);
-        this.lblHost.Name = "lblHost";
-        this.lblHost.Size = new System.Drawing.Size(35, 15);
-        this.lblHost.TabIndex = 0;
-        this.lblHost.Text = "Host:";
-
-        //
+        // 
+        lblHost.AutoSize = true;
+        lblHost.Location = new Point(15, 30);
+        lblHost.Name = "lblHost";
+        lblHost.Size = new Size(35, 15);
+        lblHost.TabIndex = 0;
+        lblHost.Text = "Host:";
+        // 
         // txtHost
-        //
-        this.txtHost.Location = new System.Drawing.Point(100, 27);
-        this.txtHost.Name = "txtHost";
-        this.txtHost.Size = new System.Drawing.Size(200, 23);
-        this.txtHost.TabIndex = 1;
-        this.txtHost.Text = "localhost";
-
-        //
+        // 
+        txtHost.Location = new Point(100, 27);
+        txtHost.Name = "txtHost";
+        txtHost.Size = new Size(200, 23);
+        txtHost.TabIndex = 1;
+        txtHost.Text = "localhost";
+        // 
         // lblPort
-        //
-        this.lblPort.AutoSize = true;
-        this.lblPort.Location = new System.Drawing.Point(310, 30);
-        this.lblPort.Name = "lblPort";
-        this.lblPort.Size = new System.Drawing.Size(32, 15);
-        this.lblPort.TabIndex = 2;
-        this.lblPort.Text = "Port:";
-
-        //
+        // 
+        lblPort.AutoSize = true;
+        lblPort.Location = new Point(310, 30);
+        lblPort.Name = "lblPort";
+        lblPort.Size = new Size(32, 15);
+        lblPort.TabIndex = 2;
+        lblPort.Text = "Port:";
+        // 
         // numPort
-        //
-        this.numPort.Location = new System.Drawing.Point(350, 27);
-        this.numPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
-        this.numPort.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-        this.numPort.Name = "numPort";
-        this.numPort.Size = new System.Drawing.Size(55, 23);
-        this.numPort.TabIndex = 3;
-        this.numPort.Value = new decimal(new int[] { 5432, 0, 0, 0 });
-
-        //
+        // 
+        numPort.Location = new Point(350, 27);
+        numPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
+        numPort.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+        numPort.Name = "numPort";
+        numPort.Size = new Size(55, 23);
+        numPort.TabIndex = 3;
+        numPort.Value = new decimal(new int[] { 5432, 0, 0, 0 });
+        // 
         // lblDatabase
-        //
-        this.lblDatabase.AutoSize = true;
-        this.lblDatabase.Location = new System.Drawing.Point(15, 60);
-        this.lblDatabase.Name = "lblDatabase";
-        this.lblDatabase.Size = new System.Drawing.Size(58, 15);
-        this.lblDatabase.TabIndex = 4;
-        this.lblDatabase.Text = "Database:";
-
-        //
+        // 
+        lblDatabase.AutoSize = true;
+        lblDatabase.Location = new Point(15, 60);
+        lblDatabase.Name = "lblDatabase";
+        lblDatabase.Size = new Size(58, 15);
+        lblDatabase.TabIndex = 4;
+        lblDatabase.Text = "Database:";
+        // 
         // txtDatabase
-        //
-        this.txtDatabase.Location = new System.Drawing.Point(100, 57);
-        this.txtDatabase.Name = "txtDatabase";
-        this.txtDatabase.Size = new System.Drawing.Size(305, 23);
-        this.txtDatabase.TabIndex = 5;
-        this.txtDatabase.Text = "nrun_db";
-
-        //
+        // 
+        txtDatabase.Location = new Point(100, 57);
+        txtDatabase.Name = "txtDatabase";
+        txtDatabase.Size = new Size(325, 23);
+        txtDatabase.TabIndex = 5;
+        txtDatabase.Text = "nrun_db";
+        // 
         // lblUsername
-        //
-        this.lblUsername.AutoSize = true;
-        this.lblUsername.Location = new System.Drawing.Point(15, 90);
-        this.lblUsername.Name = "lblUsername";
-        this.lblUsername.Size = new System.Drawing.Size(63, 15);
-        this.lblUsername.TabIndex = 6;
-        this.lblUsername.Text = "Username:";
-
-        //
+        // 
+        lblUsername.AutoSize = true;
+        lblUsername.Location = new Point(15, 90);
+        lblUsername.Name = "lblUsername";
+        lblUsername.Size = new Size(63, 15);
+        lblUsername.TabIndex = 6;
+        lblUsername.Text = "Username:";
+        // 
         // txtUsername
-        //
-        this.txtUsername.Location = new System.Drawing.Point(100, 87);
-        this.txtUsername.Name = "txtUsername";
-        this.txtUsername.Size = new System.Drawing.Size(305, 23);
-        this.txtUsername.TabIndex = 7;
-        this.txtUsername.Text = "postgres";
-
-        //
+        // 
+        txtUsername.Location = new Point(100, 87);
+        txtUsername.Name = "txtUsername";
+        txtUsername.Size = new Size(325, 23);
+        txtUsername.TabIndex = 7;
+        txtUsername.Text = "postgres";
+        // 
         // lblPassword
-        //
-        this.lblPassword.AutoSize = true;
-        this.lblPassword.Location = new System.Drawing.Point(15, 120);
-        this.lblPassword.Name = "lblPassword";
-        this.lblPassword.Size = new System.Drawing.Size(60, 15);
-        this.lblPassword.TabIndex = 8;
-        this.lblPassword.Text = "Password:";
-
-        //
+        // 
+        lblPassword.AutoSize = true;
+        lblPassword.Location = new Point(15, 120);
+        lblPassword.Name = "lblPassword";
+        lblPassword.Size = new Size(60, 15);
+        lblPassword.TabIndex = 8;
+        lblPassword.Text = "Password:";
+        // 
         // txtPassword
-        //
-        this.txtPassword.Location = new System.Drawing.Point(100, 117);
-        this.txtPassword.Name = "txtPassword";
-        this.txtPassword.PasswordChar = '*';
-        this.txtPassword.Size = new System.Drawing.Size(305, 23);
-        this.txtPassword.TabIndex = 9;
-
-        //
-        // panelActions
-        //
-        this.panelActions.Controls.Add(this.btnTest);
-        this.panelActions.Controls.Add(this.btnConnect);
-        this.panelActions.Controls.Add(this.btnCreateTables);
-        this.panelActions.Controls.Add(this.btnDeleteDatabase);
-        this.panelActions.Controls.Add(this.lblStatus);
-        this.panelActions.Location = new System.Drawing.Point(15, 200);
-        this.panelActions.Name = "panelActions";
-        this.panelActions.Size = new System.Drawing.Size(420, 60);
-        this.panelActions.TabIndex = 1;
-
-        //
+        // 
+        txtPassword.Location = new Point(100, 117);
+        txtPassword.Name = "txtPassword";
+        txtPassword.PasswordChar = '*';
+        txtPassword.Size = new Size(325, 23);
+        txtPassword.TabIndex = 9;
+        // 
         // btnTest
-        //
-        this.btnTest.Location = new System.Drawing.Point(0, 5);
-        this.btnTest.Name = "btnTest";
-        this.btnTest.Size = new System.Drawing.Size(100, 28);
-        this.btnTest.TabIndex = 0;
-        this.btnTest.Text = "Test Connection";
-        this.btnTest.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnTest.Location = new Point(0, 5);
+        btnTest.Name = "btnTest";
+        btnTest.Size = new Size(104, 28);
+        btnTest.TabIndex = 0;
+        btnTest.Text = "Test Connection";
+        btnTest.UseVisualStyleBackColor = true;
+        // 
         // btnConnect
-        //
-        this.btnConnect.Location = new System.Drawing.Point(110, 5);
-        this.btnConnect.Name = "btnConnect";
-        this.btnConnect.Size = new System.Drawing.Size(80, 28);
-        this.btnConnect.TabIndex = 1;
-        this.btnConnect.Text = "Connect";
-        this.btnConnect.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnConnect.Location = new Point(110, 5);
+        btnConnect.Name = "btnConnect";
+        btnConnect.Size = new Size(80, 28);
+        btnConnect.TabIndex = 1;
+        btnConnect.Text = "Connect";
+        btnConnect.UseVisualStyleBackColor = true;
+        // 
         // btnCreateTables
-        //
-        this.btnCreateTables.Location = new System.Drawing.Point(200, 5);
-        this.btnCreateTables.Name = "btnCreateTables";
-        this.btnCreateTables.Size = new System.Drawing.Size(100, 28);
-        this.btnCreateTables.TabIndex = 2;
-        this.btnCreateTables.Text = "Create Tables";
-        this.btnCreateTables.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnCreateTables.Location = new Point(196, 5);
+        btnCreateTables.Name = "btnCreateTables";
+        btnCreateTables.Size = new Size(161, 28);
+        btnCreateTables.TabIndex = 2;
+        btnCreateTables.Text = "Create News Tables";
+        btnCreateTables.UseVisualStyleBackColor = true;
+        // 
         // btnDeleteDatabase
-        //
-        this.btnDeleteDatabase.ForeColor = System.Drawing.Color.DarkRed;
-        this.btnDeleteDatabase.Location = new System.Drawing.Point(310, 5);
-        this.btnDeleteDatabase.Name = "btnDeleteDatabase";
-        this.btnDeleteDatabase.Size = new System.Drawing.Size(105, 28);
-        this.btnDeleteDatabase.TabIndex = 3;
-        this.btnDeleteDatabase.Text = "Delete Database";
-        this.btnDeleteDatabase.UseVisualStyleBackColor = true;
-
-        //
-        // lblStatus
-        //
-        this.lblStatus.AutoSize = true;
-        this.lblStatus.ForeColor = System.Drawing.Color.Gray;
-        this.lblStatus.Location = new System.Drawing.Point(15, 40);
-        this.lblStatus.Name = "lblStatus";
-        this.lblStatus.Size = new System.Drawing.Size(84, 15);
-        this.lblStatus.TabIndex = 4;
-        this.lblStatus.Text = "Not connected";
-
-        //
-        // txtLog
-        //
-        this.txtLog.BackColor = System.Drawing.Color.Black;
-        this.txtLog.ForeColor = System.Drawing.Color.LightGreen;
-        this.txtLog.Location = new System.Drawing.Point(15, 270);
-        this.txtLog.Multiline = true;
-        this.txtLog.Name = "txtLog";
-        this.txtLog.ReadOnly = true;
-        this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-        this.txtLog.Size = new System.Drawing.Size(420, 130);
-        this.txtLog.TabIndex = 2;
-        this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
-
-        //
-        // panelButtons
-        //
-        this.panelButtons.Controls.Add(this.btnSave);
-        this.panelButtons.Controls.Add(this.btnCancel);
-        this.panelButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-        this.panelButtons.Location = new System.Drawing.Point(0, 410);
-        this.panelButtons.Name = "panelButtons";
-        this.panelButtons.Padding = new System.Windows.Forms.Padding(10);
-        this.panelButtons.Size = new System.Drawing.Size(450, 50);
-        this.panelButtons.TabIndex = 3;
-
-        //
+        // 
+        btnDeleteDatabase.ForeColor = Color.DarkRed;
+        btnDeleteDatabase.Location = new Point(404, 5);
+        btnDeleteDatabase.Name = "btnDeleteDatabase";
+        btnDeleteDatabase.Size = new Size(132, 28);
+        btnDeleteDatabase.TabIndex = 3;
+        btnDeleteDatabase.Text = "Delete News Tables";
+        btnDeleteDatabase.UseVisualStyleBackColor = true;
+        // 
         // btnSave
-        //
-        this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnSave.Location = new System.Drawing.Point(265, 12);
-        this.btnSave.Name = "btnSave";
-        this.btnSave.Size = new System.Drawing.Size(80, 28);
-        this.btnSave.TabIndex = 0;
-        this.btnSave.Text = "Save";
-        this.btnSave.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        btnSave.Location = new Point(396, 12);
+        btnSave.Name = "btnSave";
+        btnSave.Size = new Size(80, 28);
+        btnSave.TabIndex = 0;
+        btnSave.Text = "Save";
+        btnSave.UseVisualStyleBackColor = true;
+        // 
         // btnCancel
-        //
-        this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-        this.btnCancel.Location = new System.Drawing.Point(355, 12);
-        this.btnCancel.Name = "btnCancel";
-        this.btnCancel.Size = new System.Drawing.Size(80, 28);
-        this.btnCancel.TabIndex = 1;
-        this.btnCancel.Text = "Cancel";
-        this.btnCancel.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        btnCancel.DialogResult = DialogResult.Cancel;
+        btnCancel.Location = new Point(486, 12);
+        btnCancel.Name = "btnCancel";
+        btnCancel.Size = new Size(80, 28);
+        btnCancel.TabIndex = 1;
+        btnCancel.Text = "Cancel";
+        btnCancel.UseVisualStyleBackColor = true;
+        // 
+        // lblStatus
+        // 
+        lblStatus.AutoSize = true;
+        lblStatus.ForeColor = Color.Gray;
+        lblStatus.Location = new Point(15, 40);
+        lblStatus.Name = "lblStatus";
+        lblStatus.Size = new Size(86, 15);
+        lblStatus.TabIndex = 4;
+        lblStatus.Text = "Not connected";
+        // 
+        // txtLog
+        // 
+        txtLog.BackColor = Color.Black;
+        txtLog.Font = new Font("Consolas", 9F);
+        txtLog.ForeColor = Color.LightGreen;
+        txtLog.Location = new Point(15, 270);
+        txtLog.Multiline = true;
+        txtLog.Name = "txtLog";
+        txtLog.ReadOnly = true;
+        txtLog.ScrollBars = ScrollBars.Vertical;
+        txtLog.Size = new Size(440, 130);
+        txtLog.TabIndex = 2;
+        // 
+        // panelButtons
+        // 
+        panelButtons.Controls.Add(btnSave);
+        panelButtons.Controls.Add(btnCancel);
+        panelButtons.Dock = DockStyle.Bottom;
+        panelButtons.Location = new Point(0, 410);
+        panelButtons.Name = "panelButtons";
+        panelButtons.Padding = new Padding(10);
+        panelButtons.Size = new Size(607, 50);
+        panelButtons.TabIndex = 3;
+        // 
+        // panelActions
+        // 
+        panelActions.Controls.Add(btnTest);
+        panelActions.Controls.Add(btnConnect);
+        panelActions.Controls.Add(btnCreateTables);
+        panelActions.Controls.Add(btnDeleteDatabase);
+        panelActions.Controls.Add(lblStatus);
+        panelActions.Location = new Point(15, 200);
+        panelActions.Name = "panelActions";
+        panelActions.Size = new Size(551, 60);
+        panelActions.TabIndex = 1;
+        // 
         // DatabaseConnectionForm
-        //
-        this.AcceptButton = this.btnSave;
-        this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.CancelButton = this.btnCancel;
-        this.ClientSize = new System.Drawing.Size(450, 460);
-        this.Controls.Add(this.groupBoxConnection);
-        this.Controls.Add(this.panelActions);
-        this.Controls.Add(this.txtLog);
-        this.Controls.Add(this.panelButtons);
-        this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-        this.MaximizeBox = false;
-        this.MinimizeBox = false;
-        this.Name = "DatabaseConnectionForm";
-        this.ShowInTaskbar = false;
-        this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-        this.Text = "Database Connection";
-
-        this.groupBoxConnection.ResumeLayout(false);
-        this.groupBoxConnection.PerformLayout();
-        ((System.ComponentModel.ISupportInitialize)(this.numPort)).EndInit();
-        this.panelButtons.ResumeLayout(false);
-        this.panelActions.ResumeLayout(false);
-        this.panelActions.PerformLayout();
-        this.ResumeLayout(false);
-        this.PerformLayout();
+        // 
+        AcceptButton = btnSave;
+        AutoScaleDimensions = new SizeF(7F, 15F);
+        AutoScaleMode = AutoScaleMode.Font;
+        CancelButton = btnCancel;
+        ClientSize = new Size(607, 460);
+        Controls.Add(groupBoxConnection);
+        Controls.Add(panelActions);
+        Controls.Add(txtLog);
+        Controls.Add(panelButtons);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        Name = "DatabaseConnectionForm";
+        ShowInTaskbar = false;
+        StartPosition = FormStartPosition.CenterParent;
+        Text = "Database Connection";
+        groupBoxConnection.ResumeLayout(false);
+        groupBoxConnection.PerformLayout();
+        ((System.ComponentModel.ISupportInitialize)numPort).EndInit();
+        panelButtons.ResumeLayout(false);
+        panelActions.ResumeLayout(false);
+        panelActions.PerformLayout();
+        ResumeLayout(false);
+        PerformLayout();
     }
 
     #endregion

@@ -80,7 +80,9 @@ public class WebDriverService : IDisposable
         _driverService.HideCommandPromptWindow = true;
  _driverService.SuppressInitialDiagnosticInformation = true;
 
-        var driver = new ChromeDriver(_driverService, options, TimeSpan.FromSeconds(TimeoutSeconds));
+        // Use a slightly larger command timeout than PageLoad to avoid default 30s remote timeouts
+        var commandTimeout = TimeSpan.FromSeconds(Math.Max(TimeoutSeconds * 2, 60));
+        var driver = new ChromeDriver(_driverService, options, commandTimeout);
 
         // Track the ChromeDriver process for cleanup
         try
@@ -116,32 +118,32 @@ public class WebDriverService : IDisposable
           throw new ArgumentException($"Invalid URL format: {url}", nameof(url));
         }
 
-        // Navigation with retry logic
-      Exception? lastException = null;
+        // Navigation with retry logic - catch on every attempt and only rethrow after all attempts
+        Exception? lastException = null;
         for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
         {
             try
-       {
-    GetDriver().Navigate().GoToUrl(uri);
-    return; // Success, return
-    }
-   catch (WebDriverException ex) when (attempt < MaxRetryAttempts)
-{
-       lastException = ex;
-      // Reset driver and retry
-          try
-       {
-     ResetDriver();
-        }
-                catch
-   {
-       // Ignore reset failure
-      }
-        Thread.Sleep(1000 * attempt); // Progressive delay
-         }
+            {
+                GetDriver().Navigate().GoToUrl(uri);
+                return; // Success
+            }
+            catch (WebDriverException ex)
+            {
+                lastException = ex;
+
+                if (attempt >= MaxRetryAttempts)
+                {
+                    // No more retries
+                    break;
+                }
+
+                // Reset driver and retry after a progressive delay
+                try { ResetDriver(); } catch { }
+                Thread.Sleep(1000 * attempt);
+            }
         }
 
-        // All attempts failed
+        // All attempts failed - throw a wrapped exception with last captured exception
         throw new WebDriverException($"Failed to navigate to {url} after {MaxRetryAttempts} attempts", lastException);
     }
 

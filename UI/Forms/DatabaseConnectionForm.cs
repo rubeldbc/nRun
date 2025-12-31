@@ -1,5 +1,4 @@
 using Npgsql;
-using nRun.Data;
 using nRun.Models;
 using nRun.Services;
 
@@ -25,7 +24,7 @@ public partial class DatabaseConnectionForm : Form
 
     private void LoadSettings()
     {
-        var settings = SettingsManager.LoadSettings();
+        var settings = ServiceContainer.Settings.LoadSettings();
         txtHost.Text = settings.DbHost;
         numPort.Value = settings.DbPort;
         txtDatabase.Text = settings.DbName;
@@ -213,12 +212,12 @@ public partial class DatabaseConnectionForm : Form
     {
         // Confirm deletion
         var result = MessageBox.Show(
-            "WARNING: This will permanently delete ALL data!\n\n" +
+            "WARNING: This will permanently delete ALL news data!\n\n" +
             "- All site configurations will be deleted\n" +
             "- All scraped news articles will be deleted\n" +
             "- All logo files will be deleted\n\n" +
             "Are you sure you want to continue?",
-            "Delete Database",
+            "Delete News Tables",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
@@ -288,7 +287,7 @@ public partial class DatabaseConnectionForm : Form
 
             // Delete logo files
             LogMessage("Deleting logo files...");
-            var logosFolder = LogoDownloadService.GetLogosFolder();
+            var logosFolder = ServiceContainer.LogoDownload.GetLogosFolder();
             if (Directory.Exists(logosFolder))
             {
                 var files = Directory.GetFiles(logosFolder);
@@ -320,7 +319,7 @@ public partial class DatabaseConnectionForm : Form
             UpdateStatus("Tables deleted", Color.Orange);
 
             // Reinitialize DatabaseService (it will show as not connected)
-            DatabaseService.Initialize();
+            ServiceContainer.Database.Initialize();
         }
         catch (Exception ex)
         {
@@ -455,17 +454,17 @@ public partial class DatabaseConnectionForm : Form
     {
         try
         {
-            var appSettings = SettingsManager.LoadSettings();
+            var appSettings = ServiceContainer.Settings.LoadSettings();
             appSettings.DbHost = txtHost.Text.Trim();
             appSettings.DbPort = (int)numPort.Value;
             appSettings.DbName = txtDatabase.Text.Trim();
             appSettings.DbUser = txtUsername.Text.Trim();
             appSettings.DbPassword = txtPassword.Text;
 
-            SettingsManager.SaveSettings(appSettings);
+            ServiceContainer.Settings.SaveSettings(appSettings);
 
             // Update DatabaseService connection string
-            DatabaseService.UpdateConnectionString(appSettings.GetConnectionString());
+            ServiceContainer.Database.UpdateConnectionString(appSettings.GetConnectionString());
 
             LogMessage("Settings saved successfully");
             this.DialogResult = DialogResult.OK;

@@ -1,22 +1,29 @@
 using Npgsql;
 using nRun.Models;
+using nRun.Services.Interfaces;
 
 namespace nRun.Data;
 
 /// <summary>
 /// PostgreSQL database service for storing sites and news articles
 /// </summary>
-public static class DatabaseService
+public class DatabaseService : IDatabaseService
 {
-    private static string _connectionString = string.Empty;
-    private static readonly object _lock = new();
-    private static bool _isInitialized = false;
+    private readonly ISettingsManager _settingsManager;
+    private string _connectionString = string.Empty;
+    private readonly object _lock = new();
+    private bool _isInitialized = false;
 
-    public static bool IsConnected => _isInitialized && !string.IsNullOrEmpty(_connectionString);
+    public bool IsConnected => _isInitialized && !string.IsNullOrEmpty(_connectionString);
 
-    public static void Initialize()
+    public DatabaseService(ISettingsManager settingsManager)
     {
-        var settings = SettingsManager.LoadSettings();
+        _settingsManager = settingsManager;
+    }
+
+    public void Initialize()
+    {
+        var settings = _settingsManager.LoadSettings();
         _connectionString = settings.GetConnectionString();
 
         if (!string.IsNullOrEmpty(settings.DbPassword))
@@ -24,7 +31,6 @@ public static class DatabaseService
             try
             {
                 using var conn = GetConnection();
-                // Ensure required tables exist so further queries do not fail
                 EnsureTablesExist(conn);
                 _isInitialized = true;
             }
@@ -35,7 +41,7 @@ public static class DatabaseService
         }
     }
 
-    public static void UpdateConnectionString(string connectionString)
+    public void UpdateConnectionString(string connectionString)
     {
         _connectionString = connectionString;
         try
@@ -50,9 +56,8 @@ public static class DatabaseService
         }
     }
 
-    private static void EnsureTablesExist(NpgsqlConnection conn)
+    private void EnsureTablesExist(NpgsqlConnection conn)
     {
-        // Create tables if they do not exist. Using IF NOT EXISTS avoids errors when they already exist.
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS site_info (
@@ -93,7 +98,6 @@ public static class DatabaseService
                 last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            -- Create indexes if they don't exist
             CREATE INDEX IF NOT EXISTS idx_site_info_link ON site_info(site_link);
             CREATE INDEX IF NOT EXISTS idx_news_info_site ON news_info(site_id);
             CREATE INDEX IF NOT EXISTS idx_news_info_created ON news_info(created_at DESC);
@@ -102,13 +106,12 @@ public static class DatabaseService
 
         cmd.ExecuteNonQuery();
 
-        // Ensure default app_settings row exists
         using var insertCmd = conn.CreateCommand();
         insertCmd.CommandText = "INSERT INTO app_settings (id) VALUES (1) ON CONFLICT DO NOTHING";
         insertCmd.ExecuteNonQuery();
     }
 
-    private static NpgsqlConnection GetConnection()
+    private NpgsqlConnection GetConnection()
     {
         var connection = new NpgsqlConnection(_connectionString);
         connection.Open();
@@ -117,7 +120,7 @@ public static class DatabaseService
 
     #region Site Info Operations
 
-    public static List<SiteInfo> GetAllSites()
+    public List<SiteInfo> GetAllSites()
     {
         if (!IsConnected) return new List<SiteInfo>();
 
@@ -137,7 +140,7 @@ public static class DatabaseService
         }
     }
 
-    public static List<SiteInfo> GetActiveSites()
+    public List<SiteInfo> GetActiveSites()
     {
         if (!IsConnected) return new List<SiteInfo>();
 
@@ -157,7 +160,7 @@ public static class DatabaseService
         }
     }
 
-    public static SiteInfo? GetSiteById(string siteId)
+    public SiteInfo? GetSiteById(string siteId)
     {
         if (!IsConnected) return null;
 
@@ -173,7 +176,7 @@ public static class DatabaseService
         }
     }
 
-    public static string AddSite(SiteInfo site)
+    public string AddSite(SiteInfo site)
     {
         if (!IsConnected) throw new InvalidOperationException("Database not connected");
 
@@ -203,7 +206,7 @@ public static class DatabaseService
         }
     }
 
-    public static void UpdateSite(SiteInfo site)
+    public void UpdateSite(SiteInfo site)
     {
         if (!IsConnected) return;
 
@@ -239,7 +242,7 @@ public static class DatabaseService
         }
     }
 
-    public static void UpdateSiteStats(string siteId, bool success)
+    public void UpdateSiteStats(string siteId, bool success)
     {
         if (!IsConnected) return;
 
@@ -257,7 +260,7 @@ public static class DatabaseService
         }
     }
 
-    public static void DeleteSite(string siteId)
+    public void DeleteSite(string siteId)
     {
         if (!IsConnected) return;
 
@@ -293,7 +296,7 @@ public static class DatabaseService
 
     #region News Info Operations
 
-    public static bool NewsExists(string newsUrl)
+    public bool NewsExists(string newsUrl)
     {
         if (!IsConnected) return false;
 
@@ -307,7 +310,7 @@ public static class DatabaseService
         }
     }
 
-    public static long AddNews(NewsInfo news)
+    public long AddNews(NewsInfo news)
     {
         if (!IsConnected) throw new InvalidOperationException("Database not connected");
 
@@ -330,7 +333,7 @@ public static class DatabaseService
         }
     }
 
-    public static List<NewsInfo> GetRecentNews(int limit = 100)
+    public List<NewsInfo> GetRecentNews(int limit = 100)
     {
         if (!IsConnected) return new List<NewsInfo>();
 
@@ -356,7 +359,7 @@ public static class DatabaseService
         }
     }
 
-    public static List<NewsInfo> GetNewsBySite(string siteId, int limit = 50)
+    public List<NewsInfo> GetNewsBySite(string siteId, int limit = 50)
     {
         if (!IsConnected) return new List<NewsInfo>();
 
@@ -384,7 +387,7 @@ public static class DatabaseService
         }
     }
 
-    public static NewsInfo? GetNewsById(long serial)
+    public NewsInfo? GetNewsById(long serial)
     {
         if (!IsConnected) return null;
 
@@ -404,7 +407,7 @@ public static class DatabaseService
         }
     }
 
-    public static void MarkNewsAsRead(long serial)
+    public void MarkNewsAsRead(long serial)
     {
         if (!IsConnected) return;
 
@@ -418,7 +421,7 @@ public static class DatabaseService
         }
     }
 
-    public static void DeleteNews(long serial)
+    public void DeleteNews(long serial)
     {
         if (!IsConnected) return;
 
@@ -432,7 +435,7 @@ public static class DatabaseService
         }
     }
 
-    public static long GetNewsCount()
+    public long GetNewsCount()
     {
         if (!IsConnected) return 0;
 

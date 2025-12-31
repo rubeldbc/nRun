@@ -1,4 +1,3 @@
-using nRun.Data;
 using nRun.Models;
 
 namespace nRun.Services;
@@ -17,7 +16,7 @@ public class NewsScraperService : IDisposable
 
     public NewsScraperService()
     {
-        var settings = SettingsManager.LoadSettings();
+        var settings = ServiceContainer.Settings.LoadSettings();
         _webDriver = new WebDriverService
         {
             UseHeadless = settings.UseHeadlessBrowser,
@@ -27,7 +26,7 @@ public class NewsScraperService : IDisposable
 
     public async Task<ScrapeResult> ScrapeAllSitesAsync(CancellationToken cancellationToken = default)
     {
-        var sites = DatabaseService.GetActiveSites();
+        var sites = ServiceContainer.Database.GetActiveSites();
         var allArticles = new List<NewsInfo>();
         int totalNew = 0, totalSkipped = 0;
         var startTime = DateTime.Now;
@@ -50,7 +49,7 @@ public class NewsScraperService : IDisposable
             catch (Exception ex)
             {
                 StatusChanged?.Invoke(this, $"Error scraping {site.SiteName}: {ex.Message}");
-                DatabaseService.UpdateSiteStats(site.SiteId, false);
+                ServiceContainer.Database.UpdateSiteStats(site.SiteId, false);
             }
         }
 
@@ -63,7 +62,7 @@ public class NewsScraperService : IDisposable
         var articles = new List<NewsInfo>();
         int newCount = 0, skippedCount = 0;
         var startTime = DateTime.Now;
-        var settings = SettingsManager.LoadSettings();
+        var settings = ServiceContainer.Settings.LoadSettings();
 
         try
         {
@@ -72,40 +71,40 @@ public class NewsScraperService : IDisposable
             // Navigate to site
             await Task.Run(() => _webDriver.NavigateTo(site.SiteLink), cancellationToken);
 
-            // ??? ???????? ??? ?????? ???? ???????
+            // Wait for page to fully load
             StatusChanged?.Invoke(this, $"Waiting for page load: {site.SiteName}");
             await Task.Run(() =>
             {
                 try { _webDriver.WaitForPageLoad(15); } catch { }
             }, cancellationToken);
 
-            // JavaScript ???????? ??? ?????? ???? ???????? ????
+            // Wait for JavaScript content to render
             await Task.Delay(2000, cancellationToken);
 
-            // ??? ?????? ??? ????????? ???????? ??????? ???
+            // Scroll to trigger dynamic content loading
             StatusChanged?.Invoke(this, $"Triggering dynamic content: {site.SiteName}");
             await Task.Run(() => _webDriver.ScrollAndWait(2, 300), cancellationToken);
 
-            // ???????? ??? ?????? ???? ??????? ???
+            // Wait for article element to appear
             StatusChanged?.Invoke(this, $"Waiting for element: {site.SiteName}");
             var elementFound = await Task.Run(() => _webDriver.TryWaitForElement(site.ArticleLinkSelector, 10), cancellationToken);
 
             if (!elementFound)
             {
                 StatusChanged?.Invoke(this, $"Element not found, retrying: {site.SiteName}");
-                // ??????? ?????? - ?????? ???
+                // Retry with more scrolling
                 await Task.Run(() => _webDriver.ScrollAndWait(3, 500), cancellationToken);
                 await Task.Delay(1000, cancellationToken);
             }
 
-            // ????????? ????? ?????? ??????
+            // Find the first article link
             StatusChanged?.Invoke(this, $"Finding first article on: {site.SiteName}");
             var firstLink = _webDriver.GetFirstLink(site.ArticleLinkSelector);
 
             if (string.IsNullOrEmpty(firstLink))
             {
                 StatusChanged?.Invoke(this, $"No article found on: {site.SiteName}");
-                DatabaseService.UpdateSiteStats(site.SiteId, true);
+                ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
@@ -119,51 +118,51 @@ public class NewsScraperService : IDisposable
             if (string.IsNullOrEmpty(articleUrl))
             {
                 StatusChanged?.Invoke(this, $"Invalid article URL on: {site.SiteName}");
-                DatabaseService.UpdateSiteStats(site.SiteId, true);
+                ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
-            // ???????? ??????? ??????? ???
+            // Fetch article content
             StatusChanged?.Invoke(this, $"Fetching article details...");
             var article = await ScrapeArticleAsync(site, articleUrl, cancellationToken);
 
             if (article == null)
             {
                 StatusChanged?.Invoke(this, $"Failed to get article details on: {site.SiteName}");
-                DatabaseService.UpdateSiteStats(site.SiteId, true);
+                ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
-            // ???? ??? ?????? ????? ???????? ??????
+            // Log article info for debugging
             StatusChanged?.Invoke(this, $"Link: {articleUrl}");
             StatusChanged?.Invoke(this, $"Title: {article.NewsTitle}");
 
-            // ???????? ??? ???? ??? ???
-            if (DatabaseService.NewsExists(articleUrl))
+            // Check if article already exists
+            if (ServiceContainer.Database.NewsExists(articleUrl))
             {
                 skippedCount++;
                 StatusChanged?.Invoke(this, $"Already exists, skipping: {site.SiteName}");
-                DatabaseService.UpdateSiteStats(site.SiteId, true);
+                ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
-            // ???? - ???????? ??? UI ?? ??? ???
+            // New article - add to database and notify UI
             StatusChanged?.Invoke(this, $"New article! Adding to database...");
-            article.Serial = DatabaseService.AddNews(article);
+            article.Serial = ServiceContainer.Database.AddNews(article);
             articles.Add(article);
             newCount++;
 
-            // ArticleScraped ?????? - ??? UI ?? olvArticles ? ??? ????
+            // ArticleScraped event - triggers UI article list update
             ArticleScraped?.Invoke(this, article);
             StatusChanged?.Invoke(this, $"Added: {article.ShortTitle}");
 
-            DatabaseService.UpdateSiteStats(site.SiteId, true);
+            ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
             return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
         }
         catch (Exception ex)
         {
             StatusChanged?.Invoke(this, $"Error: {ex.Message}");
-            DatabaseService.UpdateSiteStats(site.SiteId, false);
+            ServiceContainer.Database.UpdateSiteStats(site.SiteId, false);
             return ScrapeResult.Failed(ex.Message);
         }
     }
@@ -175,14 +174,14 @@ public class NewsScraperService : IDisposable
             StatusChanged?.Invoke(this, $"Navigating to article: {url}");
             await Task.Run(() => _webDriver.NavigateTo(url), cancellationToken);
 
-            // ??? ??? ?????? ???? ???????
+            // Wait for article page to load
             StatusChanged?.Invoke(this, $"Waiting for article page load...");
             await Task.Run(() =>
             {
                 try { _webDriver.WaitForPageLoad(15); } catch { }
             }, cancellationToken);
 
-            // JavaScript ????????? ?? ???? ???????? ????
+            // Wait for JavaScript to finish rendering
             await Task.Delay(2000, cancellationToken);
 
             var pageSource = _webDriver.GetPageSource();
@@ -191,7 +190,7 @@ public class NewsScraperService : IDisposable
             string title = "";
             string body = "";
 
-            // ?????? Selenium ????? ?????? ??? (??? ???????????)
+            // Try getting title with Selenium first (handles dynamic content)
             StatusChanged?.Invoke(this, $"Trying Selenium for title with selector: {site.TitleSelector}");
             title = _webDriver.GetElementText(site.TitleSelector) ?? "";
 
@@ -203,7 +202,7 @@ public class NewsScraperService : IDisposable
             {
                 StatusChanged?.Invoke(this, $"Selenium failed, trying HtmlAgilityPack...");
 
-                // HtmlAgilityPack ????? ??????
+                // Fallback to HtmlAgilityPack for static HTML parsing
                 var doc = new HtmlAgilityPack.HtmlDocument();
                 doc.LoadHtml(pageSource);
 
@@ -219,7 +218,7 @@ public class NewsScraperService : IDisposable
                 }
             }
 
-            // Body ????????????? ???
+            // Extract body content if selector is provided
             if (!string.IsNullOrEmpty(site.BodySelector))
             {
                 body = _webDriver.GetElementText(site.BodySelector) ?? "";

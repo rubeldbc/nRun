@@ -1,4 +1,3 @@
-using nRun.Data;
 using nRun.Models;
 
 namespace nRun.Services;
@@ -29,7 +28,7 @@ public class BackgroundScraperService : IDisposable
         {
             if (_isRunning) return;
 
-            var settings = SettingsManager.LoadSettings();
+            var settings = ServiceContainer.Settings.LoadSettings();
             var intervalMs = settings.CheckIntervalMinutes * 60 * 1000;
 
             _cts = new CancellationTokenSource();
@@ -119,7 +118,7 @@ public class BackgroundScraperService : IDisposable
         {
             if (!_isRunning || _timer == null) return;
 
-            var settings = SettingsManager.LoadSettings();
+            var settings = ServiceContainer.Settings.LoadSettings();
             var intervalMs = settings.CheckIntervalMinutes * 60 * 1000;
             _timer.Change(intervalMs, intervalMs);
 
@@ -146,7 +145,7 @@ public class BackgroundScraperService : IDisposable
     }
 
     /// <summary>
-    /// ????????? ???? ????????? ???? ??????? ???
+    /// Run scraper for a single site once
     /// </summary>
     public async Task RunSiteOnceAsync(SiteInfo site)
     {

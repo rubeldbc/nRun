@@ -1,5 +1,4 @@
-﻿using nRun.Data;
-using nRun.Services;
+﻿using nRun.Services;
 
 namespace nRun.UI.Forms;
 
@@ -23,7 +22,7 @@ public partial class SettingsForm : Form
 
     private void LoadSettings()
     {
-        var settings = SettingsManager.LoadSettings();
+        var settings = ServiceContainer.Settings.LoadSettings();
 
         numCheckInterval.Value = settings.CheckIntervalMinutes;
         numDelayBetweenLinks.Value = settings.DelayBetweenLinksSeconds;
@@ -141,7 +140,7 @@ public partial class SettingsForm : Form
     {
         try
         {
-            var settings = SettingsManager.LoadSettings();
+            var settings = ServiceContainer.Settings.LoadSettings();
 
             settings.CheckIntervalMinutes = (int)numCheckInterval.Value;
             settings.DelayBetweenLinksSeconds = (int)numDelayBetweenLinks.Value;
@@ -150,7 +149,7 @@ public partial class SettingsForm : Form
             settings.UseHeadlessBrowser = chkUseHeadless.Checked;
             settings.AutoStartScraping = chkAutoStart.Checked;
 
-            SettingsManager.SaveSettings(settings);
+            ServiceContainer.Settings.SaveSettings(settings);
 
             this.DialogResult = DialogResult.OK;
             this.Close();

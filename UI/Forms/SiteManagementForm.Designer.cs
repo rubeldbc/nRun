@@ -49,10 +49,21 @@ partial class SiteManagementForm
         this.progressLogos = new System.Windows.Forms.ProgressBar();
         this.lblLogoProgress = new System.Windows.Forms.Label();
 
+        // Log panel
+        this.panelLog = new System.Windows.Forms.Panel();
+        this.splitContainerLog = new System.Windows.Forms.SplitContainer();
+        this.txtLog = new System.Windows.Forms.TextBox();
+        this.txtErrorLog = new System.Windows.Forms.TextBox();
+
         this.panelTop.SuspendLayout();
         this.toolStrip.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)(this.olvSites)).BeginInit();
         this.panelBottom.SuspendLayout();
+        this.panelLog.SuspendLayout();
+        ((System.ComponentModel.ISupportInitialize)(this.splitContainerLog)).BeginInit();
+        this.splitContainerLog.Panel1.SuspendLayout();
+        this.splitContainerLog.Panel2.SuspendLayout();
+        this.splitContainerLog.SuspendLayout();
         this.SuspendLayout();
 
         //
@@ -325,16 +336,69 @@ partial class SiteManagementForm
         this.lblLogoProgress.Visible = false;
 
         //
+        // panelLog
+        //
+        this.panelLog.Controls.Add(this.splitContainerLog);
+        this.panelLog.Dock = System.Windows.Forms.DockStyle.Bottom;
+        this.panelLog.Location = new System.Drawing.Point(0, 400);
+        this.panelLog.Name = "panelLog";
+        this.panelLog.Size = new System.Drawing.Size(1100, 100);
+        this.panelLog.TabIndex = 3;
+
+        //
+        // splitContainerLog
+        //
+        this.splitContainerLog.Dock = System.Windows.Forms.DockStyle.Fill;
+        this.splitContainerLog.Location = new System.Drawing.Point(0, 0);
+        this.splitContainerLog.Name = "splitContainerLog";
+        this.splitContainerLog.Panel1.Controls.Add(this.txtLog);
+        this.splitContainerLog.Panel2.Controls.Add(this.txtErrorLog);
+        this.splitContainerLog.Size = new System.Drawing.Size(1100, 100);
+        this.splitContainerLog.SplitterDistance = 700;
+        this.splitContainerLog.TabIndex = 0;
+
+        //
+        // txtLog
+        //
+        this.txtLog.BackColor = System.Drawing.Color.FromArgb(30, 30, 30);
+        this.txtLog.Dock = System.Windows.Forms.DockStyle.Fill;
+        this.txtLog.Font = new System.Drawing.Font("Consolas", 8.25F);
+        this.txtLog.ForeColor = System.Drawing.Color.LightGreen;
+        this.txtLog.Location = new System.Drawing.Point(0, 0);
+        this.txtLog.Multiline = true;
+        this.txtLog.Name = "txtLog";
+        this.txtLog.ReadOnly = true;
+        this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+        this.txtLog.Size = new System.Drawing.Size(700, 100);
+        this.txtLog.TabIndex = 0;
+
+        //
+        // txtErrorLog
+        //
+        this.txtErrorLog.BackColor = System.Drawing.Color.FromArgb(50, 20, 20);
+        this.txtErrorLog.Dock = System.Windows.Forms.DockStyle.Fill;
+        this.txtErrorLog.Font = new System.Drawing.Font("Consolas", 8.25F);
+        this.txtErrorLog.ForeColor = System.Drawing.Color.OrangeRed;
+        this.txtErrorLog.Location = new System.Drawing.Point(0, 0);
+        this.txtErrorLog.Multiline = true;
+        this.txtErrorLog.Name = "txtErrorLog";
+        this.txtErrorLog.ReadOnly = true;
+        this.txtErrorLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+        this.txtErrorLog.Size = new System.Drawing.Size(396, 100);
+        this.txtErrorLog.TabIndex = 0;
+
+        //
         // SiteManagementForm
         //
         this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         this.CancelButton = this.btnCancel;
-        this.ClientSize = new System.Drawing.Size(1100, 550);
+        this.ClientSize = new System.Drawing.Size(1100, 580);
         this.Controls.Add(this.olvSites);
+        this.Controls.Add(this.panelLog);
         this.Controls.Add(this.panelTop);
         this.Controls.Add(this.panelBottom);
-        this.MinimumSize = new System.Drawing.Size(900, 400);
+        this.MinimumSize = new System.Drawing.Size(900, 500);
         this.Name = "SiteManagementForm";
         this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
         this.Text = "Site Management - Batch Edit & Import";
@@ -346,6 +410,13 @@ partial class SiteManagementForm
         ((System.ComponentModel.ISupportInitialize)(this.olvSites)).EndInit();
         this.panelBottom.ResumeLayout(false);
         this.panelBottom.PerformLayout();
+        this.splitContainerLog.Panel1.ResumeLayout(false);
+        this.splitContainerLog.Panel1.PerformLayout();
+        this.splitContainerLog.Panel2.ResumeLayout(false);
+        this.splitContainerLog.Panel2.PerformLayout();
+        ((System.ComponentModel.ISupportInitialize)(this.splitContainerLog)).EndInit();
+        this.splitContainerLog.ResumeLayout(false);
+        this.panelLog.ResumeLayout(false);
         this.ResumeLayout(false);
     }
 
@@ -377,4 +448,8 @@ partial class SiteManagementForm
     private System.Windows.Forms.Label lblStatus;
     private System.Windows.Forms.ProgressBar progressLogos;
     private System.Windows.Forms.Label lblLogoProgress;
+    private System.Windows.Forms.Panel panelLog;
+    private System.Windows.Forms.SplitContainer splitContainerLog;
+    private System.Windows.Forms.TextBox txtLog;
+    private System.Windows.Forms.TextBox txtErrorLog;
 }

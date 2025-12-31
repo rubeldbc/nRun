@@ -1,16 +1,17 @@
 using System.Text.Json;
 using nRun.Models;
+using nRun.Services.Interfaces;
 
 namespace nRun.Data;
 
 /// <summary>
 /// Manages application settings stored in local JSON file
 /// </summary>
-public static class SettingsManager
+public class SettingsManager : ISettingsManager
 {
-    private static readonly string SettingsFolder = Path.Combine(Application.StartupPath, "Settings");
-    private static readonly string SettingsFile = Path.Combine(SettingsFolder, "app_settings.json");
-    private static readonly object _lock = new();
+    private readonly string _settingsFolder;
+    private readonly string _settingsFile;
+    private readonly object _lock = new();
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -18,29 +19,35 @@ public static class SettingsManager
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public static void Initialize()
+    public SettingsManager()
     {
-        if (!Directory.Exists(SettingsFolder))
+        _settingsFolder = Path.Combine(Application.StartupPath, "Settings");
+        _settingsFile = Path.Combine(_settingsFolder, "app_settings.json");
+    }
+
+    public void Initialize()
+    {
+        if (!Directory.Exists(_settingsFolder))
         {
-            Directory.CreateDirectory(SettingsFolder);
+            Directory.CreateDirectory(_settingsFolder);
         }
 
         // Create default settings if not exists
-        if (!File.Exists(SettingsFile))
+        if (!File.Exists(_settingsFile))
         {
             SaveSettings(new AppSettings());
         }
     }
 
-    public static AppSettings LoadSettings()
+    public AppSettings LoadSettings()
     {
         lock (_lock)
         {
             try
             {
-                if (File.Exists(SettingsFile))
+                if (File.Exists(_settingsFile))
                 {
-                    var json = File.ReadAllText(SettingsFile);
+                    var json = File.ReadAllText(_settingsFile);
                     return JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions) ?? new AppSettings();
                 }
             }
@@ -52,21 +59,21 @@ public static class SettingsManager
         }
     }
 
-    public static void SaveSettings(AppSettings settings)
+    public void SaveSettings(AppSettings settings)
     {
         lock (_lock)
         {
-            if (!Directory.Exists(SettingsFolder))
+            if (!Directory.Exists(_settingsFolder))
             {
-                Directory.CreateDirectory(SettingsFolder);
+                Directory.CreateDirectory(_settingsFolder);
             }
 
             var json = JsonSerializer.Serialize(settings, _jsonOptions);
-            File.WriteAllText(SettingsFile, json);
+            File.WriteAllText(_settingsFile, json);
         }
     }
 
-    public static void UpdateScrapingSettings(int checkIntervalMinutes, int delayBetweenLinksSeconds,
+    public void UpdateScrapingSettings(int checkIntervalMinutes, int delayBetweenLinksSeconds,
         int maxArticlesPerSite, int browserTimeoutSeconds, bool useHeadless, bool autoStart)
     {
         var settings = LoadSettings();

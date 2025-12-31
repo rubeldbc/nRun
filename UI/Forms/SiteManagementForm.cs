@@ -1,6 +1,5 @@
 using System.Text;
 using BrightIdeasSoftware;
-using nRun.Data;
 using nRun.Models;
 using nRun.Services;
 
@@ -12,6 +11,9 @@ public partial class SiteManagementForm : Form
     private readonly HashSet<string> _modifiedSiteIds = new();
     private readonly List<SiteInfo> _newSites = new();
     private readonly List<string> _deletedSiteIds = new();
+    private bool _isDownloadingLogos = false;
+
+    private bool HasUnsavedChanges => _newSites.Count > 0 || _modifiedSiteIds.Count > 0 || _deletedSiteIds.Count > 0;
 
     public SiteManagementForm()
     {
@@ -32,6 +34,35 @@ public partial class SiteManagementForm : Form
         btnCancel.Click += BtnCancel_Click;
 
         olvSites.CellEditFinished += OlvSites_CellEditFinished;
+        this.FormClosing += SiteManagementForm_FormClosing;
+    }
+
+    private void SiteManagementForm_FormClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (_isDownloadingLogos)
+        {
+            MessageBox.Show("Please wait until logo downloads are complete.", "Download in Progress",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            e.Cancel = true;
+        }
+    }
+
+    private void Log(string message, string level = "INFO")
+    {
+        var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+        var logLine = $"[{timestamp}] [{level}] {message}{Environment.NewLine}";
+
+        txtLog.AppendText(logLine);
+        txtLog.SelectionStart = txtLog.Text.Length;
+        txtLog.ScrollToCaret();
+
+        // Also log errors and warnings to the error log
+        if (level == "ERROR" || level == "WARN")
+        {
+            txtErrorLog.AppendText(logLine);
+            txtErrorLog.SelectionStart = txtErrorLog.Text.Length;
+            txtErrorLog.ScrollToCaret();
+        }
     }
 
     private void SetupObjectListView()
@@ -77,7 +108,7 @@ public partial class SiteManagementForm : Form
             // Auto-set logo name from URL
             if (!string.IsNullOrEmpty(site.SiteLink))
             {
-                site.SiteLogo = LogoDownloadService.ExtractLogoNameFromUrl(site.SiteLink);
+                site.SiteLogo = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(site.SiteLink);
             }
             MarkAsModified(site);
         };
@@ -115,7 +146,7 @@ public partial class SiteManagementForm : Form
 
     private void LoadSites()
     {
-        _sites = DatabaseService.GetAllSites();
+        _sites = ServiceContainer.Database.GetAllSites();
         _modifiedSiteIds.Clear();
         _newSites.Clear();
         _deletedSiteIds.Clear();
@@ -140,9 +171,7 @@ public partial class SiteManagementForm : Form
             parts.Add($"{_deletedSiteIds.Count} to delete");
 
         lblStatus.Text = string.Join(" | ", parts);
-
-        bool hasChanges = _newSites.Count > 0 || _modifiedSiteIds.Count > 0 || _deletedSiteIds.Count > 0;
-        lblStatus.ForeColor = hasChanges ? Color.Blue : SystemColors.ControlText;
+        lblStatus.ForeColor = HasUnsavedChanges ? Color.Blue : SystemColors.ControlText;
     }
 
     private void OlvSites_CellEditFinished(object? sender, CellEditEventArgs e)
@@ -280,7 +309,7 @@ public partial class SiteManagementForm : Form
             if (!string.IsNullOrWhiteSpace(site.SiteName) && !string.IsNullOrWhiteSpace(site.SiteLink))
             {
                 // Auto-set logo name from URL
-                site.SiteLogo = LogoDownloadService.ExtractLogoNameFromUrl(site.SiteLink);
+                site.SiteLogo = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(site.SiteLink);
                 sites.Add(site);
             }
         }
@@ -444,28 +473,30 @@ public partial class SiteManagementForm : Form
 
     private void BtnRefresh_Click(object? sender, EventArgs e)
     {
-        bool hasChanges = _newSites.Count > 0 || _modifiedSiteIds.Count > 0 || _deletedSiteIds.Count > 0;
-
-        if (hasChanges)
-        {
-            var result = MessageBox.Show(
-                "You have unsaved changes. Refreshing will discard them.\n\nContinue?",
-                "Unsaved Changes",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
-
-            if (result != DialogResult.Yes)
-                return;
-        }
+        if (!ConfirmDiscardChanges("Refreshing will discard them."))
+            return;
 
         LoadSites();
+    }
+
+    private bool ConfirmDiscardChanges(string action)
+    {
+        if (!HasUnsavedChanges) return true;
+
+        var result = MessageBox.Show(
+            $"You have unsaved changes. {action}\n\nContinue?",
+            "Unsaved Changes",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        return result == DialogResult.Yes;
     }
 
     #endregion
 
     #region Save/Cancel
 
-    private void BtnSaveAll_Click(object? sender, EventArgs e)
+    private async void BtnSaveAll_Click(object? sender, EventArgs e)
     {
         // Validate all sites
         var errors = new List<string>();
@@ -507,7 +538,7 @@ public partial class SiteManagementForm : Form
             // Delete marked sites
             foreach (var siteId in _deletedSiteIds)
             {
-                DatabaseService.DeleteSite(siteId);
+                ServiceContainer.Database.DeleteSite(siteId);
                 deletedCount++;
             }
 
@@ -517,9 +548,9 @@ public partial class SiteManagementForm : Form
                 // Ensure logo name is set from URL
                 if (string.IsNullOrEmpty(site.SiteLogo) && !string.IsNullOrEmpty(site.SiteLink))
                 {
-                    site.SiteLogo = LogoDownloadService.ExtractLogoNameFromUrl(site.SiteLink);
+                    site.SiteLogo = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(site.SiteLink);
                 }
-                DatabaseService.AddSite(site);
+                ServiceContainer.Database.AddSite(site);
                 sitesNeedingLogos.Add(site);
                 addedCount++;
             }
@@ -533,9 +564,9 @@ public partial class SiteManagementForm : Form
                     // Ensure logo name is set from URL
                     if (string.IsNullOrEmpty(site.SiteLogo) && !string.IsNullOrEmpty(site.SiteLink))
                     {
-                        site.SiteLogo = LogoDownloadService.ExtractLogoNameFromUrl(site.SiteLink);
+                        site.SiteLogo = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(site.SiteLink);
                     }
-                    DatabaseService.UpdateSite(site);
+                    ServiceContainer.Database.UpdateSite(site);
                     sitesNeedingLogos.Add(site);
                     updatedCount++;
                 }
@@ -547,14 +578,23 @@ public partial class SiteManagementForm : Form
             _deletedSiteIds.Clear();
             UpdateStatus();
 
-            // Download logos for all saved sites in background
+            Log($"Saved {addedCount} new, {updatedCount} updated, {deletedCount} deleted sites.");
+
+            // Download logos for all saved sites (await to prevent form closing)
             if (sitesNeedingLogos.Count > 0)
             {
-                _ = DownloadLogosAsync(sitesNeedingLogos);
+                Log($"Starting logo download for {sitesNeedingLogos.Count} sites...");
+                btnSaveAll.Enabled = false;
+                btnCancel.Enabled = false;
+
+                await DownloadLogosAsync(sitesNeedingLogos);
+
+                btnSaveAll.Enabled = true;
+                btnCancel.Enabled = true;
             }
 
             MessageBox.Show(
-                $"Changes saved successfully!\n\nAdded: {addedCount}\nUpdated: {updatedCount}\nDeleted: {deletedCount}\n\nLogos are being downloaded in background...",
+                $"Changes saved successfully!\n\nAdded: {addedCount}\nUpdated: {updatedCount}\nDeleted: {deletedCount}",
                 "Save Complete",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -570,19 +610,8 @@ public partial class SiteManagementForm : Form
 
     private void BtnCancel_Click(object? sender, EventArgs e)
     {
-        bool hasChanges = _newSites.Count > 0 || _modifiedSiteIds.Count > 0 || _deletedSiteIds.Count > 0;
-
-        if (hasChanges)
-        {
-            var result = MessageBox.Show(
-                "You have unsaved changes. Discard them?",
-                "Unsaved Changes",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
-
-            if (result != DialogResult.Yes)
-                return;
-        }
+        if (!ConfirmDiscardChanges("Discard them?"))
+            return;
 
         this.DialogResult = DialogResult.Cancel;
         this.Close();
@@ -597,6 +626,8 @@ public partial class SiteManagementForm : Form
         if (sites.Count == 0)
             return;
 
+        _isDownloadingLogos = true;
+
         // Show progress controls
         progressLogos.Visible = true;
         lblLogoProgress.Visible = true;
@@ -604,6 +635,8 @@ public partial class SiteManagementForm : Form
         progressLogos.Value = 0;
 
         int current = 0;
+        int successCount = 0;
+        int failCount = 0;
 
         foreach (var site in sites)
         {
@@ -612,17 +645,30 @@ public partial class SiteManagementForm : Form
             if (string.IsNullOrEmpty(site.SiteLink) || string.IsNullOrEmpty(site.SiteLogo))
             {
                 progressLogos.Value = current;
+                Log($"Skipped logo for {site.SiteName} - missing URL or logo name", "WARN");
                 continue;
             }
 
             try
             {
                 lblLogoProgress.Text = $"Downloading logo {current}/{sites.Count}: {site.SiteName}";
-                await LogoDownloadService.DownloadLogoAsync(site.SiteLink, site.SiteName, site.SiteLogo);
+                var (logoPath, logoName) = await ServiceContainer.LogoDownload.DownloadLogoAsync(site.SiteLink, site.SiteName, site.SiteLogo);
+
+                if (!string.IsNullOrEmpty(logoPath))
+                {
+                    Log($"Downloaded logo: {site.SiteName} -> {logoName}.webp");
+                    successCount++;
+                }
+                else
+                {
+                    Log($"Could not download logo for: {site.SiteName}", "WARN");
+                    failCount++;
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore individual logo download failures
+                Log($"Error downloading logo for {site.SiteName}: {ex.Message}", "ERROR");
+                failCount++;
             }
 
             progressLogos.Value = current;
@@ -631,6 +677,9 @@ public partial class SiteManagementForm : Form
         // Hide progress controls
         progressLogos.Visible = false;
         lblLogoProgress.Visible = false;
+        _isDownloadingLogos = false;
+
+        Log($"Logo download complete: {successCount} succeeded, {failCount} failed");
     }
 
     #endregion
