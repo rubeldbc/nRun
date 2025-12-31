@@ -35,6 +35,7 @@ partial class MainForm
         olvArticles = new BrightIdeasSoftware.ObjectListView();
         olvColTitle = new BrightIdeasSoftware.OLVColumn();
         olvColSite = new BrightIdeasSoftware.OLVColumn();
+        olvColSiteLogo = new BrightIdeasSoftware.OLVColumn();
         olvColDate = new BrightIdeasSoftware.OLVColumn();
         contextMenuArticles = new ContextMenuStrip(components);
         menuItemOpenUrl = new ToolStripMenuItem();
@@ -60,6 +61,9 @@ partial class MainForm
         toolStripSeparator2 = new ToolStripSeparator();
         btnSettings = new ToolStripButton();
         toolStripSeparator3 = new ToolStripSeparator();
+        btnMemuraiSync = new ToolStripButton();
+        btnMemuraiView = new ToolStripButton();
+        toolStripSeparator4 = new ToolStripSeparator();
         lblStatus = new ToolStripLabel();
         statusStrip = new StatusStrip();
         statusLabel = new ToolStripStatusLabel();
@@ -228,9 +232,10 @@ partial class MainForm
         // 
         olvArticles.AllColumns.Add(olvColTitle);
         olvArticles.AllColumns.Add(olvColSite);
+        olvArticles.AllColumns.Add(olvColSiteLogo);
         olvArticles.AllColumns.Add(olvColDate);
         olvArticles.CellEditUseWholeCell = false;
-        olvArticles.Columns.AddRange(new ColumnHeader[] { olvColTitle, olvColSite, olvColDate });
+        olvArticles.Columns.AddRange(new ColumnHeader[] { olvColTitle, olvColSite, olvColSiteLogo, olvColDate });
         olvArticles.ContextMenuStrip = contextMenuArticles;
         olvArticles.Dock = DockStyle.Fill;
         olvArticles.FullRowSelect = true;
@@ -248,13 +253,19 @@ partial class MainForm
         olvColTitle.AspectName = "NewsTitle";
         olvColTitle.Text = "Title";
         olvColTitle.Width = 450;
-        // 
+        //
         // olvColSite
-        // 
+        //
         olvColSite.AspectName = "SiteName";
         olvColSite.Text = "Source";
         olvColSite.Width = 150;
-        // 
+        //
+        // olvColSiteLogo
+        //
+        olvColSiteLogo.AspectName = "SiteLogo";
+        olvColSiteLogo.Text = "Logo";
+        olvColSiteLogo.Width = 150;
+        //
         // olvColDate
         // 
         olvColDate.AspectName = "CreatedAtDisplay";
@@ -438,10 +449,10 @@ partial class MainForm
         btnClearErrorLog.TabIndex = 1;
         btnClearErrorLog.Text = "Clear";
         btnClearErrorLog.UseVisualStyleBackColor = false;
-        // 
+        //
         // toolStripMain
-        // 
-        toolStripMain.Items.AddRange(new ToolStripItem[] { btnStartStop, btnScrapeNow, toolStripSeparator2, btnSettings, toolStripSeparator3, lblStatus });
+        //
+        toolStripMain.Items.AddRange(new ToolStripItem[] { btnStartStop, btnScrapeNow, toolStripSeparator2, btnSettings, toolStripSeparator3, btnMemuraiSync, btnMemuraiView, toolStripSeparator4, lblStatus });
         toolStripMain.Location = new Point(0, 0);
         toolStripMain.Name = "toolStripMain";
         toolStripMain.Size = new Size(1000, 25);
@@ -476,14 +487,38 @@ partial class MainForm
         btnSettings.Size = new Size(53, 22);
         btnSettings.Text = "Settings";
         btnSettings.ToolTipText = "Open settings";
-        // 
+        //
         // toolStripSeparator3
-        // 
+        //
         toolStripSeparator3.Name = "toolStripSeparator3";
         toolStripSeparator3.Size = new Size(6, 25);
-        // 
+        //
+        // btnMemuraiSync
+        //
+        btnMemuraiSync.DisplayStyle = ToolStripItemDisplayStyle.Text;
+        btnMemuraiSync.Enabled = false;
+        btnMemuraiSync.ForeColor = Color.Gray;
+        btnMemuraiSync.Name = "btnMemuraiSync";
+        btnMemuraiSync.Size = new Size(82, 22);
+        btnMemuraiSync.Text = "Memurai Sync";
+        btnMemuraiSync.ToolTipText = "Start/Stop syncing news to Memurai server";
+        //
+        // btnMemuraiView
+        //
+        btnMemuraiView.DisplayStyle = ToolStripItemDisplayStyle.Text;
+        btnMemuraiView.ForeColor = Color.DarkCyan;
+        btnMemuraiView.Name = "btnMemuraiView";
+        btnMemuraiView.Size = new Size(82, 22);
+        btnMemuraiView.Text = "View Memurai";
+        btnMemuraiView.ToolTipText = "View data stored in Memurai server";
+        //
+        // toolStripSeparator4
+        //
+        toolStripSeparator4.Name = "toolStripSeparator4";
+        toolStripSeparator4.Size = new Size(6, 25);
+        //
         // lblStatus
-        // 
+        //
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(39, 22);
         lblStatus.Text = "Ready";
@@ -589,6 +624,7 @@ partial class MainForm
     private BrightIdeasSoftware.ObjectListView olvArticles;
     private BrightIdeasSoftware.OLVColumn olvColTitle;
     private BrightIdeasSoftware.OLVColumn olvColSite;
+    private BrightIdeasSoftware.OLVColumn olvColSiteLogo;
     private BrightIdeasSoftware.OLVColumn olvColDate;
     private System.Windows.Forms.ToolStrip toolStripMain;
     private System.Windows.Forms.ToolStripButton btnStartStop;
@@ -596,6 +632,9 @@ partial class MainForm
     private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
     private System.Windows.Forms.ToolStripButton btnSettings;
     private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
+    private System.Windows.Forms.ToolStripButton btnMemuraiSync;
+    private System.Windows.Forms.ToolStripButton btnMemuraiView;
+    private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
     private System.Windows.Forms.ToolStripLabel lblStatus;
     private System.Windows.Forms.StatusStrip statusStrip;
     private System.Windows.Forms.ToolStripStatusLabel statusLabel;

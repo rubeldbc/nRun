@@ -243,6 +243,7 @@ public class NewsScraperService : IDisposable
             {
                 SiteId = site.SiteId,
                 SiteName = site.SiteName,
+                SiteLogo = site.SiteLogo,
                 NewsTitle = CleanText(title),
                 NewsUrl = url,
                 NewsText = CleanText(body),

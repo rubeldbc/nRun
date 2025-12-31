@@ -18,6 +18,7 @@ public partial class SettingsForm : Form
         btnDatabase.Click += BtnDatabase_Click;
         btnCheckVersion.Click += BtnCheckVersion_Click;
         btnDownloadDriver.Click += BtnDownloadDriver_Click;
+        btnTestMemurai.Click += BtnTestMemurai_Click;
     }
 
     private void LoadSettings()
@@ -31,6 +32,12 @@ public partial class SettingsForm : Form
         numMaxDisplayed.Value = settings.MaxDisplayedArticles;
         chkUseHeadless.Checked = settings.UseHeadlessBrowser;
         chkAutoStart.Checked = settings.AutoStartScraping;
+
+        // Memurai settings
+        txtMemuraiHost.Text = settings.MemuraiHost;
+        numMemuraiPort.Value = settings.MemuraiPort;
+        txtMemuraiPassword.Text = settings.MemuraiPassword;
+        numMemuraiSyncInterval.Value = settings.MemuraiSyncIntervalSeconds;
     }
 
     private void LoadChromeVersionInfo()
@@ -151,7 +158,16 @@ public partial class SettingsForm : Form
             settings.UseHeadlessBrowser = chkUseHeadless.Checked;
             settings.AutoStartScraping = chkAutoStart.Checked;
 
+            // Memurai settings
+            settings.MemuraiHost = txtMemuraiHost.Text.Trim();
+            settings.MemuraiPort = (int)numMemuraiPort.Value;
+            settings.MemuraiPassword = txtMemuraiPassword.Text;
+            settings.MemuraiSyncIntervalSeconds = (int)numMemuraiSyncInterval.Value;
+
             ServiceContainer.Settings.SaveSettings(settings);
+
+            // Update Memurai service settings
+            ServiceContainer.Memurai.UpdateSettings();
 
             this.DialogResult = DialogResult.OK;
             this.Close();
@@ -159,6 +175,45 @@ public partial class SettingsForm : Form
         catch (Exception ex)
         {
             MessageBox.Show($"Error saving settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async void BtnTestMemurai_Click(object? sender, EventArgs e)
+    {
+        btnTestMemurai.Enabled = false;
+        lblMemuraiStatus.Text = "Testing...";
+        lblMemuraiStatus.ForeColor = Color.Black;
+
+        try
+        {
+            // Temporarily update settings for testing
+            var settings = ServiceContainer.Settings.LoadSettings();
+            settings.MemuraiHost = txtMemuraiHost.Text.Trim();
+            settings.MemuraiPort = (int)numMemuraiPort.Value;
+            settings.MemuraiPassword = txtMemuraiPassword.Text;
+            ServiceContainer.Settings.SaveSettings(settings);
+
+            var success = await ServiceContainer.Memurai.TestConnectionAsync();
+
+            if (success)
+            {
+                lblMemuraiStatus.Text = "Connected!";
+                lblMemuraiStatus.ForeColor = Color.Green;
+            }
+            else
+            {
+                lblMemuraiStatus.Text = "Connection failed";
+                lblMemuraiStatus.ForeColor = Color.Red;
+            }
+        }
+        catch (Exception ex)
+        {
+            lblMemuraiStatus.Text = $"Error: {ex.Message}";
+            lblMemuraiStatus.ForeColor = Color.Red;
+        }
+        finally
+        {
+            btnTestMemurai.Enabled = true;
         }
     }
 

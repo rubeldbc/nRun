@@ -8,6 +8,7 @@ public class NewsInfo
     public long Serial { get; set; }
     public string SiteId { get; set; } = string.Empty;
     public string SiteName { get; set; } = string.Empty; // For display (joined from site_info)
+    public string? SiteLogo { get; set; } // For display (joined from site_info)
     public string NewsTitle { get; set; } = string.Empty;
     public string NewsText { get; set; } = string.Empty;
     public string NewsUrl { get; set; } = string.Empty;

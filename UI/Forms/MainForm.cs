@@ -9,7 +9,7 @@ public partial class MainForm : Form
 {
     private BackgroundScraperService? _backgroundScraper;
     private List<NewsInfo> _articles = new();
-    private const int MaxLogLines = 500;
+    private const int MaxLogLines = 5000;
 
     private int MaxDisplayedArticles => ServiceContainer.Settings.LoadSettings().MaxDisplayedArticles;
 
@@ -58,6 +58,10 @@ public partial class MainForm : Form
         btnClearLog.Click += BtnClearLog_Click;
         btnClearErrorLog.Click += BtnClearErrorLog_Click;
 
+        // Memurai buttons
+        btnMemuraiSync.Click += BtnMemuraiSync_Click;
+        btnMemuraiView.Click += BtnMemuraiView_Click;
+
         // Background scraper events
         if (_backgroundScraper != null)
         {
@@ -66,6 +70,10 @@ public partial class MainForm : Form
             _backgroundScraper.ProgressChanged += BackgroundScraper_ProgressChanged;
             _backgroundScraper.RunningStateChanged += BackgroundScraper_RunningStateChanged;
         }
+
+        // Memurai service events
+        ServiceContainer.Memurai.StatusChanged += Memurai_StatusChanged;
+        ServiceContainer.Memurai.RunningStateChanged += Memurai_RunningStateChanged;
     }
 
     private void MainForm_Load(object? sender, EventArgs e)
@@ -90,6 +98,9 @@ public partial class MainForm : Form
         LoadArticles();
         LogDebug($"Loaded {_articles.Count} articles", "INFO");
         UpdateArticleCount();
+
+        // Check Memurai connection status
+        CheckMemuraiConnection();
 
         // Auto-start if configured and connected
         var settings = ServiceContainer.Settings.LoadSettings();
@@ -131,6 +142,10 @@ public partial class MainForm : Form
             _backgroundScraper?.Stop();
             _backgroundScraper?.Dispose();
             _backgroundScraper = null;
+
+            // Stop and dispose Memurai service
+            ServiceContainer.Memurai.Stop();
+            ServiceContainer.Memurai.Dispose();
 
             // Force cleanup all Chrome/ChromeDriver processes
             ProcessCleanupService.ForceCleanupAll();
@@ -245,12 +260,43 @@ public partial class MainForm : Form
         LogDebug($"Loading articles with limit: {limit}", "INFO");
         _articles = ServiceContainer.Database.GetRecentNews(limit);
         olvArticles.SetObjects(_articles);
+        UpdateMemuraiButtonState();
     }
 
     private void UpdateArticleCount()
     {
         var count = ServiceContainer.Database.GetNewsCount();
         statusArticleCount.Text = $"{count} articles";
+    }
+
+    private void UpdateMemuraiButtonState()
+    {
+        bool hasArticles = _articles.Count > 0;
+
+        // Stop Memurai sync if all articles are removed
+        if (!hasArticles && ServiceContainer.Memurai.IsRunning)
+        {
+            ServiceContainer.Memurai.Stop();
+        }
+
+        // Enable Memurai Sync button only when there's at least one article
+        btnMemuraiSync.Enabled = hasArticles;
+    }
+
+    private async void CheckMemuraiConnection()
+    {
+        var isConnected = await ServiceContainer.Memurai.TestConnectionAsync();
+
+        if (isConnected)
+        {
+            LogDebug("Memurai server is reachable", "SUCCESS");
+            btnMemuraiSync.ToolTipText = "Start/Stop syncing news to Memurai server";
+        }
+        else
+        {
+            LogDebug("Memurai server not reachable - check settings", "WARN");
+            btnMemuraiSync.ToolTipText = "Memurai server not connected - check settings";
+        }
     }
 
     private void AddArticleToTop(NewsInfo article)
@@ -272,6 +318,13 @@ public partial class MainForm : Form
         olvArticles.SetObjects(_articles);
         olvArticles.EnsureModelVisible(article);
         UpdateArticleCount();
+        UpdateMemuraiButtonState();
+
+        // Update Memurai service with current articles if running
+        if (ServiceContainer.Memurai.IsRunning && ServiceContainer.Memurai is MemuraiService ms)
+        {
+            ms.UpdateArticles(_articles);
+        }
     }
 
     private NewsInfo? GetSelectedArticle()
@@ -328,6 +381,13 @@ public partial class MainForm : Form
             _articles.Remove(article);
             olvArticles.RemoveObject(article);
             UpdateArticleCount();
+            UpdateMemuraiButtonState();
+
+            // Update Memurai service if running
+            if (ServiceContainer.Memurai.IsRunning && ServiceContainer.Memurai is MemuraiService ms)
+            {
+                ms.UpdateArticles(_articles);
+            }
         }
     }
 
@@ -475,6 +535,144 @@ public partial class MainForm : Form
 
         btnStartStop.Text = isRunning ? "Stop" : "Start";
         btnStartStop.ForeColor = isRunning ? Color.Red : Color.Green;
+    }
+
+    #endregion
+
+    #region Memurai Sync
+
+    private async void BtnMemuraiSync_Click(object? sender, EventArgs e)
+    {
+        var memurai = ServiceContainer.Memurai;
+
+        if (memurai.IsRunning)
+        {
+            memurai.Stop();
+        }
+        else
+        {
+            // Test connection first
+            btnMemuraiSync.Enabled = false;
+            var isConnected = await memurai.TestConnectionAsync();
+
+            if (!isConnected)
+            {
+                MessageBox.Show(
+                    "Cannot connect to Memurai server.\n\nPlease check your Memurai settings and ensure the server is running.",
+                    "Connection Failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                btnMemuraiSync.Enabled = true;
+                return;
+            }
+
+            // Update the Memurai service with current articles before starting
+            if (memurai is MemuraiService ms)
+            {
+                ms.UpdateArticles(_articles);
+            }
+            memurai.Start();
+
+            // Do an immediate sync
+            await memurai.SyncNowAsync(_articles);
+            btnMemuraiSync.Enabled = true;
+        }
+    }
+
+    private async void BtnMemuraiView_Click(object? sender, EventArgs e)
+    {
+        btnMemuraiView.Enabled = false;
+        btnMemuraiView.Text = "Loading...";
+
+        try
+        {
+            var data = await ServiceContainer.Memurai.GetStoredDataAsync();
+
+            using var form = new Form
+            {
+                Text = "Memurai Data Viewer",
+                Size = new Size(800, 600),
+                StartPosition = FormStartPosition.CenterParent,
+                MinimizeBox = false,
+                MaximizeBox = true,
+                ShowInTaskbar = false
+            };
+
+            var txtData = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Multiline = true,
+                ScrollBars = ScrollBars.Both,
+                Font = new Font("Consolas", 10F),
+                ReadOnly = true,
+                BackColor = Color.FromArgb(30, 30, 30),
+                ForeColor = Color.LightGreen,
+                Text = data ?? "No data available",
+                WordWrap = false
+            };
+
+            var btnClose = new Button
+            {
+                Text = "Close",
+                Dock = DockStyle.Bottom,
+                Height = 35
+            };
+            btnClose.Click += (s, args) => form.Close();
+
+            var btnRefresh = new Button
+            {
+                Text = "Refresh",
+                Dock = DockStyle.Bottom,
+                Height = 35
+            };
+            btnRefresh.Click += async (s, args) =>
+            {
+                btnRefresh.Enabled = false;
+                btnRefresh.Text = "Refreshing...";
+                var newData = await ServiceContainer.Memurai.GetStoredDataAsync();
+                txtData.Text = newData ?? "No data available";
+                btnRefresh.Text = "Refresh";
+                btnRefresh.Enabled = true;
+            };
+
+            form.Controls.Add(txtData);
+            form.Controls.Add(btnRefresh);
+            form.Controls.Add(btnClose);
+
+            form.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error viewing Memurai data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            btnMemuraiView.Text = "View Memurai";
+            btnMemuraiView.Enabled = true;
+        }
+    }
+
+    private void Memurai_StatusChanged(object? sender, string status)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => Memurai_StatusChanged(sender, status));
+            return;
+        }
+
+        LogDebug($"[Memurai] {status}", status.Contains("error", StringComparison.OrdinalIgnoreCase) ? "ERROR" : "INFO");
+    }
+
+    private void Memurai_RunningStateChanged(object? sender, bool isRunning)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => Memurai_RunningStateChanged(sender, isRunning));
+            return;
+        }
+
+        btnMemuraiSync.Text = isRunning ? "Stop Memurai" : "Memurai Sync";
+        btnMemuraiSync.ForeColor = isRunning ? Color.Red : Color.Gray;
     }
 
     #endregion

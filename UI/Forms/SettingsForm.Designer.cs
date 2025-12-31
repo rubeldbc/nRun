@@ -35,6 +35,18 @@ partial class SettingsForm
         chkUseHeadless = new CheckBox();
         chkAutoStart = new CheckBox();
         btnDatabase = new Button();
+        groupBoxMemurai = new GroupBox();
+        lblMemuraiHost = new Label();
+        txtMemuraiHost = new TextBox();
+        lblMemuraiPort = new Label();
+        numMemuraiPort = new NumericUpDown();
+        lblMemuraiPassword = new Label();
+        txtMemuraiPassword = new TextBox();
+        lblMemuraiSyncInterval = new Label();
+        numMemuraiSyncInterval = new NumericUpDown();
+        lblMemuraiSyncSeconds = new Label();
+        btnTestMemurai = new Button();
+        lblMemuraiStatus = new Label();
         groupBoxChrome = new GroupBox();
         lblChromeLbl = new Label();
         lblChromeVersion = new Label();
@@ -53,6 +65,9 @@ partial class SettingsForm
         ((System.ComponentModel.ISupportInitialize)numMaxArticles).BeginInit();
         ((System.ComponentModel.ISupportInitialize)numBrowserTimeout).BeginInit();
         ((System.ComponentModel.ISupportInitialize)numMaxDisplayed).BeginInit();
+        groupBoxMemurai.SuspendLayout();
+        ((System.ComponentModel.ISupportInitialize)numMemuraiPort).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)numMemuraiSyncInterval).BeginInit();
         groupBoxChrome.SuspendLayout();
         panelButtons.SuspendLayout();
         SuspendLayout();
@@ -241,9 +256,128 @@ partial class SettingsForm
         btnDatabase.TabIndex = 16;
         btnDatabase.Text = "Database Connection...";
         btnDatabase.UseVisualStyleBackColor = true;
-        // 
+        //
+        // groupBoxMemurai
+        //
+        groupBoxMemurai.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        groupBoxMemurai.Controls.Add(lblMemuraiHost);
+        groupBoxMemurai.Controls.Add(txtMemuraiHost);
+        groupBoxMemurai.Controls.Add(lblMemuraiPort);
+        groupBoxMemurai.Controls.Add(numMemuraiPort);
+        groupBoxMemurai.Controls.Add(lblMemuraiPassword);
+        groupBoxMemurai.Controls.Add(txtMemuraiPassword);
+        groupBoxMemurai.Controls.Add(lblMemuraiSyncInterval);
+        groupBoxMemurai.Controls.Add(numMemuraiSyncInterval);
+        groupBoxMemurai.Controls.Add(lblMemuraiSyncSeconds);
+        groupBoxMemurai.Controls.Add(btnTestMemurai);
+        groupBoxMemurai.Controls.Add(lblMemuraiStatus);
+        groupBoxMemurai.Location = new Point(15, 305);
+        groupBoxMemurai.Name = "groupBoxMemurai";
+        groupBoxMemurai.Size = new Size(400, 135);
+        groupBoxMemurai.TabIndex = 2;
+        groupBoxMemurai.TabStop = false;
+        groupBoxMemurai.Text = "Memurai / Redis Server";
+        //
+        // lblMemuraiHost
+        //
+        lblMemuraiHost.AutoSize = true;
+        lblMemuraiHost.Location = new Point(15, 28);
+        lblMemuraiHost.Name = "lblMemuraiHost";
+        lblMemuraiHost.Size = new Size(35, 15);
+        lblMemuraiHost.TabIndex = 0;
+        lblMemuraiHost.Text = "Host:";
+        //
+        // txtMemuraiHost
+        //
+        txtMemuraiHost.Location = new Point(80, 25);
+        txtMemuraiHost.Name = "txtMemuraiHost";
+        txtMemuraiHost.Size = new Size(130, 23);
+        txtMemuraiHost.TabIndex = 1;
+        txtMemuraiHost.Text = "localhost";
+        //
+        // lblMemuraiPort
+        //
+        lblMemuraiPort.AutoSize = true;
+        lblMemuraiPort.Location = new Point(220, 28);
+        lblMemuraiPort.Name = "lblMemuraiPort";
+        lblMemuraiPort.Size = new Size(32, 15);
+        lblMemuraiPort.TabIndex = 2;
+        lblMemuraiPort.Text = "Port:";
+        //
+        // numMemuraiPort
+        //
+        numMemuraiPort.Location = new Point(260, 25);
+        numMemuraiPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
+        numMemuraiPort.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+        numMemuraiPort.Name = "numMemuraiPort";
+        numMemuraiPort.Size = new Size(70, 23);
+        numMemuraiPort.TabIndex = 3;
+        numMemuraiPort.Value = new decimal(new int[] { 6379, 0, 0, 0 });
+        //
+        // lblMemuraiPassword
+        //
+        lblMemuraiPassword.AutoSize = true;
+        lblMemuraiPassword.Location = new Point(15, 58);
+        lblMemuraiPassword.Name = "lblMemuraiPassword";
+        lblMemuraiPassword.Size = new Size(60, 15);
+        lblMemuraiPassword.TabIndex = 4;
+        lblMemuraiPassword.Text = "Password:";
+        //
+        // txtMemuraiPassword
+        //
+        txtMemuraiPassword.Location = new Point(80, 55);
+        txtMemuraiPassword.Name = "txtMemuraiPassword";
+        txtMemuraiPassword.PasswordChar = '*';
+        txtMemuraiPassword.Size = new Size(130, 23);
+        txtMemuraiPassword.TabIndex = 5;
+        //
+        // lblMemuraiSyncInterval
+        //
+        lblMemuraiSyncInterval.AutoSize = true;
+        lblMemuraiSyncInterval.Location = new Point(220, 58);
+        lblMemuraiSyncInterval.Name = "lblMemuraiSyncInterval";
+        lblMemuraiSyncInterval.Size = new Size(34, 15);
+        lblMemuraiSyncInterval.TabIndex = 6;
+        lblMemuraiSyncInterval.Text = "Sync:";
+        //
+        // numMemuraiSyncInterval
+        //
+        numMemuraiSyncInterval.Location = new Point(260, 55);
+        numMemuraiSyncInterval.Maximum = new decimal(new int[] { 3600, 0, 0, 0 });
+        numMemuraiSyncInterval.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
+        numMemuraiSyncInterval.Name = "numMemuraiSyncInterval";
+        numMemuraiSyncInterval.Size = new Size(70, 23);
+        numMemuraiSyncInterval.TabIndex = 7;
+        numMemuraiSyncInterval.Value = new decimal(new int[] { 30, 0, 0, 0 });
+        //
+        // lblMemuraiSyncSeconds
+        //
+        lblMemuraiSyncSeconds.AutoSize = true;
+        lblMemuraiSyncSeconds.Location = new Point(335, 58);
+        lblMemuraiSyncSeconds.Name = "lblMemuraiSyncSeconds";
+        lblMemuraiSyncSeconds.Size = new Size(24, 15);
+        lblMemuraiSyncSeconds.TabIndex = 8;
+        lblMemuraiSyncSeconds.Text = "sec";
+        //
+        // btnTestMemurai
+        //
+        btnTestMemurai.Location = new Point(15, 90);
+        btnTestMemurai.Name = "btnTestMemurai";
+        btnTestMemurai.Size = new Size(100, 28);
+        btnTestMemurai.TabIndex = 9;
+        btnTestMemurai.Text = "Test Connection";
+        btnTestMemurai.UseVisualStyleBackColor = true;
+        //
+        // lblMemuraiStatus
+        //
+        lblMemuraiStatus.AutoSize = true;
+        lblMemuraiStatus.Location = new Point(125, 97);
+        lblMemuraiStatus.Name = "lblMemuraiStatus";
+        lblMemuraiStatus.Size = new Size(0, 15);
+        lblMemuraiStatus.TabIndex = 10;
+        //
         // groupBoxChrome
-        // 
+        //
         groupBoxChrome.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         groupBoxChrome.Controls.Add(lblChromeLbl);
         groupBoxChrome.Controls.Add(lblChromeVersion);
@@ -253,10 +387,10 @@ partial class SettingsForm
         groupBoxChrome.Controls.Add(btnCheckVersion);
         groupBoxChrome.Controls.Add(btnDownloadDriver);
         groupBoxChrome.Controls.Add(progressBarDownload);
-        groupBoxChrome.Location = new Point(15, 305);
+        groupBoxChrome.Location = new Point(15, 450);
         groupBoxChrome.Name = "groupBoxChrome";
         groupBoxChrome.Size = new Size(400, 145);
-        groupBoxChrome.TabIndex = 2;
+        groupBoxChrome.TabIndex = 3;
         groupBoxChrome.TabStop = false;
         groupBoxChrome.Text = "Chrome / ChromeDriver Version";
         // 
@@ -356,15 +490,15 @@ partial class SettingsForm
         btnCancel.UseVisualStyleBackColor = true;
         // 
         // panelButtons
-        // 
+        //
         panelButtons.Controls.Add(btnSave);
         panelButtons.Controls.Add(btnCancel);
         panelButtons.Dock = DockStyle.Bottom;
-        panelButtons.Location = new Point(0, 460);
+        panelButtons.Location = new Point(0, 605);
         panelButtons.Name = "panelButtons";
         panelButtons.Padding = new Padding(10);
         panelButtons.Size = new Size(430, 50);
-        panelButtons.TabIndex = 1;
+        panelButtons.TabIndex = 4;
         //
         // SettingsForm
         //
@@ -372,8 +506,9 @@ partial class SettingsForm
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         CancelButton = btnCancel;
-        ClientSize = new Size(430, 510);
+        ClientSize = new Size(430, 655);
         Controls.Add(groupBoxScraping);
+        Controls.Add(groupBoxMemurai);
         Controls.Add(groupBoxChrome);
         Controls.Add(panelButtons);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -390,6 +525,10 @@ partial class SettingsForm
         ((System.ComponentModel.ISupportInitialize)numMaxArticles).EndInit();
         ((System.ComponentModel.ISupportInitialize)numBrowserTimeout).EndInit();
         ((System.ComponentModel.ISupportInitialize)numMaxDisplayed).EndInit();
+        groupBoxMemurai.ResumeLayout(false);
+        groupBoxMemurai.PerformLayout();
+        ((System.ComponentModel.ISupportInitialize)numMemuraiPort).EndInit();
+        ((System.ComponentModel.ISupportInitialize)numMemuraiSyncInterval).EndInit();
         groupBoxChrome.ResumeLayout(false);
         groupBoxChrome.PerformLayout();
         panelButtons.ResumeLayout(false);
@@ -422,6 +561,18 @@ partial class SettingsForm
     private System.Windows.Forms.CheckBox chkUseHeadless;
     private System.Windows.Forms.CheckBox chkAutoStart;
     private System.Windows.Forms.Button btnDatabase;
+    private System.Windows.Forms.GroupBox groupBoxMemurai;
+    private System.Windows.Forms.Label lblMemuraiHost;
+    private System.Windows.Forms.TextBox txtMemuraiHost;
+    private System.Windows.Forms.Label lblMemuraiPort;
+    private System.Windows.Forms.NumericUpDown numMemuraiPort;
+    private System.Windows.Forms.Label lblMemuraiPassword;
+    private System.Windows.Forms.TextBox txtMemuraiPassword;
+    private System.Windows.Forms.Label lblMemuraiSyncInterval;
+    private System.Windows.Forms.NumericUpDown numMemuraiSyncInterval;
+    private System.Windows.Forms.Label lblMemuraiSyncSeconds;
+    private System.Windows.Forms.Button btnTestMemurai;
+    private System.Windows.Forms.Label lblMemuraiStatus;
     private System.Windows.Forms.Button btnCheckVersion;
     private System.Windows.Forms.Button btnDownloadDriver;
     private System.Windows.Forms.ProgressBar progressBarDownload;

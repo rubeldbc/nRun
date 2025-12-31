@@ -131,6 +131,32 @@ public class WebDriverService : IDisposable
             {
                 lastException = ex;
 
+                // Detect renderer timeout / page load timeout and try to stop the page load and proceed
+                var isRendererTimeout = ex is OpenQA.Selenium.WebDriverTimeoutException
+                    || (ex.Message != null && ex.Message.IndexOf("Timed out receiving message from renderer", StringComparison.OrdinalIgnoreCase) >= 0);
+
+                if (isRendererTimeout)
+                {
+                    try
+                    {
+                        var js = (IJavaScriptExecutor)GetDriver();
+                        // Stop further loading and give the page a moment
+                        js.ExecuteScript("window.stop();");
+                        Thread.Sleep(500);
+
+                        // If we have any page source content, assume partial load is acceptable and continue
+                        var src = GetDriver().PageSource;
+                        if (!string.IsNullOrEmpty(src))
+                        {
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // ignore and fall back to retry logic below
+                    }
+                }
+
                 if (attempt >= MaxRetryAttempts)
                 {
                     // No more retries

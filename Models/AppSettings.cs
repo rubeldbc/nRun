@@ -18,6 +18,12 @@ public class AppSettings
     // Display Settings
     public int MaxDisplayedArticles { get; set; } = 100;
 
+    // Memurai/Redis Settings
+    public string MemuraiHost { get; set; } = "localhost";
+    public int MemuraiPort { get; set; } = 6379;
+    public string MemuraiPassword { get; set; } = string.Empty;
+    public int MemuraiSyncIntervalSeconds { get; set; } = 30;
+
     // Database Connection Settings
     public string DbHost { get; set; } = "localhost";
     public int DbPort { get; set; } = 5432;

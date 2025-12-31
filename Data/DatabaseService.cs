@@ -356,7 +356,7 @@ public class DatabaseService : IDatabaseService
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = $@"
-                SELECT n.*, s.site_name
+                SELECT n.*, s.site_name, s.site_logo
                 FROM news_info n
                 JOIN site_info s ON n.site_id = s.site_id
                 ORDER BY n.created_at DESC
@@ -381,7 +381,7 @@ public class DatabaseService : IDatabaseService
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT n.*, s.site_name
+                SELECT n.*, s.site_name, s.site_logo
                 FROM news_info n
                 JOIN site_info s ON n.site_id = s.site_id
                 WHERE n.site_id = @siteId
@@ -408,7 +408,7 @@ public class DatabaseService : IDatabaseService
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT n.*, s.site_name
+                SELECT n.*, s.site_name, s.site_logo
                 FROM news_info n
                 JOIN site_info s ON n.site_id = s.site_id
                 WHERE n.serial = @serial";
@@ -465,6 +465,7 @@ public class DatabaseService : IDatabaseService
         Serial = reader.GetInt64(reader.GetOrdinal("serial")),
         SiteId = reader.GetString(reader.GetOrdinal("site_id")),
         SiteName = reader.GetString(reader.GetOrdinal("site_name")),
+        SiteLogo = reader.IsDBNull(reader.GetOrdinal("site_logo")) ? null : reader.GetString(reader.GetOrdinal("site_logo")),
         NewsTitle = reader.GetString(reader.GetOrdinal("news_title")),
         NewsText = reader.IsDBNull(reader.GetOrdinal("news_text")) ? "" : reader.GetString(reader.GetOrdinal("news_text")),
         NewsUrl = reader.GetString(reader.GetOrdinal("news_url")),
