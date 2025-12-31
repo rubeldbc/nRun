@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>nRun</RootNamespace>
     <AssemblyName>nRun</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,8 @@
     <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="131.0.6778.6900" />
     <PackageReference Include="ObjectListView.Official" Version="2.9.1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.67" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.8" />
   </ItemGroup>
 
 </Project>

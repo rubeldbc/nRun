@@ -14,6 +14,7 @@ public class BackgroundScraperService : IDisposable
     private bool _isRunning;
     private bool _disposed;
     private readonly object _lock = new();
+    private bool _isExecuting; // Prevent concurrent executions
 
     public bool IsRunning => _isRunning;
 
@@ -56,13 +57,55 @@ public class BackgroundScraperService : IDisposable
         {
             if (!_isRunning) return;
 
-            _cts?.Cancel();
-            _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-            _timer?.Dispose();
-            _timer = null;
+            // Cancel any ongoing operations
+            try
+            {
+                _cts?.Cancel();
+            }
+            catch { }
 
-            _scraper?.Dispose();
-            _scraper = null;
+            // Stop and dispose the timer
+            try
+            {
+                _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+                _timer?.Dispose();
+            }
+            catch { }
+            finally
+            {
+                _timer = null;
+            }
+
+            // Wait a bit for any executing operation to notice cancellation
+            // but don't wait too long
+            var waitCount = 0;
+            while (_isExecuting && waitCount < 10)
+            {
+                Thread.Sleep(100);
+                waitCount++;
+            }
+
+            // Dispose the scraper (this will close Chrome)
+            try
+            {
+                _scraper?.Dispose();
+            }
+            catch { }
+            finally
+            {
+                _scraper = null;
+            }
+
+            // Dispose the cancellation token source
+            try
+            {
+                _cts?.Dispose();
+            }
+            catch { }
+            finally
+            {
+                _cts = null;
+            }
 
             _isRunning = false;
             RunningStateChanged?.Invoke(this, false);
@@ -129,6 +172,10 @@ public class BackgroundScraperService : IDisposable
     {
         if (_scraper == null || _cts == null) return;
 
+        // Prevent concurrent executions
+        if (_isExecuting) return;
+
+        _isExecuting = true;
         try
         {
             StatusChanged?.Invoke(this, "Starting scheduled scrape...");
@@ -142,6 +189,10 @@ public class BackgroundScraperService : IDisposable
         {
             StatusChanged?.Invoke(this, $"Scrape error: {ex.Message}");
         }
+        finally
+        {
+            _isExecuting = false;
+        }
     }
 
     public void Dispose()
@@ -149,9 +200,13 @@ public class BackgroundScraperService : IDisposable
         if (!_disposed)
         {
             Stop();
-            _cts?.Dispose();
             _disposed = true;
         }
         GC.SuppressFinalize(this);
+    }
+
+    ~BackgroundScraperService()
+    {
+        Dispose();
     }
 }

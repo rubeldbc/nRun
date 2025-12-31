@@ -24,6 +24,8 @@ public static class DatabaseService
             try
             {
                 using var conn = GetConnection();
+                // Ensure required tables exist so further queries do not fail
+                EnsureTablesExist(conn);
                 _isInitialized = true;
             }
             catch
@@ -39,12 +41,71 @@ public static class DatabaseService
         try
         {
             using var conn = GetConnection();
+            EnsureTablesExist(conn);
             _isInitialized = true;
         }
         catch
         {
             _isInitialized = false;
         }
+    }
+
+    private static void EnsureTablesExist(NpgsqlConnection conn)
+    {
+        // Create tables if they do not exist. Using IF NOT EXISTS avoids errors when they already exist.
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS site_info (
+                site_id VARCHAR(20) PRIMARY KEY,
+                site_name VARCHAR(255) NOT NULL,
+                site_link VARCHAR(500) NOT NULL,
+                site_logo VARCHAR(500),
+                site_category VARCHAR(100),
+                site_country VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                article_link_selector TEXT,
+                title_selector TEXT,
+                body_selector TEXT,
+                success_count INTEGER DEFAULT 0,
+                failure_count INTEGER DEFAULT 0,
+                last_checked TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS news_info (
+                serial BIGSERIAL PRIMARY KEY,
+                site_id VARCHAR(20) NOT NULL REFERENCES site_info(site_id) ON DELETE CASCADE,
+                news_title TEXT NOT NULL,
+                news_text TEXT,
+                news_url VARCHAR(1000) NOT NULL UNIQUE,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+                check_interval_minutes INTEGER DEFAULT 5,
+                delay_between_links_seconds INTEGER DEFAULT 2,
+                max_articles_per_site INTEGER DEFAULT 10,
+                use_headless_browser BOOLEAN DEFAULT TRUE,
+                browser_timeout_seconds INTEGER DEFAULT 30,
+                auto_start_scraping BOOLEAN DEFAULT FALSE,
+                last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Create indexes if they don't exist
+            CREATE INDEX IF NOT EXISTS idx_site_info_link ON site_info(site_link);
+            CREATE INDEX IF NOT EXISTS idx_news_info_site ON news_info(site_id);
+            CREATE INDEX IF NOT EXISTS idx_news_info_created ON news_info(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_news_info_url ON news_info(news_url);
+        ";
+
+        cmd.ExecuteNonQuery();
+
+        // Ensure default app_settings row exists
+        using var insertCmd = conn.CreateCommand();
+        insertCmd.CommandText = "INSERT INTO app_settings (id) VALUES (1) ON CONFLICT DO NOTHING";
+        insertCmd.ExecuteNonQuery();
     }
 
     private static NpgsqlConnection GetConnection()

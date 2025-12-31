@@ -38,6 +38,7 @@ partial class DatabaseConnectionForm
         this.btnTest = new System.Windows.Forms.Button();
         this.btnConnect = new System.Windows.Forms.Button();
         this.btnCreateTables = new System.Windows.Forms.Button();
+        this.btnDeleteDatabase = new System.Windows.Forms.Button();
         this.btnSave = new System.Windows.Forms.Button();
         this.btnCancel = new System.Windows.Forms.Button();
 
@@ -178,10 +179,11 @@ partial class DatabaseConnectionForm
         this.panelActions.Controls.Add(this.btnTest);
         this.panelActions.Controls.Add(this.btnConnect);
         this.panelActions.Controls.Add(this.btnCreateTables);
+        this.panelActions.Controls.Add(this.btnDeleteDatabase);
         this.panelActions.Controls.Add(this.lblStatus);
         this.panelActions.Location = new System.Drawing.Point(15, 200);
         this.panelActions.Name = "panelActions";
-        this.panelActions.Size = new System.Drawing.Size(420, 40);
+        this.panelActions.Size = new System.Drawing.Size(420, 60);
         this.panelActions.TabIndex = 1;
 
         //
@@ -215,14 +217,25 @@ partial class DatabaseConnectionForm
         this.btnCreateTables.UseVisualStyleBackColor = true;
 
         //
+        // btnDeleteDatabase
+        //
+        this.btnDeleteDatabase.ForeColor = System.Drawing.Color.DarkRed;
+        this.btnDeleteDatabase.Location = new System.Drawing.Point(310, 5);
+        this.btnDeleteDatabase.Name = "btnDeleteDatabase";
+        this.btnDeleteDatabase.Size = new System.Drawing.Size(105, 28);
+        this.btnDeleteDatabase.TabIndex = 3;
+        this.btnDeleteDatabase.Text = "Delete Database";
+        this.btnDeleteDatabase.UseVisualStyleBackColor = true;
+
+        //
         // lblStatus
         //
         this.lblStatus.AutoSize = true;
         this.lblStatus.ForeColor = System.Drawing.Color.Gray;
-        this.lblStatus.Location = new System.Drawing.Point(310, 11);
+        this.lblStatus.Location = new System.Drawing.Point(15, 40);
         this.lblStatus.Name = "lblStatus";
         this.lblStatus.Size = new System.Drawing.Size(84, 15);
-        this.lblStatus.TabIndex = 3;
+        this.lblStatus.TabIndex = 4;
         this.lblStatus.Text = "Not connected";
 
         //
@@ -230,12 +243,12 @@ partial class DatabaseConnectionForm
         //
         this.txtLog.BackColor = System.Drawing.Color.Black;
         this.txtLog.ForeColor = System.Drawing.Color.LightGreen;
-        this.txtLog.Location = new System.Drawing.Point(15, 250);
+        this.txtLog.Location = new System.Drawing.Point(15, 270);
         this.txtLog.Multiline = true;
         this.txtLog.Name = "txtLog";
         this.txtLog.ReadOnly = true;
         this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-        this.txtLog.Size = new System.Drawing.Size(420, 150);
+        this.txtLog.Size = new System.Drawing.Size(420, 130);
         this.txtLog.TabIndex = 2;
         this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
 
@@ -321,6 +334,7 @@ partial class DatabaseConnectionForm
     private System.Windows.Forms.Button btnTest;
     private System.Windows.Forms.Button btnConnect;
     private System.Windows.Forms.Button btnCreateTables;
+    private System.Windows.Forms.Button btnDeleteDatabase;
     private System.Windows.Forms.Label lblStatus;
     private System.Windows.Forms.TextBox txtLog;
     private System.Windows.Forms.Panel panelButtons;

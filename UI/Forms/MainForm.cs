@@ -41,6 +41,7 @@ public partial class MainForm : Form
         btnEditSite.Click += BtnEditSite_Click;
         btnDeleteSite.Click += BtnDeleteSite_Click;
         btnRefreshSites.Click += BtnRefreshSites_Click;
+        btnManageSites.Click += BtnManageSites_Click;
         listBoxSites.DoubleClick += ListBoxSites_DoubleClick;
 
         // Article list events
@@ -55,6 +56,7 @@ public partial class MainForm : Form
 
         // Debug log events
         btnClearLog.Click += BtnClearLog_Click;
+        btnClearErrorLog.Click += BtnClearErrorLog_Click;
 
         // Background scraper events
         if (_backgroundScraper != null)
@@ -101,8 +103,20 @@ public partial class MainForm : Form
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
-        _backgroundScraper?.Stop();
-        _backgroundScraper?.Dispose();
+        try
+        {
+            // Stop and dispose background scraper
+            _backgroundScraper?.Stop();
+            _backgroundScraper?.Dispose();
+            _backgroundScraper = null;
+
+            // Force cleanup all Chrome/ChromeDriver processes
+            ProcessCleanupService.ForceCleanupAll();
+        }
+        catch
+        {
+            // Ensure we exit even if cleanup fails
+        }
     }
 
     #region Site Management
@@ -170,11 +184,32 @@ public partial class MainForm : Form
     {
         if (listBoxSites.SelectedItem is SiteInfo site)
         {
-            using var form = new SiteEditForm(site);
+            // Get all sites for navigation
+            var allSites = listBoxSites.DataSource as List<SiteInfo>;
+            var currentIndex = allSites?.IndexOf(site) ?? -1;
+
+            using var form = new SiteEditForm(site, allSites, currentIndex);
             if (form.ShowDialog(this) == DialogResult.OK)
             {
                 LoadSites();
             }
+        }
+    }
+
+    private void BtnManageSites_Click(object? sender, EventArgs e)
+    {
+        if (!DatabaseService.IsConnected)
+        {
+            MessageBox.Show("Please configure database connection first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new SiteManagementForm();
+        if (form.ShowDialog(this) == DialogResult.OK)
+        {
+            LoadSites();
+            LoadArticles();
+            UpdateArticleCount();
         }
     }
 
@@ -435,7 +470,24 @@ public partial class MainForm : Form
 
         txtDebugLog.AppendText(logLine);
 
-        // ???????? ???? ?????? ????? ????
+        // Also log errors and warnings to the error log
+        if (level == "ERROR" || level == "WARN")
+        {
+            txtErrorLog.AppendText(logLine);
+
+            // Limit error log lines
+            var errorLines = txtErrorLog.Lines;
+            if (errorLines.Length > MaxLogLines)
+            {
+                var newErrorLines = errorLines.Skip(errorLines.Length - MaxLogLines).ToArray();
+                txtErrorLog.Lines = newErrorLines;
+            }
+
+            txtErrorLog.SelectionStart = txtErrorLog.Text.Length;
+            txtErrorLog.ScrollToCaret();
+        }
+
+        // Limit main debug log lines
         var lines = txtDebugLog.Lines;
         if (lines.Length > MaxLogLines)
         {
@@ -443,7 +495,6 @@ public partial class MainForm : Form
             txtDebugLog.Lines = newLines;
         }
 
-        // ?????? ?? ???
         txtDebugLog.SelectionStart = txtDebugLog.Text.Length;
         txtDebugLog.ScrollToCaret();
     }
@@ -452,6 +503,11 @@ public partial class MainForm : Form
     {
         txtDebugLog.Clear();
         LogDebug("Log cleared", "INFO");
+    }
+
+    private void BtnClearErrorLog_Click(object? sender, EventArgs e)
+    {
+        txtErrorLog.Clear();
     }
 
     #endregion

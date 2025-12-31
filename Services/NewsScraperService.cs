@@ -389,9 +389,18 @@ public class NewsScraperService : IDisposable
     {
         if (!_disposed)
         {
-            _webDriver.Dispose();
+            try
+            {
+                _webDriver.Dispose();
+            }
+            catch { }
             _disposed = true;
         }
         GC.SuppressFinalize(this);
+    }
+
+    ~NewsScraperService()
+    {
+        Dispose();
     }
 }

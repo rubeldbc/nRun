@@ -1,6 +1,7 @@
 using Npgsql;
 using nRun.Data;
 using nRun.Models;
+using nRun.Services;
 
 namespace nRun.UI.Forms;
 
@@ -18,6 +19,7 @@ public partial class DatabaseConnectionForm : Form
         btnTest.Click += BtnTest_Click;
         btnConnect.Click += BtnConnect_Click;
         btnCreateTables.Click += BtnCreateTables_Click;
+        btnDeleteDatabase.Click += BtnDeleteDatabase_Click;
         btnSave.Click += BtnSave_Click;
     }
 
@@ -204,6 +206,130 @@ public partial class DatabaseConnectionForm : Form
         finally
         {
             btnCreateTables.Enabled = true;
+        }
+    }
+
+    private async void BtnDeleteDatabase_Click(object? sender, EventArgs e)
+    {
+        // Confirm deletion
+        var result = MessageBox.Show(
+            "WARNING: This will permanently delete ALL data!\n\n" +
+            "- All site configurations will be deleted\n" +
+            "- All scraped news articles will be deleted\n" +
+            "- All logo files will be deleted\n\n" +
+            "Are you sure you want to continue?",
+            "Delete Database",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+
+        if (result != DialogResult.Yes)
+        {
+            LogMessage("Delete operation cancelled.");
+            return;
+        }
+
+        // Second confirmation
+        result = MessageBox.Show(
+            "This action CANNOT be undone!\n\nType 'DELETE' in your mind and click Yes to confirm.",
+            "Final Confirmation",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Stop,
+            MessageBoxDefaultButton.Button2);
+
+        if (result != DialogResult.Yes)
+        {
+            LogMessage("Delete operation cancelled.");
+            return;
+        }
+
+        btnDeleteDatabase.Enabled = false;
+        LogMessage("Starting database deletion...");
+
+        try
+        {
+            var settings = GetConnectionSettings();
+            var connString = settings.GetConnectionString();
+
+            await using var conn = new NpgsqlConnection(connString);
+            await conn.OpenAsync();
+
+            // Drop tables in correct order (due to foreign key constraints)
+            LogMessage("Dropping tables...");
+
+            // Drop news_info first (has FK to site_info)
+            if (await TableExists(conn, "news_info"))
+            {
+                await using var cmd1 = conn.CreateCommand();
+                cmd1.CommandText = "DROP TABLE news_info CASCADE";
+                await cmd1.ExecuteNonQueryAsync();
+                LogMessage("  Dropped table: news_info");
+            }
+
+            // Drop site_info
+            if (await TableExists(conn, "site_info"))
+            {
+                await using var cmd2 = conn.CreateCommand();
+                cmd2.CommandText = "DROP TABLE site_info CASCADE";
+                await cmd2.ExecuteNonQueryAsync();
+                LogMessage("  Dropped table: site_info");
+            }
+
+            // Drop app_settings
+            if (await TableExists(conn, "app_settings"))
+            {
+                await using var cmd3 = conn.CreateCommand();
+                cmd3.CommandText = "DROP TABLE app_settings CASCADE";
+                await cmd3.ExecuteNonQueryAsync();
+                LogMessage("  Dropped table: app_settings");
+            }
+
+            LogMessage("All tables dropped successfully.");
+
+            // Delete logo files
+            LogMessage("Deleting logo files...");
+            var logosFolder = LogoDownloadService.GetLogosFolder();
+            if (Directory.Exists(logosFolder))
+            {
+                var files = Directory.GetFiles(logosFolder);
+                int deletedCount = 0;
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                        deletedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessage($"  Failed to delete: {Path.GetFileName(file)} - {ex.Message}");
+                    }
+                }
+                LogMessage($"  Deleted {deletedCount} logo files.");
+            }
+            else
+            {
+                LogMessage("  Logos folder does not exist.");
+            }
+
+            LogMessage("");
+            LogMessage("=== DATABASE DELETION COMPLETE ===");
+            LogMessage("You can now click 'Create Tables' to recreate the database structure.");
+            LogMessage("");
+
+            UpdateStatus("Tables deleted", Color.Orange);
+
+            // Reinitialize DatabaseService (it will show as not connected)
+            DatabaseService.Initialize();
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"ERROR: {ex.Message}");
+            UpdateStatus("Delete Failed", Color.Red);
+        }
+        finally
+        {
+            btnDeleteDatabase.Enabled = true;
         }
     }
 

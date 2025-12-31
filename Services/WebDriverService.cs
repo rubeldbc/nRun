@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -10,8 +11,10 @@ namespace nRun.Services;
 public class WebDriverService : IDisposable
 {
     private IWebDriver? _driver;
+    private ChromeDriverService? _driverService;
     private readonly object _lock = new();
     private bool _disposed;
+    private int _chromeDriverProcessId;
 
     public int TimeoutSeconds { get; set; } = 60;
     public bool UseHeadless { get; set; } = true;
@@ -60,25 +63,32 @@ public class WebDriverService : IDisposable
         options.AddAdditionalOption("useAutomationExtension", false);
 
     // Check for local ChromeDriver path
-   ChromeDriverService service;
       var localDriverPath = ChromeVersionService.GetLocalChromeDriverPath();
 
     if (File.Exists(localDriverPath))
      {
             // Use local ChromeDriver
-            service = ChromeDriverService.CreateDefaultService(
+            _driverService = ChromeDriverService.CreateDefaultService(
      ChromeVersionService.GetLocalChromeDriverDirectory());
   }
         else
         {
         // Use ChromeDriver from PATH
-            service = ChromeDriverService.CreateDefaultService();
+            _driverService = ChromeDriverService.CreateDefaultService();
  }
 
-        service.HideCommandPromptWindow = true;
- service.SuppressInitialDiagnosticInformation = true;
+        _driverService.HideCommandPromptWindow = true;
+ _driverService.SuppressInitialDiagnosticInformation = true;
 
-        var driver = new ChromeDriver(service, options, TimeSpan.FromSeconds(TimeoutSeconds));
+        var driver = new ChromeDriver(_driverService, options, TimeSpan.FromSeconds(TimeoutSeconds));
+
+        // Track the ChromeDriver process for cleanup
+        try
+        {
+            _chromeDriverProcessId = _driverService.ProcessId;
+            ProcessCleanupService.TrackProcess(_chromeDriverProcessId);
+        }
+        catch { }
         driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(TimeoutSeconds);
       driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);
         driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(30);
@@ -308,6 +318,27 @@ var js = (IJavaScriptExecutor)GetDriver();
  _driver = null;
    }
        }
+
+            // Dispose the driver service
+            if (_driverService != null)
+            {
+                try
+                {
+                    // Untrack the process
+                    if (_chromeDriverProcessId > 0)
+                    {
+                        ProcessCleanupService.UntrackProcess(_chromeDriverProcessId);
+                    }
+
+                    _driverService.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    _driverService = null;
+                    _chromeDriverProcessId = 0;
+                }
+            }
         }
     }
 
@@ -316,8 +347,28 @@ var js = (IJavaScriptExecutor)GetDriver();
      if (!_disposed)
       {
      CloseDriver();
+
+            // Force kill any remaining Chrome processes that might be orphaned
+            try
+            {
+                if (_chromeDriverProcessId > 0)
+                {
+                    var process = Process.GetProcessById(_chromeDriverProcessId);
+                    if (!process.HasExited)
+                    {
+                        process.Kill(true);
+                    }
+                }
+            }
+            catch { }
+
      _disposed = true;
   }
         GC.SuppressFinalize(this);
+    }
+
+    ~WebDriverService()
+    {
+        Dispose();
     }
 }
