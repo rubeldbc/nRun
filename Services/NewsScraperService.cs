@@ -172,37 +172,74 @@ public class NewsScraperService : IDisposable
     {
         try
         {
+            StatusChanged?.Invoke(this, $"Navigating to article: {url}");
             await Task.Run(() => _webDriver.NavigateTo(url), cancellationToken);
-            await Task.Delay(500, cancellationToken);
+
+            // ??? ??? ?????? ???? ???????
+            StatusChanged?.Invoke(this, $"Waiting for article page load...");
+            await Task.Run(() =>
+            {
+                try { _webDriver.WaitForPageLoad(15); } catch { }
+            }, cancellationToken);
+
+            // JavaScript ????????? ?? ???? ???????? ????
+            await Task.Delay(2000, cancellationToken);
 
             var pageSource = _webDriver.GetPageSource();
-            var doc = new HtmlAgilityPack.HtmlDocument();
-            doc.LoadHtml(pageSource);
+            StatusChanged?.Invoke(this, $"Page source length: {pageSource?.Length ?? 0} chars");
 
-            // Extract title
-            var titleNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.TitleSelector));
-            var title = titleNode?.InnerText?.Trim() ?? "";
+            string title = "";
+            string body = "";
 
-            // Extract body
-            var bodyNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.BodySelector));
-            var body = bodyNode?.InnerText?.Trim() ?? "";
+            // ?????? Selenium ????? ?????? ??? (??? ???????????)
+            StatusChanged?.Invoke(this, $"Trying Selenium for title with selector: {site.TitleSelector}");
+            title = _webDriver.GetElementText(site.TitleSelector) ?? "";
 
-            // Also try direct Selenium extraction if HtmlAgilityPack fails
-            if (string.IsNullOrEmpty(title))
+            if (!string.IsNullOrEmpty(title))
             {
-                title = _webDriver.GetElementText(site.TitleSelector) ?? "";
+                StatusChanged?.Invoke(this, $"Title found via Selenium: {title.Substring(0, Math.Min(50, title.Length))}...");
+            }
+            else
+            {
+                StatusChanged?.Invoke(this, $"Selenium failed, trying HtmlAgilityPack...");
+
+                // HtmlAgilityPack ????? ??????
+                var doc = new HtmlAgilityPack.HtmlDocument();
+                doc.LoadHtml(pageSource);
+
+                var xpath = ConvertCssToXPath(site.TitleSelector);
+                StatusChanged?.Invoke(this, $"XPath: {xpath}");
+
+                var titleNode = doc.DocumentNode.SelectSingleNode(xpath);
+                title = titleNode?.InnerText?.Trim() ?? "";
+
+                if (!string.IsNullOrEmpty(title))
+                {
+                    StatusChanged?.Invoke(this, $"Title found via HtmlAgilityPack");
+                }
             }
 
-            if (string.IsNullOrEmpty(body))
+            // Body ????????????? ???
+            if (!string.IsNullOrEmpty(site.BodySelector))
             {
                 body = _webDriver.GetElementText(site.BodySelector) ?? "";
+
+                if (string.IsNullOrEmpty(body))
+                {
+                    var doc = new HtmlAgilityPack.HtmlDocument();
+                    doc.LoadHtml(pageSource);
+                    var bodyNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.BodySelector));
+                    body = bodyNode?.InnerText?.Trim() ?? "";
+                }
             }
 
             if (string.IsNullOrEmpty(title))
             {
+                StatusChanged?.Invoke(this, $"Title is empty, article scrape failed");
                 return null;
             }
 
+            StatusChanged?.Invoke(this, $"Article scraped successfully");
             return new NewsInfo
             {
                 SiteId = site.SiteId,
@@ -213,8 +250,9 @@ public class NewsScraperService : IDisposable
                 CreatedAt = DateTime.Now
             };
         }
-        catch
+        catch (Exception ex)
         {
+            StatusChanged?.Invoke(this, $"ScrapeArticle error: {ex.Message}");
             return null;
         }
     }

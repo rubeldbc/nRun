@@ -17,283 +17,353 @@ partial class SettingsForm
 
     private void InitializeComponent()
     {
-        // GroupBox for scraping settings
-        this.groupBoxScraping = new System.Windows.Forms.GroupBox();
-
-        // Labels
-        this.lblCheckInterval = new System.Windows.Forms.Label();
-        this.lblDelayBetweenLinks = new System.Windows.Forms.Label();
-        this.lblMaxArticles = new System.Windows.Forms.Label();
-        this.lblBrowserTimeout = new System.Windows.Forms.Label();
-        this.lblIntervalMinutes = new System.Windows.Forms.Label();
-        this.lblDelaySeconds = new System.Windows.Forms.Label();
-        this.lblTimeoutSeconds = new System.Windows.Forms.Label();
-
-        // NumericUpDown controls
-        this.numCheckInterval = new System.Windows.Forms.NumericUpDown();
-        this.numDelayBetweenLinks = new System.Windows.Forms.NumericUpDown();
-        this.numMaxArticles = new System.Windows.Forms.NumericUpDown();
-        this.numBrowserTimeout = new System.Windows.Forms.NumericUpDown();
-
-        // Checkboxes
-        this.chkUseHeadless = new System.Windows.Forms.CheckBox();
-        this.chkAutoStart = new System.Windows.Forms.CheckBox();
-
-        // Database button
-        this.btnDatabase = new System.Windows.Forms.Button();
-
-        // Buttons
-        this.btnSave = new System.Windows.Forms.Button();
-        this.btnCancel = new System.Windows.Forms.Button();
-
-        // Panel
-        this.panelButtons = new System.Windows.Forms.Panel();
-
-        this.groupBoxScraping.SuspendLayout();
-        ((System.ComponentModel.ISupportInitialize)(this.numCheckInterval)).BeginInit();
-        ((System.ComponentModel.ISupportInitialize)(this.numDelayBetweenLinks)).BeginInit();
-        ((System.ComponentModel.ISupportInitialize)(this.numMaxArticles)).BeginInit();
-        ((System.ComponentModel.ISupportInitialize)(this.numBrowserTimeout)).BeginInit();
-        this.panelButtons.SuspendLayout();
-        this.SuspendLayout();
-
-        //
+        groupBoxScraping = new GroupBox();
+        lblCheckInterval = new Label();
+        numCheckInterval = new NumericUpDown();
+        lblIntervalMinutes = new Label();
+        lblDelayBetweenLinks = new Label();
+        numDelayBetweenLinks = new NumericUpDown();
+        lblDelaySeconds = new Label();
+        lblMaxArticles = new Label();
+        numMaxArticles = new NumericUpDown();
+        lblBrowserTimeout = new Label();
+        numBrowserTimeout = new NumericUpDown();
+        lblTimeoutSeconds = new Label();
+        chkUseHeadless = new CheckBox();
+        chkAutoStart = new CheckBox();
+        btnDatabase = new Button();
+        groupBoxChrome = new GroupBox();
+        lblChromeLbl = new Label();
+        lblChromeVersion = new Label();
+        lblDriverLbl = new Label();
+        lblDriverVersion = new Label();
+        lblVersionStatus = new Label();
+        btnCheckVersion = new Button();
+        btnDownloadDriver = new Button();
+        progressBarDownload = new ProgressBar();
+        btnSave = new Button();
+        btnCancel = new Button();
+        panelButtons = new Panel();
+        groupBoxScraping.SuspendLayout();
+        ((System.ComponentModel.ISupportInitialize)numCheckInterval).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)numDelayBetweenLinks).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)numMaxArticles).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)numBrowserTimeout).BeginInit();
+        groupBoxChrome.SuspendLayout();
+        panelButtons.SuspendLayout();
+        SuspendLayout();
+        // 
         // groupBoxScraping
-        //
-        this.groupBoxScraping.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
-        this.groupBoxScraping.Controls.Add(this.lblCheckInterval);
-        this.groupBoxScraping.Controls.Add(this.numCheckInterval);
-        this.groupBoxScraping.Controls.Add(this.lblIntervalMinutes);
-        this.groupBoxScraping.Controls.Add(this.lblDelayBetweenLinks);
-        this.groupBoxScraping.Controls.Add(this.numDelayBetweenLinks);
-        this.groupBoxScraping.Controls.Add(this.lblDelaySeconds);
-        this.groupBoxScraping.Controls.Add(this.lblMaxArticles);
-        this.groupBoxScraping.Controls.Add(this.numMaxArticles);
-        this.groupBoxScraping.Controls.Add(this.lblBrowserTimeout);
-        this.groupBoxScraping.Controls.Add(this.numBrowserTimeout);
-        this.groupBoxScraping.Controls.Add(this.lblTimeoutSeconds);
-        this.groupBoxScraping.Controls.Add(this.chkUseHeadless);
-        this.groupBoxScraping.Controls.Add(this.chkAutoStart);
-        this.groupBoxScraping.Controls.Add(this.btnDatabase);
-        this.groupBoxScraping.Location = new System.Drawing.Point(15, 15);
-        this.groupBoxScraping.Name = "groupBoxScraping";
-        this.groupBoxScraping.Size = new System.Drawing.Size(400, 250);
-        this.groupBoxScraping.TabIndex = 0;
-        this.groupBoxScraping.TabStop = false;
-        this.groupBoxScraping.Text = "Scraping Settings";
-
-        //
+        // 
+        groupBoxScraping.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        groupBoxScraping.Controls.Add(lblCheckInterval);
+        groupBoxScraping.Controls.Add(numCheckInterval);
+        groupBoxScraping.Controls.Add(lblIntervalMinutes);
+        groupBoxScraping.Controls.Add(lblDelayBetweenLinks);
+        groupBoxScraping.Controls.Add(numDelayBetweenLinks);
+        groupBoxScraping.Controls.Add(lblDelaySeconds);
+        groupBoxScraping.Controls.Add(lblMaxArticles);
+        groupBoxScraping.Controls.Add(numMaxArticles);
+        groupBoxScraping.Controls.Add(lblBrowserTimeout);
+        groupBoxScraping.Controls.Add(numBrowserTimeout);
+        groupBoxScraping.Controls.Add(lblTimeoutSeconds);
+        groupBoxScraping.Controls.Add(chkUseHeadless);
+        groupBoxScraping.Controls.Add(chkAutoStart);
+        groupBoxScraping.Controls.Add(btnDatabase);
+        groupBoxScraping.Location = new Point(15, 15);
+        groupBoxScraping.Name = "groupBoxScraping";
+        groupBoxScraping.Size = new Size(400, 250);
+        groupBoxScraping.TabIndex = 0;
+        groupBoxScraping.TabStop = false;
+        groupBoxScraping.Text = "Scraping Settings";
+        // 
         // lblCheckInterval
-        //
-        this.lblCheckInterval.AutoSize = true;
-        this.lblCheckInterval.Location = new System.Drawing.Point(15, 30);
-        this.lblCheckInterval.Name = "lblCheckInterval";
-        this.lblCheckInterval.Size = new System.Drawing.Size(82, 15);
-        this.lblCheckInterval.TabIndex = 0;
-        this.lblCheckInterval.Text = "Check Interval:";
-
-        //
+        // 
+        lblCheckInterval.AutoSize = true;
+        lblCheckInterval.Location = new Point(15, 30);
+        lblCheckInterval.Name = "lblCheckInterval";
+        lblCheckInterval.Size = new Size(85, 15);
+        lblCheckInterval.TabIndex = 0;
+        lblCheckInterval.Text = "Check Interval:";
+        // 
         // numCheckInterval
-        //
-        this.numCheckInterval.Location = new System.Drawing.Point(180, 27);
-        this.numCheckInterval.Maximum = new decimal(new int[] { 1440, 0, 0, 0 });
-        this.numCheckInterval.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-        this.numCheckInterval.Name = "numCheckInterval";
-        this.numCheckInterval.Size = new System.Drawing.Size(80, 23);
-        this.numCheckInterval.TabIndex = 1;
-        this.numCheckInterval.Value = new decimal(new int[] { 5, 0, 0, 0 });
-
-        //
+        // 
+        numCheckInterval.Location = new Point(180, 27);
+        numCheckInterval.Maximum = new decimal(new int[] { 1440, 0, 0, 0 });
+        numCheckInterval.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+        numCheckInterval.Name = "numCheckInterval";
+        numCheckInterval.Size = new Size(80, 23);
+        numCheckInterval.TabIndex = 1;
+        numCheckInterval.Value = new decimal(new int[] { 5, 0, 0, 0 });
+        // 
         // lblIntervalMinutes
-        //
-        this.lblIntervalMinutes.AutoSize = true;
-        this.lblIntervalMinutes.Location = new System.Drawing.Point(265, 30);
-        this.lblIntervalMinutes.Name = "lblIntervalMinutes";
-        this.lblIntervalMinutes.Size = new System.Drawing.Size(50, 15);
-        this.lblIntervalMinutes.TabIndex = 2;
-        this.lblIntervalMinutes.Text = "minutes";
-
-        //
+        // 
+        lblIntervalMinutes.AutoSize = true;
+        lblIntervalMinutes.Location = new Point(265, 30);
+        lblIntervalMinutes.Name = "lblIntervalMinutes";
+        lblIntervalMinutes.Size = new Size(50, 15);
+        lblIntervalMinutes.TabIndex = 2;
+        lblIntervalMinutes.Text = "minutes";
+        // 
         // lblDelayBetweenLinks
-        //
-        this.lblDelayBetweenLinks.AutoSize = true;
-        this.lblDelayBetweenLinks.Location = new System.Drawing.Point(15, 60);
-        this.lblDelayBetweenLinks.Name = "lblDelayBetweenLinks";
-        this.lblDelayBetweenLinks.Size = new System.Drawing.Size(118, 15);
-        this.lblDelayBetweenLinks.TabIndex = 3;
-        this.lblDelayBetweenLinks.Text = "Delay Between Links:";
-
-        //
+        // 
+        lblDelayBetweenLinks.AutoSize = true;
+        lblDelayBetweenLinks.Location = new Point(15, 60);
+        lblDelayBetweenLinks.Name = "lblDelayBetweenLinks";
+        lblDelayBetweenLinks.Size = new Size(117, 15);
+        lblDelayBetweenLinks.TabIndex = 3;
+        lblDelayBetweenLinks.Text = "Delay Between Links:";
+        // 
         // numDelayBetweenLinks
-        //
-        this.numDelayBetweenLinks.Location = new System.Drawing.Point(180, 57);
-        this.numDelayBetweenLinks.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-        this.numDelayBetweenLinks.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
-        this.numDelayBetweenLinks.Name = "numDelayBetweenLinks";
-        this.numDelayBetweenLinks.Size = new System.Drawing.Size(80, 23);
-        this.numDelayBetweenLinks.TabIndex = 4;
-        this.numDelayBetweenLinks.Value = new decimal(new int[] { 2, 0, 0, 0 });
-
-        //
+        // 
+        numDelayBetweenLinks.Location = new Point(180, 57);
+        numDelayBetweenLinks.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+        numDelayBetweenLinks.Name = "numDelayBetweenLinks";
+        numDelayBetweenLinks.Size = new Size(80, 23);
+        numDelayBetweenLinks.TabIndex = 4;
+        numDelayBetweenLinks.Value = new decimal(new int[] { 2, 0, 0, 0 });
+        // 
         // lblDelaySeconds
-        //
-        this.lblDelaySeconds.AutoSize = true;
-        this.lblDelaySeconds.Location = new System.Drawing.Point(265, 60);
-        this.lblDelaySeconds.Name = "lblDelaySeconds";
-        this.lblDelaySeconds.Size = new System.Drawing.Size(93, 15);
-        this.lblDelaySeconds.TabIndex = 5;
-        this.lblDelaySeconds.Text = "seconds (0-10000)";
-
-        //
+        // 
+        lblDelaySeconds.AutoSize = true;
+        lblDelaySeconds.Location = new Point(265, 60);
+        lblDelaySeconds.Name = "lblDelaySeconds";
+        lblDelaySeconds.Size = new Size(102, 15);
+        lblDelaySeconds.TabIndex = 5;
+        lblDelaySeconds.Text = "seconds (0-10000)";
+        // 
         // lblMaxArticles
-        //
-        this.lblMaxArticles.AutoSize = true;
-        this.lblMaxArticles.Location = new System.Drawing.Point(15, 90);
-        this.lblMaxArticles.Name = "lblMaxArticles";
-        this.lblMaxArticles.Size = new System.Drawing.Size(118, 15);
-        this.lblMaxArticles.TabIndex = 6;
-        this.lblMaxArticles.Text = "Max Articles per Site:";
-
-        //
+        // 
+        lblMaxArticles.AutoSize = true;
+        lblMaxArticles.Location = new Point(15, 90);
+        lblMaxArticles.Name = "lblMaxArticles";
+        lblMaxArticles.Size = new Size(117, 15);
+        lblMaxArticles.TabIndex = 6;
+        lblMaxArticles.Text = "Max Articles per Site:";
+        // 
         // numMaxArticles
-        //
-        this.numMaxArticles.Location = new System.Drawing.Point(180, 87);
-        this.numMaxArticles.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
-        this.numMaxArticles.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-        this.numMaxArticles.Name = "numMaxArticles";
-        this.numMaxArticles.Size = new System.Drawing.Size(80, 23);
-        this.numMaxArticles.TabIndex = 7;
-        this.numMaxArticles.Value = new decimal(new int[] { 10, 0, 0, 0 });
-
-        //
+        // 
+        numMaxArticles.Location = new Point(180, 87);
+        numMaxArticles.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+        numMaxArticles.Name = "numMaxArticles";
+        numMaxArticles.Size = new Size(80, 23);
+        numMaxArticles.TabIndex = 7;
+        numMaxArticles.Value = new decimal(new int[] { 10, 0, 0, 0 });
+        // 
         // lblBrowserTimeout
-        //
-        this.lblBrowserTimeout.AutoSize = true;
-        this.lblBrowserTimeout.Location = new System.Drawing.Point(15, 120);
-        this.lblBrowserTimeout.Name = "lblBrowserTimeout";
-        this.lblBrowserTimeout.Size = new System.Drawing.Size(98, 15);
-        this.lblBrowserTimeout.TabIndex = 8;
-        this.lblBrowserTimeout.Text = "Browser Timeout:";
-
-        //
+        // 
+        lblBrowserTimeout.AutoSize = true;
+        lblBrowserTimeout.Location = new Point(15, 120);
+        lblBrowserTimeout.Name = "lblBrowserTimeout";
+        lblBrowserTimeout.Size = new Size(99, 15);
+        lblBrowserTimeout.TabIndex = 8;
+        lblBrowserTimeout.Text = "Browser Timeout:";
+        // 
         // numBrowserTimeout
-        //
-        this.numBrowserTimeout.Location = new System.Drawing.Point(180, 117);
-        this.numBrowserTimeout.Maximum = new decimal(new int[] { 300, 0, 0, 0 });
-        this.numBrowserTimeout.Minimum = new decimal(new int[] { 10, 0, 0, 0 });
-        this.numBrowserTimeout.Name = "numBrowserTimeout";
-        this.numBrowserTimeout.Size = new System.Drawing.Size(80, 23);
-        this.numBrowserTimeout.TabIndex = 9;
-        this.numBrowserTimeout.Value = new decimal(new int[] { 30, 0, 0, 0 });
-
-        //
+        // 
+        numBrowserTimeout.Location = new Point(180, 117);
+        numBrowserTimeout.Maximum = new decimal(new int[] { 300, 0, 0, 0 });
+        numBrowserTimeout.Minimum = new decimal(new int[] { 10, 0, 0, 0 });
+        numBrowserTimeout.Name = "numBrowserTimeout";
+        numBrowserTimeout.Size = new Size(80, 23);
+        numBrowserTimeout.TabIndex = 9;
+        numBrowserTimeout.Value = new decimal(new int[] { 30, 0, 0, 0 });
+        // 
         // lblTimeoutSeconds
-        //
-        this.lblTimeoutSeconds.AutoSize = true;
-        this.lblTimeoutSeconds.Location = new System.Drawing.Point(265, 120);
-        this.lblTimeoutSeconds.Name = "lblTimeoutSeconds";
-        this.lblTimeoutSeconds.Size = new System.Drawing.Size(50, 15);
-        this.lblTimeoutSeconds.TabIndex = 10;
-        this.lblTimeoutSeconds.Text = "seconds";
-
-        //
+        // 
+        lblTimeoutSeconds.AutoSize = true;
+        lblTimeoutSeconds.Location = new Point(265, 120);
+        lblTimeoutSeconds.Name = "lblTimeoutSeconds";
+        lblTimeoutSeconds.Size = new Size(50, 15);
+        lblTimeoutSeconds.TabIndex = 10;
+        lblTimeoutSeconds.Text = "seconds";
+        // 
         // chkUseHeadless
-        //
-        this.chkUseHeadless.AutoSize = true;
-        this.chkUseHeadless.Checked = true;
-        this.chkUseHeadless.CheckState = System.Windows.Forms.CheckState.Checked;
-        this.chkUseHeadless.Location = new System.Drawing.Point(15, 155);
-        this.chkUseHeadless.Name = "chkUseHeadless";
-        this.chkUseHeadless.Size = new System.Drawing.Size(206, 19);
-        this.chkUseHeadless.TabIndex = 11;
-        this.chkUseHeadless.Text = "Use Headless Browser (no window)";
-
-        //
+        // 
+        chkUseHeadless.AutoSize = true;
+        chkUseHeadless.Checked = true;
+        chkUseHeadless.CheckState = CheckState.Checked;
+        chkUseHeadless.Location = new Point(15, 155);
+        chkUseHeadless.Name = "chkUseHeadless";
+        chkUseHeadless.Size = new Size(210, 19);
+        chkUseHeadless.TabIndex = 11;
+        chkUseHeadless.Text = "Use Headless Browser (no window)";
+        // 
         // chkAutoStart
-        //
-        this.chkAutoStart.AutoSize = true;
-        this.chkAutoStart.Location = new System.Drawing.Point(15, 180);
-        this.chkAutoStart.Name = "chkAutoStart";
-        this.chkAutoStart.Size = new System.Drawing.Size(218, 19);
-        this.chkAutoStart.TabIndex = 12;
-        this.chkAutoStart.Text = "Auto-start scraping when app opens";
-
-        //
+        // 
+        chkAutoStart.AutoSize = true;
+        chkAutoStart.Location = new Point(15, 180);
+        chkAutoStart.Name = "chkAutoStart";
+        chkAutoStart.Size = new Size(218, 19);
+        chkAutoStart.TabIndex = 12;
+        chkAutoStart.Text = "Auto-start scraping when app opens";
+        // 
         // btnDatabase
-        //
-        this.btnDatabase.Location = new System.Drawing.Point(15, 210);
-        this.btnDatabase.Name = "btnDatabase";
-        this.btnDatabase.Size = new System.Drawing.Size(150, 28);
-        this.btnDatabase.TabIndex = 13;
-        this.btnDatabase.Text = "Database Connection...";
-        this.btnDatabase.UseVisualStyleBackColor = true;
-
-        //
-        // panelButtons
-        //
-        this.panelButtons.Controls.Add(this.btnSave);
-        this.panelButtons.Controls.Add(this.btnCancel);
-        this.panelButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-        this.panelButtons.Location = new System.Drawing.Point(0, 280);
-        this.panelButtons.Name = "panelButtons";
-        this.panelButtons.Padding = new System.Windows.Forms.Padding(10);
-        this.panelButtons.Size = new System.Drawing.Size(430, 50);
-        this.panelButtons.TabIndex = 1;
-
-        //
+        // 
+        btnDatabase.Location = new Point(15, 210);
+        btnDatabase.Name = "btnDatabase";
+        btnDatabase.Size = new Size(150, 28);
+        btnDatabase.TabIndex = 13;
+        btnDatabase.Text = "Database Connection...";
+        btnDatabase.UseVisualStyleBackColor = true;
+        // 
+        // groupBoxChrome
+        // 
+        groupBoxChrome.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        groupBoxChrome.Controls.Add(lblChromeLbl);
+        groupBoxChrome.Controls.Add(lblChromeVersion);
+        groupBoxChrome.Controls.Add(lblDriverLbl);
+        groupBoxChrome.Controls.Add(lblDriverVersion);
+        groupBoxChrome.Controls.Add(lblVersionStatus);
+        groupBoxChrome.Controls.Add(btnCheckVersion);
+        groupBoxChrome.Controls.Add(btnDownloadDriver);
+        groupBoxChrome.Controls.Add(progressBarDownload);
+        groupBoxChrome.Location = new Point(15, 275);
+        groupBoxChrome.Name = "groupBoxChrome";
+        groupBoxChrome.Size = new Size(400, 145);
+        groupBoxChrome.TabIndex = 2;
+        groupBoxChrome.TabStop = false;
+        groupBoxChrome.Text = "Chrome / ChromeDriver Version";
+        // 
+        // lblChromeLbl
+        // 
+        lblChromeLbl.AutoSize = true;
+        lblChromeLbl.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        lblChromeLbl.Location = new Point(15, 28);
+        lblChromeLbl.Name = "lblChromeLbl";
+        lblChromeLbl.Size = new Size(98, 15);
+        lblChromeLbl.TabIndex = 0;
+        lblChromeLbl.Text = "Chrome Version:";
+        // 
+        // lblChromeVersion
+        // 
+        lblChromeVersion.AutoSize = true;
+        lblChromeVersion.ForeColor = Color.DarkBlue;
+        lblChromeVersion.Location = new Point(159, 28);
+        lblChromeVersion.Name = "lblChromeVersion";
+        lblChromeVersion.Size = new Size(66, 15);
+        lblChromeVersion.TabIndex = 1;
+        lblChromeVersion.Text = "Checking...";
+        // 
+        // lblDriverLbl
+        // 
+        lblDriverLbl.AutoSize = true;
+        lblDriverLbl.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        lblDriverLbl.Location = new Point(15, 53);
+        lblDriverLbl.Name = "lblDriverLbl";
+        lblDriverLbl.Size = new Size(134, 15);
+        lblDriverLbl.TabIndex = 2;
+        lblDriverLbl.Text = "ChromeDriver Version:";
+        // 
+        // lblDriverVersion
+        // 
+        lblDriverVersion.AutoSize = true;
+        lblDriverVersion.ForeColor = Color.DarkBlue;
+        lblDriverVersion.Location = new Point(159, 53);
+        lblDriverVersion.Name = "lblDriverVersion";
+        lblDriverVersion.Size = new Size(66, 15);
+        lblDriverVersion.TabIndex = 3;
+        lblDriverVersion.Text = "Checking...";
+        // 
+        // lblVersionStatus
+        // 
+        lblVersionStatus.AutoSize = true;
+        lblVersionStatus.Location = new Point(15, 78);
+        lblVersionStatus.Name = "lblVersionStatus";
+        lblVersionStatus.Size = new Size(0, 15);
+        lblVersionStatus.TabIndex = 4;
+        // 
+        // btnCheckVersion
+        // 
+        btnCheckVersion.Location = new Point(15, 105);
+        btnCheckVersion.Name = "btnCheckVersion";
+        btnCheckVersion.Size = new Size(100, 28);
+        btnCheckVersion.TabIndex = 5;
+        btnCheckVersion.Text = "Refresh";
+        btnCheckVersion.UseVisualStyleBackColor = true;
+        // 
+        // btnDownloadDriver
+        // 
+        btnDownloadDriver.Location = new Point(125, 105);
+        btnDownloadDriver.Name = "btnDownloadDriver";
+        btnDownloadDriver.Size = new Size(130, 28);
+        btnDownloadDriver.TabIndex = 6;
+        btnDownloadDriver.Text = "Download";
+        btnDownloadDriver.UseVisualStyleBackColor = true;
+        // 
+        // progressBarDownload
+        // 
+        progressBarDownload.Location = new Point(265, 105);
+        progressBarDownload.Name = "progressBarDownload";
+        progressBarDownload.Size = new Size(120, 28);
+        progressBarDownload.TabIndex = 7;
+        progressBarDownload.Visible = false;
+        // 
         // btnSave
-        //
-        this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnSave.Location = new System.Drawing.Point(245, 12);
-        this.btnSave.Name = "btnSave";
-        this.btnSave.Size = new System.Drawing.Size(80, 28);
-        this.btnSave.TabIndex = 0;
-        this.btnSave.Text = "Save";
-        this.btnSave.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        btnSave.Location = new Point(245, 12);
+        btnSave.Name = "btnSave";
+        btnSave.Size = new Size(80, 28);
+        btnSave.TabIndex = 0;
+        btnSave.Text = "Save";
+        btnSave.UseVisualStyleBackColor = true;
+        // 
         // btnCancel
-        //
-        this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-        this.btnCancel.Location = new System.Drawing.Point(335, 12);
-        this.btnCancel.Name = "btnCancel";
-        this.btnCancel.Size = new System.Drawing.Size(80, 28);
-        this.btnCancel.TabIndex = 1;
-        this.btnCancel.Text = "Cancel";
-        this.btnCancel.UseVisualStyleBackColor = true;
-
-        //
+        // 
+        btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        btnCancel.DialogResult = DialogResult.Cancel;
+        btnCancel.Location = new Point(335, 12);
+        btnCancel.Name = "btnCancel";
+        btnCancel.Size = new Size(80, 28);
+        btnCancel.TabIndex = 1;
+        btnCancel.Text = "Cancel";
+        btnCancel.UseVisualStyleBackColor = true;
+        // 
+        // panelButtons
+        // 
+        panelButtons.Controls.Add(btnSave);
+        panelButtons.Controls.Add(btnCancel);
+        panelButtons.Dock = DockStyle.Bottom;
+        panelButtons.Location = new Point(0, 430);
+        panelButtons.Name = "panelButtons";
+        panelButtons.Padding = new Padding(10);
+        panelButtons.Size = new Size(430, 50);
+        panelButtons.TabIndex = 1;
+        // 
         // SettingsForm
-        //
-        this.AcceptButton = this.btnSave;
-        this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.CancelButton = this.btnCancel;
-        this.ClientSize = new System.Drawing.Size(430, 330);
-        this.Controls.Add(this.groupBoxScraping);
-        this.Controls.Add(this.panelButtons);
-        this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-        this.MaximizeBox = false;
-        this.MinimizeBox = false;
-        this.Name = "SettingsForm";
-        this.ShowInTaskbar = false;
-        this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-        this.Text = "Settings";
-
-        this.groupBoxScraping.ResumeLayout(false);
-        this.groupBoxScraping.PerformLayout();
-        ((System.ComponentModel.ISupportInitialize)(this.numCheckInterval)).EndInit();
-        ((System.ComponentModel.ISupportInitialize)(this.numDelayBetweenLinks)).EndInit();
-        ((System.ComponentModel.ISupportInitialize)(this.numMaxArticles)).EndInit();
-        ((System.ComponentModel.ISupportInitialize)(this.numBrowserTimeout)).EndInit();
-        this.panelButtons.ResumeLayout(false);
-        this.ResumeLayout(false);
+        // 
+        AcceptButton = btnSave;
+        AutoScaleDimensions = new SizeF(7F, 15F);
+        AutoScaleMode = AutoScaleMode.Font;
+        CancelButton = btnCancel;
+        ClientSize = new Size(430, 480);
+        Controls.Add(groupBoxScraping);
+        Controls.Add(groupBoxChrome);
+        Controls.Add(panelButtons);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        Name = "SettingsForm";
+        ShowInTaskbar = false;
+        StartPosition = FormStartPosition.CenterParent;
+        Text = "Settings";
+        groupBoxScraping.ResumeLayout(false);
+        groupBoxScraping.PerformLayout();
+        ((System.ComponentModel.ISupportInitialize)numCheckInterval).EndInit();
+        ((System.ComponentModel.ISupportInitialize)numDelayBetweenLinks).EndInit();
+        ((System.ComponentModel.ISupportInitialize)numMaxArticles).EndInit();
+        ((System.ComponentModel.ISupportInitialize)numBrowserTimeout).EndInit();
+        groupBoxChrome.ResumeLayout(false);
+        groupBoxChrome.PerformLayout();
+        panelButtons.ResumeLayout(false);
+        ResumeLayout(false);
     }
 
     #endregion
 
     private System.Windows.Forms.GroupBox groupBoxScraping;
+    private System.Windows.Forms.GroupBox groupBoxChrome;
     private System.Windows.Forms.Label lblCheckInterval;
     private System.Windows.Forms.Label lblDelayBetweenLinks;
     private System.Windows.Forms.Label lblMaxArticles;
@@ -301,6 +371,11 @@ partial class SettingsForm
     private System.Windows.Forms.Label lblIntervalMinutes;
     private System.Windows.Forms.Label lblDelaySeconds;
     private System.Windows.Forms.Label lblTimeoutSeconds;
+    private System.Windows.Forms.Label lblChromeLbl;
+    private System.Windows.Forms.Label lblDriverLbl;
+    private System.Windows.Forms.Label lblChromeVersion;
+    private System.Windows.Forms.Label lblDriverVersion;
+    private System.Windows.Forms.Label lblVersionStatus;
     private System.Windows.Forms.NumericUpDown numCheckInterval;
     private System.Windows.Forms.NumericUpDown numDelayBetweenLinks;
     private System.Windows.Forms.NumericUpDown numMaxArticles;
@@ -308,6 +383,9 @@ partial class SettingsForm
     private System.Windows.Forms.CheckBox chkUseHeadless;
     private System.Windows.Forms.CheckBox chkAutoStart;
     private System.Windows.Forms.Button btnDatabase;
+    private System.Windows.Forms.Button btnCheckVersion;
+    private System.Windows.Forms.Button btnDownloadDriver;
+    private System.Windows.Forms.ProgressBar progressBarDownload;
     private System.Windows.Forms.Panel panelButtons;
     private System.Windows.Forms.Button btnSave;
     private System.Windows.Forms.Button btnCancel;
