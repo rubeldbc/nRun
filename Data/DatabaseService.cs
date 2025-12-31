@@ -95,6 +95,7 @@ public class DatabaseService : IDatabaseService
                 use_headless_browser BOOLEAN DEFAULT TRUE,
                 browser_timeout_seconds INTEGER DEFAULT 30,
                 auto_start_scraping BOOLEAN DEFAULT FALSE,
+                max_displayed_articles INTEGER DEFAULT 100,
                 last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -109,6 +110,18 @@ public class DatabaseService : IDatabaseService
         using var insertCmd = conn.CreateCommand();
         insertCmd.CommandText = "INSERT INTO app_settings (id) VALUES (1) ON CONFLICT DO NOTHING";
         insertCmd.ExecuteNonQuery();
+
+        // Add column if it doesn't exist (for existing databases)
+        using var alterCmd = conn.CreateCommand();
+        alterCmd.CommandText = @"
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name = 'app_settings' AND column_name = 'max_displayed_articles') THEN
+                    ALTER TABLE app_settings ADD COLUMN max_displayed_articles INTEGER DEFAULT 100;
+                END IF;
+            END $$;";
+        alterCmd.ExecuteNonQuery();
     }
 
     private NpgsqlConnection GetConnection()
@@ -342,13 +355,12 @@ public class DatabaseService : IDatabaseService
             var news = new List<NewsInfo>();
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 SELECT n.*, s.site_name
                 FROM news_info n
                 JOIN site_info s ON n.site_id = s.site_id
                 ORDER BY n.created_at DESC
-                LIMIT @limit";
-            cmd.Parameters.AddWithValue("limit", limit);
+                LIMIT {limit}";
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())

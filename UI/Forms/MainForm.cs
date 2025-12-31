@@ -9,8 +9,9 @@ public partial class MainForm : Form
 {
     private BackgroundScraperService? _backgroundScraper;
     private List<NewsInfo> _articles = new();
-    private const int MaxDisplayedArticles = 100;
     private const int MaxLogLines = 500;
+
+    private int MaxDisplayedArticles => ServiceContainer.Settings.LoadSettings().MaxDisplayedArticles;
 
     public MainForm()
     {
@@ -85,7 +86,9 @@ public partial class MainForm : Form
         LoadSites();
         LogDebug($"Loaded {listBoxSites.Items.Count} sites", "INFO");
 
+        LogDebug($"MaxDisplayedArticles setting: {MaxDisplayedArticles}", "INFO");
         LoadArticles();
+        LogDebug($"Loaded {_articles.Count} articles", "INFO");
         UpdateArticleCount();
 
         // Auto-start if configured and connected
@@ -238,7 +241,9 @@ public partial class MainForm : Form
 
     private void LoadArticles()
     {
-        _articles = ServiceContainer.Database.GetRecentNews(MaxDisplayedArticles);
+        var limit = MaxDisplayedArticles;
+        LogDebug($"Loading articles with limit: {limit}", "INFO");
+        _articles = ServiceContainer.Database.GetRecentNews(limit);
         olvArticles.SetObjects(_articles);
     }
 
@@ -258,8 +263,8 @@ public partial class MainForm : Form
 
         _articles.Insert(0, article);
 
-        // Keep only the last 100 items in the display list
-        if (_articles.Count > MaxDisplayedArticles)
+        // Keep only MaxDisplayedArticles items - remove oldest from bottom
+        while (_articles.Count > MaxDisplayedArticles)
         {
             _articles.RemoveAt(_articles.Count - 1);
         }

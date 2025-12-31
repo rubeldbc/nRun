@@ -15,6 +15,9 @@ public class AppSettings
     public int BrowserTimeoutSeconds { get; set; } = 30;
     public bool AutoStartScraping { get; set; } = false;
 
+    // Display Settings
+    public int MaxDisplayedArticles { get; set; } = 100;
+
     // Database Connection Settings
     public string DbHost { get; set; } = "localhost";
     public int DbPort { get; set; } = 5432;

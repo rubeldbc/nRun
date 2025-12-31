@@ -414,6 +414,7 @@ public partial class DatabaseConnectionForm : Form
                 use_headless_browser BOOLEAN DEFAULT TRUE,
                 browser_timeout_seconds INTEGER DEFAULT 30,
                 auto_start_scraping BOOLEAN DEFAULT FALSE,
+                max_displayed_articles INTEGER DEFAULT 100,
                 last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )";
         await cmd.ExecuteNonQueryAsync();

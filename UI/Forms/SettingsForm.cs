@@ -28,6 +28,7 @@ public partial class SettingsForm : Form
         numDelayBetweenLinks.Value = settings.DelayBetweenLinksSeconds;
         numMaxArticles.Value = settings.MaxArticlesPerSite;
         numBrowserTimeout.Value = settings.BrowserTimeoutSeconds;
+        numMaxDisplayed.Value = settings.MaxDisplayedArticles;
         chkUseHeadless.Checked = settings.UseHeadlessBrowser;
         chkAutoStart.Checked = settings.AutoStartScraping;
     }
@@ -146,6 +147,7 @@ public partial class SettingsForm : Form
             settings.DelayBetweenLinksSeconds = (int)numDelayBetweenLinks.Value;
             settings.MaxArticlesPerSite = (int)numMaxArticles.Value;
             settings.BrowserTimeoutSeconds = (int)numBrowserTimeout.Value;
+            settings.MaxDisplayedArticles = (int)numMaxDisplayed.Value;
             settings.UseHeadlessBrowser = chkUseHeadless.Checked;
             settings.AutoStartScraping = chkAutoStart.Checked;
 

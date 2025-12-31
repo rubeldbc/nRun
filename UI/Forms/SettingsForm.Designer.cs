@@ -29,6 +29,9 @@ partial class SettingsForm
         lblBrowserTimeout = new Label();
         numBrowserTimeout = new NumericUpDown();
         lblTimeoutSeconds = new Label();
+        lblMaxDisplayed = new Label();
+        numMaxDisplayed = new NumericUpDown();
+        lblMaxDisplayedInfo = new Label();
         chkUseHeadless = new CheckBox();
         chkAutoStart = new CheckBox();
         btnDatabase = new Button();
@@ -49,6 +52,7 @@ partial class SettingsForm
         ((System.ComponentModel.ISupportInitialize)numDelayBetweenLinks).BeginInit();
         ((System.ComponentModel.ISupportInitialize)numMaxArticles).BeginInit();
         ((System.ComponentModel.ISupportInitialize)numBrowserTimeout).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)numMaxDisplayed).BeginInit();
         groupBoxChrome.SuspendLayout();
         panelButtons.SuspendLayout();
         SuspendLayout();
@@ -67,12 +71,15 @@ partial class SettingsForm
         groupBoxScraping.Controls.Add(lblBrowserTimeout);
         groupBoxScraping.Controls.Add(numBrowserTimeout);
         groupBoxScraping.Controls.Add(lblTimeoutSeconds);
+        groupBoxScraping.Controls.Add(lblMaxDisplayed);
+        groupBoxScraping.Controls.Add(numMaxDisplayed);
+        groupBoxScraping.Controls.Add(lblMaxDisplayedInfo);
         groupBoxScraping.Controls.Add(chkUseHeadless);
         groupBoxScraping.Controls.Add(chkAutoStart);
         groupBoxScraping.Controls.Add(btnDatabase);
         groupBoxScraping.Location = new Point(15, 15);
         groupBoxScraping.Name = "groupBoxScraping";
-        groupBoxScraping.Size = new Size(400, 250);
+        groupBoxScraping.Size = new Size(400, 280);
         groupBoxScraping.TabIndex = 0;
         groupBoxScraping.TabStop = false;
         groupBoxScraping.Text = "Scraping Settings";
@@ -177,33 +184,61 @@ partial class SettingsForm
         lblTimeoutSeconds.Size = new Size(50, 15);
         lblTimeoutSeconds.TabIndex = 10;
         lblTimeoutSeconds.Text = "seconds";
-        // 
+        //
+        // lblMaxDisplayed
+        //
+        lblMaxDisplayed.AutoSize = true;
+        lblMaxDisplayed.Location = new Point(15, 150);
+        lblMaxDisplayed.Name = "lblMaxDisplayed";
+        lblMaxDisplayed.Size = new Size(139, 15);
+        lblMaxDisplayed.TabIndex = 11;
+        lblMaxDisplayed.Text = "Max Displayed Articles:";
+        //
+        // numMaxDisplayed
+        //
+        numMaxDisplayed.Location = new Point(180, 147);
+        numMaxDisplayed.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+        numMaxDisplayed.Minimum = new decimal(new int[] { 10, 0, 0, 0 });
+        numMaxDisplayed.Name = "numMaxDisplayed";
+        numMaxDisplayed.Size = new Size(80, 23);
+        numMaxDisplayed.TabIndex = 12;
+        numMaxDisplayed.Value = new decimal(new int[] { 100, 0, 0, 0 });
+        //
+        // lblMaxDisplayedInfo
+        //
+        lblMaxDisplayedInfo.AutoSize = true;
+        lblMaxDisplayedInfo.Location = new Point(265, 150);
+        lblMaxDisplayedInfo.Name = "lblMaxDisplayedInfo";
+        lblMaxDisplayedInfo.Size = new Size(57, 15);
+        lblMaxDisplayedInfo.TabIndex = 13;
+        lblMaxDisplayedInfo.Text = "(10-1000)";
+        //
         // chkUseHeadless
-        // 
+        //
         chkUseHeadless.AutoSize = true;
         chkUseHeadless.Checked = true;
         chkUseHeadless.CheckState = CheckState.Checked;
-        chkUseHeadless.Location = new Point(15, 155);
+        chkUseHeadless.Location = new Point(15, 185);
         chkUseHeadless.Name = "chkUseHeadless";
         chkUseHeadless.Size = new Size(210, 19);
-        chkUseHeadless.TabIndex = 11;
+        chkUseHeadless.TabIndex = 14;
         chkUseHeadless.Text = "Use Headless Browser (no window)";
-        // 
+        //
         // chkAutoStart
-        // 
+        //
         chkAutoStart.AutoSize = true;
-        chkAutoStart.Location = new Point(15, 180);
+        chkAutoStart.Location = new Point(15, 210);
         chkAutoStart.Name = "chkAutoStart";
         chkAutoStart.Size = new Size(218, 19);
-        chkAutoStart.TabIndex = 12;
+        chkAutoStart.TabIndex = 15;
         chkAutoStart.Text = "Auto-start scraping when app opens";
-        // 
+        //
         // btnDatabase
-        // 
-        btnDatabase.Location = new Point(15, 210);
+        //
+        btnDatabase.Location = new Point(15, 240);
         btnDatabase.Name = "btnDatabase";
         btnDatabase.Size = new Size(150, 28);
-        btnDatabase.TabIndex = 13;
+        btnDatabase.TabIndex = 16;
         btnDatabase.Text = "Database Connection...";
         btnDatabase.UseVisualStyleBackColor = true;
         // 
@@ -218,7 +253,7 @@ partial class SettingsForm
         groupBoxChrome.Controls.Add(btnCheckVersion);
         groupBoxChrome.Controls.Add(btnDownloadDriver);
         groupBoxChrome.Controls.Add(progressBarDownload);
-        groupBoxChrome.Location = new Point(15, 275);
+        groupBoxChrome.Location = new Point(15, 305);
         groupBoxChrome.Name = "groupBoxChrome";
         groupBoxChrome.Size = new Size(400, 145);
         groupBoxChrome.TabIndex = 2;
@@ -325,19 +360,19 @@ partial class SettingsForm
         panelButtons.Controls.Add(btnSave);
         panelButtons.Controls.Add(btnCancel);
         panelButtons.Dock = DockStyle.Bottom;
-        panelButtons.Location = new Point(0, 430);
+        panelButtons.Location = new Point(0, 460);
         panelButtons.Name = "panelButtons";
         panelButtons.Padding = new Padding(10);
         panelButtons.Size = new Size(430, 50);
         panelButtons.TabIndex = 1;
-        // 
+        //
         // SettingsForm
-        // 
+        //
         AcceptButton = btnSave;
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         CancelButton = btnCancel;
-        ClientSize = new Size(430, 480);
+        ClientSize = new Size(430, 510);
         Controls.Add(groupBoxScraping);
         Controls.Add(groupBoxChrome);
         Controls.Add(panelButtons);
@@ -354,6 +389,7 @@ partial class SettingsForm
         ((System.ComponentModel.ISupportInitialize)numDelayBetweenLinks).EndInit();
         ((System.ComponentModel.ISupportInitialize)numMaxArticles).EndInit();
         ((System.ComponentModel.ISupportInitialize)numBrowserTimeout).EndInit();
+        ((System.ComponentModel.ISupportInitialize)numMaxDisplayed).EndInit();
         groupBoxChrome.ResumeLayout(false);
         groupBoxChrome.PerformLayout();
         panelButtons.ResumeLayout(false);
@@ -380,6 +416,9 @@ partial class SettingsForm
     private System.Windows.Forms.NumericUpDown numDelayBetweenLinks;
     private System.Windows.Forms.NumericUpDown numMaxArticles;
     private System.Windows.Forms.NumericUpDown numBrowserTimeout;
+    private System.Windows.Forms.NumericUpDown numMaxDisplayed;
+    private System.Windows.Forms.Label lblMaxDisplayed;
+    private System.Windows.Forms.Label lblMaxDisplayedInfo;
     private System.Windows.Forms.CheckBox chkUseHeadless;
     private System.Windows.Forms.CheckBox chkAutoStart;
     private System.Windows.Forms.Button btnDatabase;
