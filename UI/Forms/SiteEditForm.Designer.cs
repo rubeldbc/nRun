@@ -10,12 +10,6 @@ partial class SiteEditForm
         {
             components.Dispose();
         }
-        // Dispose the logo image to prevent memory leaks
-        if (picLogo.Image != null)
-        {
-            picLogo.Image.Dispose();
-            picLogo.Image = null;
-        }
         base.Dispose(disposing);
     }
 
@@ -47,17 +41,10 @@ partial class SiteEditForm
 
         // Buttons
         this.btnTestSelectors = new System.Windows.Forms.Button();
-        this.btnDownloadLogo = new System.Windows.Forms.Button();
         this.btnSave = new System.Windows.Forms.Button();
         this.btnCancel = new System.Windows.Forms.Button();
         this.btnPrevious = new System.Windows.Forms.Button();
         this.btnNext = new System.Windows.Forms.Button();
-
-        // Logo Preview
-        this.groupBoxLogo = new System.Windows.Forms.GroupBox();
-        this.picLogo = new System.Windows.Forms.PictureBox();
-        this.lblLogoInfo = new System.Windows.Forms.Label();
-        this.progressLogo = new System.Windows.Forms.ProgressBar();
 
         // Test Results
         this.groupBoxTestResults = new System.Windows.Forms.GroupBox();
@@ -69,8 +56,6 @@ partial class SiteEditForm
         this.panelNavigation = new System.Windows.Forms.Panel();
         this.lblNavInfo = new System.Windows.Forms.Label();
 
-        this.groupBoxLogo.SuspendLayout();
-        ((System.ComponentModel.ISupportInitialize)(this.picLogo)).BeginInit();
         this.groupBoxTestResults.SuspendLayout();
         this.panelButtons.SuspendLayout();
         this.panelMain.SuspendLayout();
@@ -86,7 +71,7 @@ partial class SiteEditForm
         this.panelNavigation.Dock = System.Windows.Forms.DockStyle.Top;
         this.panelNavigation.Location = new System.Drawing.Point(0, 0);
         this.panelNavigation.Name = "panelNavigation";
-        this.panelNavigation.Size = new System.Drawing.Size(680, 35);
+        this.panelNavigation.Size = new System.Drawing.Size(580, 35);
         this.panelNavigation.TabIndex = 0;
         this.panelNavigation.Visible = false;
 
@@ -104,7 +89,7 @@ partial class SiteEditForm
         // lblNavInfo
         //
         this.lblNavInfo.Anchor = System.Windows.Forms.AnchorStyles.Top;
-        this.lblNavInfo.Location = new System.Drawing.Point(200, 8);
+        this.lblNavInfo.Location = new System.Drawing.Point(150, 8);
         this.lblNavInfo.Name = "lblNavInfo";
         this.lblNavInfo.Size = new System.Drawing.Size(280, 20);
         this.lblNavInfo.TabIndex = 1;
@@ -115,7 +100,7 @@ partial class SiteEditForm
         // btnNext
         //
         this.btnNext.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnNext.Location = new System.Drawing.Point(565, 5);
+        this.btnNext.Location = new System.Drawing.Point(465, 5);
         this.btnNext.Name = "btnNext";
         this.btnNext.Size = new System.Drawing.Size(100, 25);
         this.btnNext.TabIndex = 2;
@@ -142,14 +127,12 @@ partial class SiteEditForm
         this.panelMain.Controls.Add(this.lblBodySelector);
         this.panelMain.Controls.Add(this.txtBodySelector);
         this.panelMain.Controls.Add(this.btnTestSelectors);
-        this.panelMain.Controls.Add(this.btnDownloadLogo);
-        this.panelMain.Controls.Add(this.groupBoxLogo);
         this.panelMain.Controls.Add(this.groupBoxTestResults);
         this.panelMain.Dock = System.Windows.Forms.DockStyle.Fill;
         this.panelMain.Location = new System.Drawing.Point(0, 35);
         this.panelMain.Name = "panelMain";
         this.panelMain.Padding = new System.Windows.Forms.Padding(15);
-        this.panelMain.Size = new System.Drawing.Size(680, 565);
+        this.panelMain.Size = new System.Drawing.Size(580, 515);
         this.panelMain.TabIndex = 1;
 
         //
@@ -165,9 +148,10 @@ partial class SiteEditForm
         //
         // txtName
         //
+        this.txtName.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.txtName.Location = new System.Drawing.Point(130, 12);
         this.txtName.Name = "txtName";
-        this.txtName.Size = new System.Drawing.Size(400, 23);
+        this.txtName.Size = new System.Drawing.Size(435, 23);
         this.txtName.TabIndex = 1;
 
         //
@@ -183,9 +167,10 @@ partial class SiteEditForm
         //
         // txtUrl
         //
+        this.txtUrl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.txtUrl.Location = new System.Drawing.Point(130, 42);
         this.txtUrl.Name = "txtUrl";
-        this.txtUrl.Size = new System.Drawing.Size(400, 23);
+        this.txtUrl.Size = new System.Drawing.Size(435, 23);
         this.txtUrl.TabIndex = 3;
 
         //
@@ -220,9 +205,10 @@ partial class SiteEditForm
         //
         // txtCountry
         //
+        this.txtCountry.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.txtCountry.Location = new System.Drawing.Point(355, 72);
         this.txtCountry.Name = "txtCountry";
-        this.txtCountry.Size = new System.Drawing.Size(175, 23);
+        this.txtCountry.Size = new System.Drawing.Size(210, 23);
         this.txtCountry.TabIndex = 7;
         this.txtCountry.PlaceholderText = "e.g., USA, Bangladesh";
 
@@ -241,10 +227,11 @@ partial class SiteEditForm
         //
         // lblSelectorInfo
         //
+        this.lblSelectorInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.lblSelectorInfo.ForeColor = System.Drawing.Color.Gray;
         this.lblSelectorInfo.Location = new System.Drawing.Point(15, 128);
         this.lblSelectorInfo.Name = "lblSelectorInfo";
-        this.lblSelectorInfo.Size = new System.Drawing.Size(515, 30);
+        this.lblSelectorInfo.Size = new System.Drawing.Size(550, 30);
         this.lblSelectorInfo.TabIndex = 9;
         this.lblSelectorInfo.Text = "CSS Selectors are used to find elements on the page. Examples: .article-link, #main-title, article h1";
 
@@ -261,9 +248,10 @@ partial class SiteEditForm
         //
         // txtArticleSelector
         //
+        this.txtArticleSelector.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.txtArticleSelector.Location = new System.Drawing.Point(130, 165);
         this.txtArticleSelector.Name = "txtArticleSelector";
-        this.txtArticleSelector.Size = new System.Drawing.Size(400, 23);
+        this.txtArticleSelector.Size = new System.Drawing.Size(435, 23);
         this.txtArticleSelector.TabIndex = 11;
         this.txtArticleSelector.PlaceholderText = "e.g., .article-list a, article a.title-link";
 
@@ -280,9 +268,10 @@ partial class SiteEditForm
         //
         // txtTitleSelector
         //
+        this.txtTitleSelector.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.txtTitleSelector.Location = new System.Drawing.Point(130, 195);
         this.txtTitleSelector.Name = "txtTitleSelector";
-        this.txtTitleSelector.Size = new System.Drawing.Size(400, 23);
+        this.txtTitleSelector.Size = new System.Drawing.Size(435, 23);
         this.txtTitleSelector.TabIndex = 13;
         this.txtTitleSelector.PlaceholderText = "e.g., h1.title, article h1, .headline";
 
@@ -299,9 +288,10 @@ partial class SiteEditForm
         //
         // txtBodySelector
         //
+        this.txtBodySelector.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.txtBodySelector.Location = new System.Drawing.Point(130, 225);
         this.txtBodySelector.Name = "txtBodySelector";
-        this.txtBodySelector.Size = new System.Drawing.Size(400, 23);
+        this.txtBodySelector.Size = new System.Drawing.Size(435, 23);
         this.txtBodySelector.TabIndex = 15;
         this.txtBodySelector.PlaceholderText = "e.g., .article-content, div.body-text, article p";
 
@@ -316,73 +306,14 @@ partial class SiteEditForm
         this.btnTestSelectors.UseVisualStyleBackColor = true;
 
         //
-        // btnDownloadLogo
-        //
-        this.btnDownloadLogo.Location = new System.Drawing.Point(260, 258);
-        this.btnDownloadLogo.Name = "btnDownloadLogo";
-        this.btnDownloadLogo.Size = new System.Drawing.Size(120, 28);
-        this.btnDownloadLogo.TabIndex = 17;
-        this.btnDownloadLogo.Text = "Download Logo";
-        this.btnDownloadLogo.UseVisualStyleBackColor = true;
-
-        //
-        // groupBoxLogo
-        //
-        this.groupBoxLogo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-        this.groupBoxLogo.Controls.Add(this.picLogo);
-        this.groupBoxLogo.Controls.Add(this.lblLogoInfo);
-        this.groupBoxLogo.Controls.Add(this.progressLogo);
-        this.groupBoxLogo.Location = new System.Drawing.Point(545, 12);
-        this.groupBoxLogo.Name = "groupBoxLogo";
-        this.groupBoxLogo.Size = new System.Drawing.Size(120, 160);
-        this.groupBoxLogo.TabIndex = 18;
-        this.groupBoxLogo.TabStop = false;
-        this.groupBoxLogo.Text = "Site Header";
-
-        //
-        // picLogo
-        //
-        this.picLogo.BackColor = System.Drawing.Color.WhiteSmoke;
-        this.picLogo.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-        this.picLogo.Location = new System.Drawing.Point(10, 22);
-        this.picLogo.Name = "picLogo";
-        this.picLogo.Size = new System.Drawing.Size(100, 100);
-        this.picLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-        this.picLogo.TabIndex = 0;
-        this.picLogo.TabStop = false;
-
-        //
-        // lblLogoInfo
-        //
-        this.lblLogoInfo.Font = new System.Drawing.Font("Segoe UI", 7.5F);
-        this.lblLogoInfo.ForeColor = System.Drawing.Color.Gray;
-        this.lblLogoInfo.Location = new System.Drawing.Point(5, 125);
-        this.lblLogoInfo.Name = "lblLogoInfo";
-        this.lblLogoInfo.Size = new System.Drawing.Size(110, 30);
-        this.lblLogoInfo.TabIndex = 1;
-        this.lblLogoInfo.Text = "No logo";
-        this.lblLogoInfo.TextAlign = System.Drawing.ContentAlignment.TopCenter;
-
-        //
-        // progressLogo
-        //
-        this.progressLogo.Location = new System.Drawing.Point(10, 60);
-        this.progressLogo.Name = "progressLogo";
-        this.progressLogo.Size = new System.Drawing.Size(100, 10);
-        this.progressLogo.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
-        this.progressLogo.MarqueeAnimationSpeed = 30;
-        this.progressLogo.TabIndex = 2;
-        this.progressLogo.Visible = false;
-
-        //
         // groupBoxTestResults
         //
         this.groupBoxTestResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
         this.groupBoxTestResults.Controls.Add(this.txtTestResults);
         this.groupBoxTestResults.Location = new System.Drawing.Point(15, 295);
         this.groupBoxTestResults.Name = "groupBoxTestResults";
-        this.groupBoxTestResults.Size = new System.Drawing.Size(650, 220);
-        this.groupBoxTestResults.TabIndex = 19;
+        this.groupBoxTestResults.Size = new System.Drawing.Size(550, 170);
+        this.groupBoxTestResults.TabIndex = 17;
         this.groupBoxTestResults.TabStop = false;
         this.groupBoxTestResults.Text = "Test Results / Log";
 
@@ -396,7 +327,7 @@ partial class SiteEditForm
         this.txtTestResults.Name = "txtTestResults";
         this.txtTestResults.ReadOnly = true;
         this.txtTestResults.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-        this.txtTestResults.Size = new System.Drawing.Size(644, 198);
+        this.txtTestResults.Size = new System.Drawing.Size(544, 148);
         this.txtTestResults.TabIndex = 0;
 
         //
@@ -405,17 +336,17 @@ partial class SiteEditForm
         this.panelButtons.Controls.Add(this.btnSave);
         this.panelButtons.Controls.Add(this.btnCancel);
         this.panelButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-        this.panelButtons.Location = new System.Drawing.Point(0, 600);
+        this.panelButtons.Location = new System.Drawing.Point(0, 550);
         this.panelButtons.Name = "panelButtons";
         this.panelButtons.Padding = new System.Windows.Forms.Padding(10);
-        this.panelButtons.Size = new System.Drawing.Size(680, 50);
+        this.panelButtons.Size = new System.Drawing.Size(580, 50);
         this.panelButtons.TabIndex = 2;
 
         //
         // btnSave
         //
         this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-        this.btnSave.Location = new System.Drawing.Point(495, 12);
+        this.btnSave.Location = new System.Drawing.Point(395, 12);
         this.btnSave.Name = "btnSave";
         this.btnSave.Size = new System.Drawing.Size(80, 28);
         this.btnSave.TabIndex = 0;
@@ -427,7 +358,7 @@ partial class SiteEditForm
         //
         this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
         this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-        this.btnCancel.Location = new System.Drawing.Point(585, 12);
+        this.btnCancel.Location = new System.Drawing.Point(485, 12);
         this.btnCancel.Name = "btnCancel";
         this.btnCancel.Size = new System.Drawing.Size(80, 28);
         this.btnCancel.TabIndex = 1;
@@ -441,7 +372,7 @@ partial class SiteEditForm
         this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         this.CancelButton = this.btnCancel;
-        this.ClientSize = new System.Drawing.Size(680, 650);
+        this.ClientSize = new System.Drawing.Size(580, 600);
         this.Controls.Add(this.panelMain);
         this.Controls.Add(this.panelNavigation);
         this.Controls.Add(this.panelButtons);
@@ -453,8 +384,6 @@ partial class SiteEditForm
         this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
         this.Text = "Add News Source";
 
-        this.groupBoxLogo.ResumeLayout(false);
-        ((System.ComponentModel.ISupportInitialize)(this.picLogo)).EndInit();
         this.groupBoxTestResults.ResumeLayout(false);
         this.groupBoxTestResults.PerformLayout();
         this.panelButtons.ResumeLayout(false);
@@ -487,15 +416,10 @@ partial class SiteEditForm
     private System.Windows.Forms.TextBox txtBodySelector;
     private System.Windows.Forms.CheckBox chkIsActive;
     private System.Windows.Forms.Button btnTestSelectors;
-    private System.Windows.Forms.Button btnDownloadLogo;
     private System.Windows.Forms.Button btnSave;
     private System.Windows.Forms.Button btnCancel;
     private System.Windows.Forms.Button btnPrevious;
     private System.Windows.Forms.Button btnNext;
-    private System.Windows.Forms.GroupBox groupBoxLogo;
-    private System.Windows.Forms.PictureBox picLogo;
-    private System.Windows.Forms.Label lblLogoInfo;
-    private System.Windows.Forms.ProgressBar progressLogo;
     private System.Windows.Forms.GroupBox groupBoxTestResults;
     private System.Windows.Forms.TextBox txtTestResults;
 }

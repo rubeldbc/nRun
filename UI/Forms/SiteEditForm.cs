@@ -1,7 +1,5 @@
 using nRun.Models;
 using nRun.Services;
-using SkiaSharp;
-using System.Drawing.Imaging;
 
 namespace nRun.UI.Forms;
 
@@ -9,7 +7,6 @@ public partial class SiteEditForm : Form
 {
     private SiteInfo? _existingSite;
     private bool _isEditMode;
-    private bool _isDownloadingLogo = false;
 
     // Navigation support
     private List<SiteInfo>? _allSites;
@@ -34,28 +31,14 @@ public partial class SiteEditForm : Form
         SetupEventHandlers();
         SetupNavigationPanel();
         LoadSiteData();
-        LoadLogoPreview();
     }
 
     private void SetupEventHandlers()
     {
         btnSave.Click += BtnSave_Click;
         btnTestSelectors.Click += BtnTestSelectors_Click;
-        btnDownloadLogo.Click += BtnDownloadLogo_Click;
         btnPrevious.Click += BtnPrevious_Click;
         btnNext.Click += BtnNext_Click;
-        txtUrl.TextChanged += TxtUrl_TextChanged;
-        this.FormClosing += SiteEditForm_FormClosing;
-    }
-
-    private void SiteEditForm_FormClosing(object? sender, FormClosingEventArgs e)
-    {
-        if (_isDownloadingLogo)
-        {
-            MessageBox.Show("Please wait until logo download is complete.", "Download in Progress",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            e.Cancel = true;
-        }
     }
 
     private void SetupNavigationPanel()
@@ -101,192 +84,6 @@ public partial class SiteEditForm : Form
         }
     }
 
-    private void LoadLogoPreview()
-    {
-        // Dispose previous image if any
-        if (picLogo.Image != null)
-        {
-            picLogo.Image.Dispose();
-            picLogo.Image = null;
-        }
-
-        // Get logo name from existing site or extract from URL
-        string? logoName = _existingSite?.SiteLogo;
-        if (string.IsNullOrEmpty(logoName))
-        {
-            var siteUrl = txtUrl.Text.Trim();
-            if (!string.IsNullOrEmpty(siteUrl))
-            {
-                logoName = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(siteUrl);
-            }
-        }
-
-        if (string.IsNullOrEmpty(logoName))
-        {
-            lblLogoInfo.Text = "No logo";
-            return;
-        }
-
-        // Try to find local logo
-        var logoPath = ServiceContainer.LogoDownload.GetLogoPath(logoName);
-        if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
-        {
-            try
-            {
-                // Load image using SkiaSharp (supports WebP)
-                var bitmap = ConvertFileToBitmap(logoPath);
-                if (bitmap != null)
-                {
-                    picLogo.Image = bitmap;
-
-                    // Get file info
-                    var fileInfo = new FileInfo(logoPath);
-                    var sizeKb = fileInfo.Length / 1024.0;
-                    lblLogoInfo.Text = $"{bitmap.Width}x{bitmap.Height}\n{sizeKb:F1} KB (local)";
-                }
-                else
-                {
-                    lblLogoInfo.Text = "Error loading";
-                }
-            }
-            catch
-            {
-                lblLogoInfo.Text = "Error loading";
-            }
-        }
-        else
-        {
-            // Try to load from online
-            LoadLogoFromOnlineAsync();
-        }
-    }
-
-    private async void LoadLogoFromOnlineAsync()
-    {
-        var siteUrl = txtUrl.Text.Trim();
-        if (string.IsNullOrEmpty(siteUrl))
-        {
-            lblLogoInfo.Text = "No logo";
-            return;
-        }
-
-        lblLogoInfo.Text = "Loading...";
-        progressLogo.Visible = true;
-
-        try
-        {
-            var logoData = await ServiceContainer.LogoDownload.GetLogoFromOnlineAsync(siteUrl);
-            if (logoData != null && logoData.Length > 0)
-            {
-                // Dispose previous image if any
-                if (picLogo.Image != null)
-                {
-                    picLogo.Image.Dispose();
-                    picLogo.Image = null;
-                }
-
-                // Convert using SkiaSharp (supports all formats including WebP)
-                var bitmap = ConvertToBitmap(logoData);
-                if (bitmap != null)
-                {
-                    picLogo.Image = bitmap;
-                    lblLogoInfo.Text = $"{bitmap.Width}x{bitmap.Height}\n(online)";
-                }
-                else
-                {
-                    lblLogoInfo.Text = "No logo";
-                }
-            }
-            else
-            {
-                lblLogoInfo.Text = "No logo";
-            }
-        }
-        catch
-        {
-            lblLogoInfo.Text = "No logo";
-        }
-        finally
-        {
-            progressLogo.Visible = false;
-        }
-    }
-
-    private void TxtName_TextChanged(object? sender, EventArgs e)
-    {
-        // No longer triggers logo preview - logo is based on URL, not name
-    }
-
-    private void TxtUrl_TextChanged(object? sender, EventArgs e)
-    {
-        // Update logo preview when site URL changes
-        LoadLogoPreview();
-    }
-
-    /// <summary>
-    /// Converts image data (including WebP) to System.Drawing.Bitmap using SkiaSharp
-    /// </summary>
-    private Bitmap? ConvertToBitmap(byte[] imageData)
-    {
-        try
-        {
-            using var skBitmap = SKBitmap.Decode(imageData);
-            if (skBitmap == null) return null;
-
-            var bitmap = new Bitmap(skBitmap.Width, skBitmap.Height, PixelFormat.Format32bppArgb);
-            var bitmapData = bitmap.LockBits(
-                new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                ImageLockMode.WriteOnly,
-                PixelFormat.Format32bppArgb);
-
-            try
-            {
-                // Copy pixel data
-                var srcPtr = skBitmap.GetPixels();
-                var dstPtr = bitmapData.Scan0;
-                var rowBytes = skBitmap.Width * 4;
-
-                for (int y = 0; y < skBitmap.Height; y++)
-                {
-                    unsafe
-                    {
-                        Buffer.MemoryCopy(
-                            (void*)(srcPtr + y * skBitmap.RowBytes),
-                            (void*)(dstPtr + y * bitmapData.Stride),
-                            rowBytes,
-                            rowBytes);
-                    }
-                }
-            }
-            finally
-            {
-                bitmap.UnlockBits(bitmapData);
-            }
-
-            return bitmap;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Converts image data from file to System.Drawing.Bitmap using SkiaSharp
-    /// </summary>
-    private Bitmap? ConvertFileToBitmap(string filePath)
-    {
-        try
-        {
-            var imageData = File.ReadAllBytes(filePath);
-            return ConvertToBitmap(imageData);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
     private void Log(string message)
     {
         var timestamp = DateTime.Now.ToString("HH:mm:ss");
@@ -313,7 +110,6 @@ public partial class SiteEditForm : Form
         _currentIndex = newIndex;
         _existingSite = _allSites[_currentIndex];
         LoadSiteData();
-        LoadLogoPreview();
         UpdateNavigationState();
         txtTestResults.Clear();
         Log($"Navigated to: {_existingSite.SiteName}");
@@ -426,7 +222,7 @@ public partial class SiteEditForm : Form
                 _existingSite.IsActive = chkIsActive.Checked;
 
                 ServiceContainer.Database.UpdateSite(_existingSite);
-                Log($"Updated: {_existingSite.SiteName} (logo: {logoName})");
+                Log($"Updated: {_existingSite.SiteName}");
             }
             else
             {
@@ -447,11 +243,8 @@ public partial class SiteEditForm : Form
                 ServiceContainer.Database.AddSite(newSite);
                 _existingSite = newSite;
                 _isEditMode = true;
-                Log($"Added: {newSite.SiteName} (logo: {logoName})");
+                Log($"Added: {newSite.SiteName}");
             }
-
-            // Always download logo when site is saved
-            _ = DownloadLogoOnSaveAsync();
 
             return true;
         }
@@ -459,52 +252,6 @@ public partial class SiteEditForm : Form
         {
             Log($"ERROR saving site: {ex.Message}");
             return false;
-        }
-    }
-
-    private async Task DownloadLogoOnSaveAsync()
-    {
-        var siteUrl = txtUrl.Text.Trim();
-        var siteName = txtName.Text.Trim();
-
-        if (string.IsNullOrEmpty(siteUrl) || string.IsNullOrEmpty(siteName))
-            return;
-
-        _isDownloadingLogo = true;
-        btnSave.Enabled = false;
-        btnCancel.Enabled = false;
-
-        try
-        {
-            // Show progress
-            progressLogo.Visible = true;
-
-            // Use logo name from database (already set during save)
-            var existingLogoName = _existingSite?.SiteLogo;
-
-            Log($"Downloading logo for: {siteName} (file: {existingLogoName}.webp)");
-            var (logoPath, logoName) = await ServiceContainer.LogoDownload.DownloadLogoAsync(siteUrl, siteName, existingLogoName);
-
-            if (!string.IsNullOrEmpty(logoPath))
-            {
-                Log($"[SUCCESS] Logo saved: {logoPath}");
-                LoadLogoPreview();
-            }
-            else
-            {
-                Log("[WARN] Could not download logo - no valid favicon found.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"[ERROR] Logo download failed: {ex.Message}");
-        }
-        finally
-        {
-            progressLogo.Visible = false;
-            _isDownloadingLogo = false;
-            btnSave.Enabled = true;
-            btnCancel.Enabled = true;
         }
     }
 
@@ -590,77 +337,6 @@ public partial class SiteEditForm : Form
         finally
         {
             btnTestSelectors.Enabled = true;
-        }
-    }
-
-    #endregion
-
-    #region Download Logo
-
-    private async void BtnDownloadLogo_Click(object? sender, EventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(txtUrl.Text))
-        {
-            Log("[ERROR] Please enter a URL first.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(txtName.Text))
-        {
-            Log("[ERROR] Please enter a site name first.");
-            return;
-        }
-
-        _isDownloadingLogo = true;
-        btnDownloadLogo.Enabled = false;
-        btnDownloadLogo.Text = "Downloading...";
-        btnSave.Enabled = false;
-        btnCancel.Enabled = false;
-        progressLogo.Visible = true;
-
-        // Use logo name from database if available, otherwise extract from URL
-        var existingLogoName = _existingSite?.SiteLogo;
-        if (string.IsNullOrEmpty(existingLogoName))
-        {
-            existingLogoName = ServiceContainer.LogoDownload.ExtractLogoNameFromUrl(txtUrl.Text.Trim());
-        }
-
-        Log($"Downloading logo for: {txtName.Text.Trim()} (file: {existingLogoName}.webp)");
-
-        try
-        {
-            var (logoPath, logoName) = await ServiceContainer.LogoDownload.DownloadLogoAsync(txtUrl.Text.Trim(), txtName.Text.Trim(), existingLogoName);
-
-            if (!string.IsNullOrEmpty(logoPath))
-            {
-                Log($"[SUCCESS] Logo downloaded: {logoPath}");
-
-                // Update site logo name in database if site exists and not yet set
-                if (_existingSite != null && string.IsNullOrEmpty(_existingSite.SiteLogo))
-                {
-                    _existingSite.SiteLogo = logoName;
-                    ServiceContainer.Database.UpdateSite(_existingSite);
-                }
-
-                LoadLogoPreview();
-            }
-            else
-            {
-                Log("[WARN] Could not download logo. The website may not have a favicon.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"[ERROR] Logo download failed: {ex.Message}");
-        }
-        finally
-        {
-            btnDownloadLogo.Enabled = true;
-            btnDownloadLogo.Text = "Download Logo";
-            btnSave.Enabled = true;
-            btnCancel.Enabled = true;
-            progressLogo.Visible = false;
-            _isDownloadingLogo = false;
         }
     }
 
