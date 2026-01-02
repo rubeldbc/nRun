@@ -159,7 +159,7 @@ partial class SettingsForm
         lblMaxArticles.AutoSize = true;
         lblMaxArticles.Location = new Point(15, 90);
         lblMaxArticles.Name = "lblMaxArticles";
-        lblMaxArticles.Size = new Size(117, 15);
+        lblMaxArticles.Size = new Size(116, 15);
         lblMaxArticles.TabIndex = 6;
         lblMaxArticles.Text = "Max Articles per Site:";
         // 
@@ -177,7 +177,7 @@ partial class SettingsForm
         lblBrowserTimeout.AutoSize = true;
         lblBrowserTimeout.Location = new Point(15, 120);
         lblBrowserTimeout.Name = "lblBrowserTimeout";
-        lblBrowserTimeout.Size = new Size(99, 15);
+        lblBrowserTimeout.Size = new Size(100, 15);
         lblBrowserTimeout.TabIndex = 8;
         lblBrowserTimeout.Text = "Browser Timeout:";
         // 
@@ -199,18 +199,18 @@ partial class SettingsForm
         lblTimeoutSeconds.Size = new Size(50, 15);
         lblTimeoutSeconds.TabIndex = 10;
         lblTimeoutSeconds.Text = "seconds";
-        //
+        // 
         // lblMaxDisplayed
-        //
+        // 
         lblMaxDisplayed.AutoSize = true;
         lblMaxDisplayed.Location = new Point(15, 150);
         lblMaxDisplayed.Name = "lblMaxDisplayed";
-        lblMaxDisplayed.Size = new Size(139, 15);
+        lblMaxDisplayed.Size = new Size(128, 15);
         lblMaxDisplayed.TabIndex = 11;
         lblMaxDisplayed.Text = "Max Displayed Articles:";
-        //
+        // 
         // numMaxDisplayed
-        //
+        // 
         numMaxDisplayed.Location = new Point(180, 147);
         numMaxDisplayed.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
         numMaxDisplayed.Minimum = new decimal(new int[] { 10, 0, 0, 0 });
@@ -218,18 +218,18 @@ partial class SettingsForm
         numMaxDisplayed.Size = new Size(80, 23);
         numMaxDisplayed.TabIndex = 12;
         numMaxDisplayed.Value = new decimal(new int[] { 100, 0, 0, 0 });
-        //
+        // 
         // lblMaxDisplayedInfo
-        //
+        // 
         lblMaxDisplayedInfo.AutoSize = true;
         lblMaxDisplayedInfo.Location = new Point(265, 150);
         lblMaxDisplayedInfo.Name = "lblMaxDisplayedInfo";
-        lblMaxDisplayedInfo.Size = new Size(57, 15);
+        lblMaxDisplayedInfo.Size = new Size(56, 15);
         lblMaxDisplayedInfo.TabIndex = 13;
         lblMaxDisplayedInfo.Text = "(10-1000)";
-        //
+        // 
         // chkUseHeadless
-        //
+        // 
         chkUseHeadless.AutoSize = true;
         chkUseHeadless.Checked = true;
         chkUseHeadless.CheckState = CheckState.Checked;
@@ -238,27 +238,27 @@ partial class SettingsForm
         chkUseHeadless.Size = new Size(210, 19);
         chkUseHeadless.TabIndex = 14;
         chkUseHeadless.Text = "Use Headless Browser (no window)";
-        //
+        // 
         // chkAutoStart
-        //
+        // 
         chkAutoStart.AutoSize = true;
         chkAutoStart.Location = new Point(15, 210);
         chkAutoStart.Name = "chkAutoStart";
         chkAutoStart.Size = new Size(218, 19);
         chkAutoStart.TabIndex = 15;
         chkAutoStart.Text = "Auto-start scraping when app opens";
-        //
+        // 
         // btnDatabase
-        //
+        // 
         btnDatabase.Location = new Point(15, 240);
         btnDatabase.Name = "btnDatabase";
         btnDatabase.Size = new Size(150, 28);
         btnDatabase.TabIndex = 16;
         btnDatabase.Text = "Database Connection...";
         btnDatabase.UseVisualStyleBackColor = true;
-        //
+        // 
         // groupBoxMemurai
-        //
+        // 
         groupBoxMemurai.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         groupBoxMemurai.Controls.Add(lblMemuraiHost);
         groupBoxMemurai.Controls.Add(txtMemuraiHost);
@@ -277,35 +277,35 @@ partial class SettingsForm
         groupBoxMemurai.TabIndex = 2;
         groupBoxMemurai.TabStop = false;
         groupBoxMemurai.Text = "Memurai / Redis Server";
-        //
+        // 
         // lblMemuraiHost
-        //
+        // 
         lblMemuraiHost.AutoSize = true;
         lblMemuraiHost.Location = new Point(15, 28);
         lblMemuraiHost.Name = "lblMemuraiHost";
         lblMemuraiHost.Size = new Size(35, 15);
         lblMemuraiHost.TabIndex = 0;
         lblMemuraiHost.Text = "Host:";
-        //
+        // 
         // txtMemuraiHost
-        //
+        // 
         txtMemuraiHost.Location = new Point(80, 25);
         txtMemuraiHost.Name = "txtMemuraiHost";
         txtMemuraiHost.Size = new Size(130, 23);
         txtMemuraiHost.TabIndex = 1;
         txtMemuraiHost.Text = "localhost";
-        //
+        // 
         // lblMemuraiPort
-        //
+        // 
         lblMemuraiPort.AutoSize = true;
         lblMemuraiPort.Location = new Point(220, 28);
         lblMemuraiPort.Name = "lblMemuraiPort";
         lblMemuraiPort.Size = new Size(32, 15);
         lblMemuraiPort.TabIndex = 2;
         lblMemuraiPort.Text = "Port:";
-        //
+        // 
         // numMemuraiPort
-        //
+        // 
         numMemuraiPort.Location = new Point(260, 25);
         numMemuraiPort.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
         numMemuraiPort.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
@@ -313,35 +313,35 @@ partial class SettingsForm
         numMemuraiPort.Size = new Size(70, 23);
         numMemuraiPort.TabIndex = 3;
         numMemuraiPort.Value = new decimal(new int[] { 6379, 0, 0, 0 });
-        //
+        // 
         // lblMemuraiPassword
-        //
+        // 
         lblMemuraiPassword.AutoSize = true;
         lblMemuraiPassword.Location = new Point(15, 58);
         lblMemuraiPassword.Name = "lblMemuraiPassword";
         lblMemuraiPassword.Size = new Size(60, 15);
         lblMemuraiPassword.TabIndex = 4;
         lblMemuraiPassword.Text = "Password:";
-        //
+        // 
         // txtMemuraiPassword
-        //
+        // 
         txtMemuraiPassword.Location = new Point(80, 55);
         txtMemuraiPassword.Name = "txtMemuraiPassword";
         txtMemuraiPassword.PasswordChar = '*';
         txtMemuraiPassword.Size = new Size(130, 23);
         txtMemuraiPassword.TabIndex = 5;
-        //
+        // 
         // lblMemuraiSyncInterval
-        //
+        // 
         lblMemuraiSyncInterval.AutoSize = true;
         lblMemuraiSyncInterval.Location = new Point(220, 58);
         lblMemuraiSyncInterval.Name = "lblMemuraiSyncInterval";
-        lblMemuraiSyncInterval.Size = new Size(34, 15);
+        lblMemuraiSyncInterval.Size = new Size(35, 15);
         lblMemuraiSyncInterval.TabIndex = 6;
         lblMemuraiSyncInterval.Text = "Sync:";
-        //
+        // 
         // numMemuraiSyncInterval
-        //
+        // 
         numMemuraiSyncInterval.Location = new Point(260, 55);
         numMemuraiSyncInterval.Maximum = new decimal(new int[] { 3600, 0, 0, 0 });
         numMemuraiSyncInterval.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
@@ -349,35 +349,35 @@ partial class SettingsForm
         numMemuraiSyncInterval.Size = new Size(70, 23);
         numMemuraiSyncInterval.TabIndex = 7;
         numMemuraiSyncInterval.Value = new decimal(new int[] { 30, 0, 0, 0 });
-        //
+        // 
         // lblMemuraiSyncSeconds
-        //
+        // 
         lblMemuraiSyncSeconds.AutoSize = true;
         lblMemuraiSyncSeconds.Location = new Point(335, 58);
         lblMemuraiSyncSeconds.Name = "lblMemuraiSyncSeconds";
         lblMemuraiSyncSeconds.Size = new Size(24, 15);
         lblMemuraiSyncSeconds.TabIndex = 8;
         lblMemuraiSyncSeconds.Text = "sec";
-        //
+        // 
         // btnTestMemurai
-        //
-        btnTestMemurai.Location = new Point(15, 90);
+        // 
+        btnTestMemurai.Location = new Point(80, 90);
         btnTestMemurai.Name = "btnTestMemurai";
-        btnTestMemurai.Size = new Size(100, 28);
+        btnTestMemurai.Size = new Size(130, 28);
         btnTestMemurai.TabIndex = 9;
         btnTestMemurai.Text = "Test Connection";
         btnTestMemurai.UseVisualStyleBackColor = true;
-        //
+        // 
         // lblMemuraiStatus
-        //
+        // 
         lblMemuraiStatus.AutoSize = true;
         lblMemuraiStatus.Location = new Point(125, 97);
         lblMemuraiStatus.Name = "lblMemuraiStatus";
         lblMemuraiStatus.Size = new Size(0, 15);
         lblMemuraiStatus.TabIndex = 10;
-        //
+        // 
         // groupBoxChrome
-        //
+        // 
         groupBoxChrome.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         groupBoxChrome.Controls.Add(lblChromeLbl);
         groupBoxChrome.Controls.Add(lblChromeVersion);
@@ -490,7 +490,7 @@ partial class SettingsForm
         btnCancel.UseVisualStyleBackColor = true;
         // 
         // panelButtons
-        //
+        // 
         panelButtons.Controls.Add(btnSave);
         panelButtons.Controls.Add(btnCancel);
         panelButtons.Dock = DockStyle.Bottom;
@@ -499,9 +499,9 @@ partial class SettingsForm
         panelButtons.Padding = new Padding(10);
         panelButtons.Size = new Size(430, 50);
         panelButtons.TabIndex = 4;
-        //
+        // 
         // SettingsForm
-        //
+        // 
         AcceptButton = btnSave;
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
