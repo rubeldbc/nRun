@@ -253,19 +253,19 @@ partial class MainForm
         olvColTitle.AspectName = "NewsTitle";
         olvColTitle.Text = "Title";
         olvColTitle.Width = 450;
-        //
+        // 
         // olvColSite
-        //
+        // 
         olvColSite.AspectName = "SiteName";
         olvColSite.Text = "Source";
         olvColSite.Width = 150;
-        //
+        // 
         // olvColSiteLogo
-        //
+        // 
         olvColSiteLogo.AspectName = "SiteLogo";
         olvColSiteLogo.Text = "Logo";
         olvColSiteLogo.Width = 150;
-        //
+        // 
         // olvColDate
         // 
         olvColDate.AspectName = "CreatedAtDisplay";
@@ -317,35 +317,35 @@ partial class MainForm
         menuItemDelete.Name = "menuItemDelete";
         menuItemDelete.Size = new Size(145, 22);
         menuItemDelete.Text = "Delete";
-        //
+        // 
         // panelDebug
-        //
+        // 
         panelDebug.Controls.Add(splitContainerDebug);
         panelDebug.Dock = DockStyle.Fill;
         panelDebug.Location = new Point(0, 0);
         panelDebug.Name = "panelDebug";
         panelDebug.Size = new Size(746, 147);
         panelDebug.TabIndex = 0;
-        //
+        // 
         // splitContainerDebug
-        //
+        // 
         splitContainerDebug.Dock = DockStyle.Fill;
         splitContainerDebug.Location = new Point(0, 0);
         splitContainerDebug.Name = "splitContainerDebug";
-        //
+        // 
         // splitContainerDebug.Panel1
-        //
+        // 
         splitContainerDebug.Panel1.Controls.Add(panelDebugLeft);
-        //
+        // 
         // splitContainerDebug.Panel2
-        //
+        // 
         splitContainerDebug.Panel2.Controls.Add(panelDebugRight);
         splitContainerDebug.Size = new Size(746, 147);
         splitContainerDebug.SplitterDistance = 373;
         splitContainerDebug.TabIndex = 0;
-        //
+        // 
         // panelDebugLeft
-        //
+        // 
         panelDebugLeft.Controls.Add(txtDebugLog);
         panelDebugLeft.Controls.Add(lblDebugHeader);
         panelDebugLeft.Controls.Add(btnClearLog);
@@ -354,9 +354,9 @@ partial class MainForm
         panelDebugLeft.Name = "panelDebugLeft";
         panelDebugLeft.Size = new Size(373, 147);
         panelDebugLeft.TabIndex = 0;
-        //
+        // 
         // txtDebugLog
-        //
+        // 
         txtDebugLog.BackColor = Color.FromArgb(30, 30, 30);
         txtDebugLog.BorderStyle = BorderStyle.None;
         txtDebugLog.Dock = DockStyle.Fill;
@@ -369,9 +369,9 @@ partial class MainForm
         txtDebugLog.ScrollBars = ScrollBars.Vertical;
         txtDebugLog.Size = new Size(373, 125);
         txtDebugLog.TabIndex = 2;
-        //
+        // 
         // lblDebugHeader
-        //
+        // 
         lblDebugHeader.BackColor = Color.FromArgb(45, 45, 48);
         lblDebugHeader.Dock = DockStyle.Top;
         lblDebugHeader.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -382,9 +382,9 @@ partial class MainForm
         lblDebugHeader.Size = new Size(373, 22);
         lblDebugHeader.TabIndex = 0;
         lblDebugHeader.Text = "Debug Log";
-        //
+        // 
         // btnClearLog
-        //
+        // 
         btnClearLog.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         btnClearLog.BackColor = Color.FromArgb(45, 45, 48);
         btnClearLog.FlatStyle = FlatStyle.Flat;
@@ -396,9 +396,9 @@ partial class MainForm
         btnClearLog.TabIndex = 1;
         btnClearLog.Text = "Clear";
         btnClearLog.UseVisualStyleBackColor = false;
-        //
+        // 
         // panelDebugRight
-        //
+        // 
         panelDebugRight.Controls.Add(txtErrorLog);
         panelDebugRight.Controls.Add(lblErrorHeader);
         panelDebugRight.Controls.Add(btnClearErrorLog);
@@ -407,9 +407,9 @@ partial class MainForm
         panelDebugRight.Name = "panelDebugRight";
         panelDebugRight.Size = new Size(369, 147);
         panelDebugRight.TabIndex = 0;
-        //
+        // 
         // txtErrorLog
-        //
+        // 
         txtErrorLog.BackColor = Color.FromArgb(40, 20, 20);
         txtErrorLog.BorderStyle = BorderStyle.None;
         txtErrorLog.Dock = DockStyle.Fill;
@@ -422,9 +422,9 @@ partial class MainForm
         txtErrorLog.ScrollBars = ScrollBars.Vertical;
         txtErrorLog.Size = new Size(369, 125);
         txtErrorLog.TabIndex = 2;
-        //
+        // 
         // lblErrorHeader
-        //
+        // 
         lblErrorHeader.BackColor = Color.FromArgb(80, 40, 40);
         lblErrorHeader.Dock = DockStyle.Top;
         lblErrorHeader.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -435,9 +435,9 @@ partial class MainForm
         lblErrorHeader.Size = new Size(369, 22);
         lblErrorHeader.TabIndex = 0;
         lblErrorHeader.Text = "Errors / Warnings";
-        //
+        // 
         // btnClearErrorLog
-        //
+        // 
         btnClearErrorLog.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         btnClearErrorLog.BackColor = Color.FromArgb(80, 40, 40);
         btnClearErrorLog.FlatStyle = FlatStyle.Flat;
@@ -449,9 +449,9 @@ partial class MainForm
         btnClearErrorLog.TabIndex = 1;
         btnClearErrorLog.Text = "Clear";
         btnClearErrorLog.UseVisualStyleBackColor = false;
-        //
+        // 
         // toolStripMain
-        //
+        // 
         toolStripMain.Items.AddRange(new ToolStripItem[] { btnStartStop, btnScrapeNow, toolStripSeparator2, btnSettings, toolStripSeparator3, btnMemuraiSync, btnMemuraiView, toolStripSeparator4, lblStatus });
         toolStripMain.Location = new Point(0, 0);
         toolStripMain.Name = "toolStripMain";
@@ -487,38 +487,37 @@ partial class MainForm
         btnSettings.Size = new Size(53, 22);
         btnSettings.Text = "Settings";
         btnSettings.ToolTipText = "Open settings";
-        //
+        // 
         // toolStripSeparator3
-        //
+        // 
         toolStripSeparator3.Name = "toolStripSeparator3";
         toolStripSeparator3.Size = new Size(6, 25);
-        //
+        // 
         // btnMemuraiSync
-        //
+        // 
         btnMemuraiSync.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnMemuraiSync.Enabled = false;
-        btnMemuraiSync.ForeColor = Color.Gray;
+        btnMemuraiSync.ForeColor = Color.Black;
         btnMemuraiSync.Name = "btnMemuraiSync";
-        btnMemuraiSync.Size = new Size(82, 22);
+        btnMemuraiSync.Size = new Size(87, 22);
         btnMemuraiSync.Text = "Memurai Sync";
         btnMemuraiSync.ToolTipText = "Start/Stop syncing news to Memurai server";
-        //
+        // 
         // btnMemuraiView
-        //
+        // 
         btnMemuraiView.DisplayStyle = ToolStripItemDisplayStyle.Text;
         btnMemuraiView.ForeColor = Color.DarkCyan;
         btnMemuraiView.Name = "btnMemuraiView";
-        btnMemuraiView.Size = new Size(82, 22);
+        btnMemuraiView.Size = new Size(87, 22);
         btnMemuraiView.Text = "View Memurai";
         btnMemuraiView.ToolTipText = "View data stored in Memurai server";
-        //
+        // 
         // toolStripSeparator4
-        //
+        // 
         toolStripSeparator4.Name = "toolStripSeparator4";
         toolStripSeparator4.Size = new Size(6, 25);
-        //
+        // 
         // lblStatus
-        //
+        // 
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(39, 22);
         lblStatus.Text = "Ready";
@@ -578,15 +577,15 @@ partial class MainForm
         splitContainerRight.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)olvArticles).EndInit();
         contextMenuArticles.ResumeLayout(false);
-        panelDebugLeft.ResumeLayout(false);
-        panelDebugLeft.PerformLayout();
-        panelDebugRight.ResumeLayout(false);
-        panelDebugRight.PerformLayout();
+        panelDebug.ResumeLayout(false);
         splitContainerDebug.Panel1.ResumeLayout(false);
         splitContainerDebug.Panel2.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)splitContainerDebug).EndInit();
         splitContainerDebug.ResumeLayout(false);
-        panelDebug.ResumeLayout(false);
+        panelDebugLeft.ResumeLayout(false);
+        panelDebugLeft.PerformLayout();
+        panelDebugRight.ResumeLayout(false);
+        panelDebugRight.PerformLayout();
         toolStripMain.ResumeLayout(false);
         toolStripMain.PerformLayout();
         statusStrip.ResumeLayout(false);

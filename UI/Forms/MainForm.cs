@@ -278,9 +278,6 @@ public partial class MainForm : Form
         {
             ServiceContainer.Memurai.Stop();
         }
-
-        // Enable Memurai Sync button only when there's at least one article
-        btnMemuraiSync.Enabled = hasArticles;
     }
 
     private async void CheckMemuraiConnection()
@@ -543,6 +540,13 @@ public partial class MainForm : Form
 
     private async void BtnMemuraiSync_Click(object? sender, EventArgs e)
     {
+        // Check database connection first
+        if (!ServiceContainer.Database.IsConnected)
+        {
+            LogDebug("Database not connected - cannot start Memurai sync", "WARN");
+            return;
+        }
+
         var memurai = ServiceContainer.Memurai;
 
         if (memurai.IsRunning)
