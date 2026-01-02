@@ -356,7 +356,6 @@ public partial class TikTokIdManagerForm : Form
         SetBulkRunning(true);
         _bulkCts = new CancellationTokenSource();
 
-        var delaySeconds = (int)numDelay.Value;
         var pendingItems = _bulkItems.Where(x => x.Status == "Pending" || x.Status.StartsWith("Error")).ToList();
 
         progressBarBulk.Minimum = 0;
@@ -364,13 +363,20 @@ public partial class TikTokIdManagerForm : Form
         progressBarBulk.Value = 0;
 
         // Reuse scraper like btnFetch does
-        _scraper ??= new TikTokScraperService();
+        var baseDelay = (int)numDelay.Value;
+        var jitterMax = Math.Max(1, baseDelay / 2); // Jitter is half of base delay
+
+        _scraper ??= new TikTokScraperService(baseDelay, jitterMax);
         if (!_scraperEventsAttached)
         {
             _scraper.StatusChanged += (s, msg) => UpdateBulkStatus(msg);
             _scraper.ErrorOccurred += (s, msg) => UpdateBulkStatus($"Error: {msg}");
             _scraperEventsAttached = true;
         }
+
+        // Update rate limiter settings
+        _scraper.RateLimiter.BaseDelaySeconds = baseDelay;
+        _scraper.RateLimiter.JitterMaxSeconds = jitterMax;
 
         int processed = 0;
         int saved = 0;
@@ -431,13 +437,13 @@ public partial class TikTokIdManagerForm : Form
                 processed++;
                 progressBarBulk.Value = processed;
 
-                // Wait before next fetch (unless cancelled or last item)
+                // Wait before next fetch using rate limiter with jitter
                 if (!_bulkCts.Token.IsCancellationRequested && processed < pendingItems.Count)
                 {
-                    UpdateBulkStatus($"Waiting {delaySeconds}s before next fetch...");
+                    UpdateBulkStatus($"Waiting ({_scraper.GetDelayInfo()}) before next fetch...");
                     try
                     {
-                        await Task.Delay(delaySeconds * 1000, _bulkCts.Token);
+                        await _scraper.WaitBeforeNextRequestAsync(_bulkCts.Token);
                     }
                     catch (OperationCanceledException) { break; }
                 }

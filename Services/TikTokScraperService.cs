@@ -15,6 +15,8 @@ public class TikTokScraperService : IDisposable
     private WebDriverService? _webDriver;
     private HttpClient? _httpClient;
     private bool _disposed;
+    private readonly RateLimiter _rateLimiter;
+    private readonly ResilientRequestHandler _requestHandler;
 
     private static readonly string TikTokLogosFolder = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "tiktok_logos");
@@ -25,8 +27,18 @@ public class TikTokScraperService : IDisposable
     public int TimeoutSeconds { get; set; } = 30;
     public bool UseHeadless { get; set; } = true;
 
-    public TikTokScraperService()
+    /// <summary>
+    /// Gets the rate limiter for external configuration
+    /// </summary>
+    public RateLimiter RateLimiter => _rateLimiter;
+
+    public TikTokScraperService(int baseDelaySeconds = 10, int jitterMaxSeconds = 5)
     {
+        _rateLimiter = new RateLimiter(baseDelaySeconds, jitterMaxSeconds);
+        _requestHandler = new ResilientRequestHandler(_rateLimiter);
+        _requestHandler.StatusChanged += (s, msg) => OnStatusChanged(msg);
+        _requestHandler.ErrorOccurred += (s, msg) => OnError(msg);
+
         // Ensure tiktok_logos folder exists
         if (!Directory.Exists(TikTokLogosFolder))
         {
@@ -52,11 +64,23 @@ public class TikTokScraperService : IDisposable
         if (_httpClient == null)
         {
             _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Add("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", WebDriverConfig.GetDefaultUserAgent());
         }
         return _httpClient;
     }
+
+    /// <summary>
+    /// Waits before the next request using rate limiter with jitter
+    /// </summary>
+    public async Task WaitBeforeNextRequestAsync(CancellationToken cancellationToken = default)
+    {
+        await _requestHandler.WaitBeforeNextRequestAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets the current delay description for display
+    /// </summary>
+    public string GetDelayInfo() => _rateLimiter.GetDelayDescription();
 
     /// <summary>
     /// Downloads avatar image, resizes to 88x88, converts to WebP, and saves to tiktok_logos folder
