@@ -474,4 +474,352 @@ public class DatabaseService : IDatabaseService
     };
 
     #endregion
+
+    #region TikTok Profile Operations
+
+    public List<TkProfile> GetAllTkProfiles()
+    {
+        if (!IsConnected) return new List<TkProfile>();
+
+        lock (_lock)
+        {
+            var profiles = new List<TkProfile>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM tk_profile ORDER BY username";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                profiles.Add(MapTkProfile(reader));
+            }
+            return profiles;
+        }
+    }
+
+    public List<TkProfile> GetActiveTkProfiles()
+    {
+        if (!IsConnected) return new List<TkProfile>();
+
+        lock (_lock)
+        {
+            var profiles = new List<TkProfile>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM tk_profile WHERE status = TRUE ORDER BY username";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                profiles.Add(MapTkProfile(reader));
+            }
+            return profiles;
+        }
+    }
+
+    public TkProfile? GetTkProfileById(long userId)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM tk_profile WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("userId", userId);
+
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapTkProfile(reader) : null;
+        }
+    }
+
+    public TkProfile? GetTkProfileByUsername(string username)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM tk_profile WHERE username = @username";
+            cmd.Parameters.AddWithValue("username", username);
+
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapTkProfile(reader) : null;
+        }
+    }
+
+    public bool TkProfileExists(long userId)
+    {
+        if (!IsConnected) return false;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM tk_profile WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("userId", userId);
+            return Convert.ToInt64(cmd.ExecuteScalar()) > 0;
+        }
+    }
+
+    public void AddTkProfile(TkProfile profile)
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO tk_profile (status, user_id, username, nickname, region, created_at_ts, created_at)
+                VALUES (@status, @userId, @username, @nickname, @region, @createdAtTs, @createdAt)
+                ON CONFLICT (user_id) DO NOTHING";
+
+            cmd.Parameters.AddWithValue("status", profile.Status);
+            cmd.Parameters.AddWithValue("userId", profile.UserId);
+            cmd.Parameters.AddWithValue("username", profile.Username);
+            cmd.Parameters.AddWithValue("nickname", profile.Nickname);
+            cmd.Parameters.AddWithValue("region", profile.Region);
+            cmd.Parameters.AddWithValue("createdAtTs", profile.CreatedAtTs.HasValue ? profile.CreatedAtTs.Value : DBNull.Value);
+            cmd.Parameters.AddWithValue("createdAt", profile.CreatedAt);
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void UpdateTkProfile(TkProfile profile)
+    {
+        if (!IsConnected) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE tk_profile SET
+                    status = @status,
+                    username = @username,
+                    nickname = @nickname,
+                    region = @region,
+                    created_at_ts = @createdAtTs
+                WHERE user_id = @userId";
+
+            cmd.Parameters.AddWithValue("status", profile.Status);
+            cmd.Parameters.AddWithValue("userId", profile.UserId);
+            cmd.Parameters.AddWithValue("username", profile.Username);
+            cmd.Parameters.AddWithValue("nickname", profile.Nickname);
+            cmd.Parameters.AddWithValue("region", profile.Region);
+            cmd.Parameters.AddWithValue("createdAtTs", profile.CreatedAtTs.HasValue ? profile.CreatedAtTs.Value : DBNull.Value);
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void UpdateTkProfileStatus(long userId, bool status)
+    {
+        if (!IsConnected) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE tk_profile SET status = @status WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("status", status);
+            cmd.Parameters.AddWithValue("userId", userId);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void DeleteTkProfile(long userId)
+    {
+        if (!IsConnected) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM tk_profile WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("userId", userId);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    private static TkProfile MapTkProfile(NpgsqlDataReader reader) => new()
+    {
+        Status = reader.GetBoolean(reader.GetOrdinal("status")),
+        UserId = reader.GetInt64(reader.GetOrdinal("user_id")),
+        Username = reader.IsDBNull(reader.GetOrdinal("username")) ? "" : reader.GetString(reader.GetOrdinal("username")),
+        Nickname = reader.IsDBNull(reader.GetOrdinal("nickname")) ? "" : reader.GetString(reader.GetOrdinal("nickname")),
+        Region = reader.IsDBNull(reader.GetOrdinal("region")) ? "" : reader.GetString(reader.GetOrdinal("region")),
+        CreatedAtTs = reader.IsDBNull(reader.GetOrdinal("created_at_ts")) ? null : reader.GetDateTime(reader.GetOrdinal("created_at_ts")),
+        CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at"))
+    };
+
+    #endregion
+
+    #region TikTok Data Operations
+
+    public void AddTkData(TkData data)
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO tk_data (user_id, follower_count, heart_count, video_count, recorded_at)
+                VALUES (@userId, @followerCount, @heartCount, @videoCount, @recordedAt)";
+
+            cmd.Parameters.AddWithValue("userId", data.UserId);
+            cmd.Parameters.AddWithValue("followerCount", data.FollowerCount);
+            cmd.Parameters.AddWithValue("heartCount", data.HeartCount);
+            cmd.Parameters.AddWithValue("videoCount", data.VideoCount);
+            cmd.Parameters.AddWithValue("recordedAt", data.RecordedAt);
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void AddTkDataBatch(List<TkData> dataList)
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+        if (dataList.Count == 0) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var transaction = conn.BeginTransaction();
+
+            try
+            {
+                foreach (var data in dataList)
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.Transaction = transaction;
+                    cmd.CommandText = @"
+                        INSERT INTO tk_data (user_id, follower_count, heart_count, video_count, recorded_at)
+                        VALUES (@userId, @followerCount, @heartCount, @videoCount, @recordedAt)";
+
+                    cmd.Parameters.AddWithValue("userId", data.UserId);
+                    cmd.Parameters.AddWithValue("followerCount", data.FollowerCount);
+                    cmd.Parameters.AddWithValue("heartCount", data.HeartCount);
+                    cmd.Parameters.AddWithValue("videoCount", data.VideoCount);
+                    cmd.Parameters.AddWithValue("recordedAt", data.RecordedAt);
+
+                    cmd.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+    }
+
+    public List<TkData> GetRecentTkData(int limit = 100)
+    {
+        if (!IsConnected) return new List<TkData>();
+
+        lock (_lock)
+        {
+            var dataList = new List<TkData>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $@"
+                SELECT d.*, p.username, p.nickname
+                FROM tk_data d
+                JOIN tk_profile p ON d.user_id = p.user_id
+                ORDER BY d.recorded_at DESC
+                LIMIT {limit}";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                dataList.Add(MapTkData(reader));
+            }
+            return dataList;
+        }
+    }
+
+    public List<TkData> GetTkDataByUserId(long userId, int limit = 50)
+    {
+        if (!IsConnected) return new List<TkData>();
+
+        lock (_lock)
+        {
+            var dataList = new List<TkData>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT d.*, p.username, p.nickname
+                FROM tk_data d
+                JOIN tk_profile p ON d.user_id = p.user_id
+                WHERE d.user_id = @userId
+                ORDER BY d.recorded_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("userId", userId);
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                dataList.Add(MapTkData(reader));
+            }
+            return dataList;
+        }
+    }
+
+    public TkData? GetLatestTkDataByUserId(long userId)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT d.*, p.username, p.nickname
+                FROM tk_data d
+                JOIN tk_profile p ON d.user_id = p.user_id
+                WHERE d.user_id = @userId
+                ORDER BY d.recorded_at DESC
+                LIMIT 1";
+            cmd.Parameters.AddWithValue("userId", userId);
+
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapTkData(reader) : null;
+        }
+    }
+
+    public long GetTkDataCount()
+    {
+        if (!IsConnected) return 0;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM tk_data";
+            return Convert.ToInt64(cmd.ExecuteScalar());
+        }
+    }
+
+    private static TkData MapTkData(NpgsqlDataReader reader) => new()
+    {
+        DataId = reader.GetInt32(reader.GetOrdinal("data_id")),
+        UserId = reader.GetInt64(reader.GetOrdinal("user_id")),
+        FollowerCount = reader.IsDBNull(reader.GetOrdinal("follower_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("follower_count")),
+        HeartCount = reader.IsDBNull(reader.GetOrdinal("heart_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("heart_count")),
+        VideoCount = reader.IsDBNull(reader.GetOrdinal("video_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("video_count")),
+        RecordedAt = reader.GetDateTime(reader.GetOrdinal("recorded_at")),
+        Username = reader.IsDBNull(reader.GetOrdinal("username")) ? "" : reader.GetString(reader.GetOrdinal("username")),
+        Nickname = reader.IsDBNull(reader.GetOrdinal("nickname")) ? "" : reader.GetString(reader.GetOrdinal("nickname"))
+    };
+
+    #endregion
 }

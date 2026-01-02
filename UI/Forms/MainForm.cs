@@ -11,6 +11,13 @@ public partial class MainForm : Form
     private List<NewsInfo> _articles = new();
     private const int MaxLogLines = 5000;
 
+    // TikTok related fields
+    private TikTokDataCollectionService? _tikTokCollector;
+    private List<TkProfile> _tikTokProfiles = new();
+    private List<TkSchedule> _tikTokSchedules = new();
+    private List<TkData> _tikTokData = new();
+    private int _nextScheduleId = 1;
+
     private int MaxDisplayedArticles => ServiceContainer.Settings.LoadSettings().MaxDisplayedArticles;
 
     public MainForm()
@@ -22,6 +29,7 @@ public partial class MainForm : Form
             return;
 
         _backgroundScraper = new BackgroundScraperService();
+        _tikTokCollector = new TikTokDataCollectionService();
         SetupEventHandlers();
     }
 
@@ -74,6 +82,24 @@ public partial class MainForm : Form
         // Memurai service events
         ServiceContainer.Memurai.StatusChanged += Memurai_StatusChanged;
         ServiceContainer.Memurai.RunningStateChanged += Memurai_RunningStateChanged;
+
+        // TikTok events
+        btnTkAddId.Click += BtnTkAddId_Click;
+        btnTkDeleteId.Click += BtnTkDeleteId_Click;
+        btnTkAddSchedule.Click += BtnTkAddSchedule_Click;
+        btnTkEditSchedule.Click += BtnTkEditSchedule_Click;
+        btnTkDeleteSchedule.Click += BtnTkDeleteSchedule_Click;
+        btnTkStartStop.Click += BtnTkStartStop_Click;
+        numTkFrequency.ValueChanged += NumTkFrequency_ValueChanged;
+
+        // TikTok collector events
+        if (_tikTokCollector != null)
+        {
+            _tikTokCollector.StatusChanged += TikTokCollector_StatusChanged;
+            _tikTokCollector.ProgressChanged += TikTokCollector_ProgressChanged;
+            _tikTokCollector.RunningStateChanged += TikTokCollector_RunningStateChanged;
+            _tikTokCollector.DataCollected += TikTokCollector_DataCollected;
+        }
     }
 
     private void MainForm_Load(object? sender, EventArgs e)
@@ -109,6 +135,55 @@ public partial class MainForm : Form
             LogDebug("Auto-start enabled, starting background scraper", "INFO");
             _backgroundScraper?.Start();
         }
+
+        // Load TikTok data and settings
+        LoadTikTokSettings();
+        LoadTikTokProfiles();
+        LoadTikTokData();
+    }
+
+    private void LoadTikTokSettings()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+
+        // Load delay setting
+        numTkFrequency.Value = Math.Clamp(settings.TikTokDelaySeconds, 1, 3600);
+
+        // Load schedules
+        _tikTokSchedules.Clear();
+        foreach (var schedSetting in settings.TikTokSchedules)
+        {
+            var schedule = new TkSchedule
+            {
+                Id = _nextScheduleId++,
+                Timing = new TimeSpan(schedSetting.Hour, schedSetting.Minute, 0),
+                IsActive = schedSetting.IsEnabled
+            };
+            _tikTokSchedules.Add(schedule);
+        }
+        RefreshScheduleList();
+    }
+
+    private void SaveTikTokSettings()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+
+        // Save delay setting
+        settings.TikTokDelaySeconds = (int)numTkFrequency.Value;
+
+        // Save schedules
+        settings.TikTokSchedules.Clear();
+        foreach (var schedule in _tikTokSchedules)
+        {
+            settings.TikTokSchedules.Add(new TikTokScheduleSettings
+            {
+                Hour = schedule.Timing.Hours,
+                Minute = schedule.Timing.Minutes,
+                IsEnabled = schedule.IsActive
+            });
+        }
+
+        ServiceContainer.Settings.SaveSettings(settings);
     }
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
@@ -142,6 +217,11 @@ public partial class MainForm : Form
             _backgroundScraper?.Stop();
             _backgroundScraper?.Dispose();
             _backgroundScraper = null;
+
+            // Stop and dispose TikTok collector
+            _tikTokCollector?.Stop();
+            _tikTokCollector?.Dispose();
+            _tikTokCollector = null;
 
             // Stop and dispose Memurai service
             ServiceContainer.Memurai.Stop();
@@ -771,6 +851,205 @@ public partial class MainForm : Form
         }
 
         LogDebug(message, level);
+    }
+
+    #endregion
+
+    #region TikTok Management
+
+    private void LoadTikTokProfiles()
+    {
+        if (!ServiceContainer.Database.IsConnected) return;
+
+        _tikTokProfiles = ServiceContainer.Database.GetAllTkProfiles();
+        olvTiktokID.SetObjects(_tikTokProfiles);
+    }
+
+    private void LoadTikTokData()
+    {
+        if (!ServiceContainer.Database.IsConnected) return;
+
+        _tikTokData = ServiceContainer.Database.GetRecentTkData(200);
+        olvTiktokData.SetObjects(_tikTokData);
+    }
+
+    private void RefreshScheduleList()
+    {
+        // Update serial numbers
+        for (int i = 0; i < _tikTokSchedules.Count; i++)
+        {
+            _tikTokSchedules[i].SerialNumber = i + 1;
+        }
+        olvTiktokSchedule.SetObjects(_tikTokSchedules);
+
+        // Update collector
+        _tikTokCollector?.UpdateSchedules(_tikTokSchedules);
+    }
+
+    private void BtnTkAddId_Click(object? sender, EventArgs e)
+    {
+        if (!ServiceContainer.Database.IsConnected)
+        {
+            MessageBox.Show("Please configure database connection first.", "Not Connected",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new TikTokIdManagerForm();
+        if (form.ShowDialog(this) == DialogResult.OK && form.ResultProfile != null)
+        {
+            LoadTikTokProfiles();
+            UpdateTkStatus($"Added profile: @{form.ResultProfile.Username}");
+        }
+    }
+
+    private void BtnTkDeleteId_Click(object? sender, EventArgs e)
+    {
+        if (olvTiktokID.SelectedObject is not TkProfile profile) return;
+
+        var result = MessageBox.Show(
+            $"Delete @{profile.Username} and all associated data?",
+            "Confirm Delete",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if (result == DialogResult.Yes)
+        {
+            ServiceContainer.Database.DeleteTkProfile(profile.UserId);
+            LoadTikTokProfiles();
+            LoadTikTokData();
+            UpdateTkStatus($"Deleted profile: @{profile.Username}");
+        }
+    }
+
+    private void BtnTkAddSchedule_Click(object? sender, EventArgs e)
+    {
+        using var form = new TikTokScheduleForm();
+        if (form.ShowDialog(this) == DialogResult.OK && form.ResultSchedule != null)
+        {
+            form.ResultSchedule.Id = _nextScheduleId++;
+            _tikTokSchedules.Add(form.ResultSchedule);
+            RefreshScheduleList();
+            SaveTikTokSettings();
+            UpdateTkStatus($"Added schedule: {form.ResultSchedule.TimingDisplay}");
+        }
+    }
+
+    private void BtnTkEditSchedule_Click(object? sender, EventArgs e)
+    {
+        if (olvTiktokSchedule.SelectedObject is not TkSchedule schedule) return;
+
+        using var form = new TikTokScheduleForm(schedule);
+        if (form.ShowDialog(this) == DialogResult.OK)
+        {
+            RefreshScheduleList();
+            SaveTikTokSettings();
+            UpdateTkStatus($"Updated schedule: {schedule.TimingDisplay}");
+        }
+    }
+
+    private void BtnTkDeleteSchedule_Click(object? sender, EventArgs e)
+    {
+        if (olvTiktokSchedule.SelectedObject is not TkSchedule schedule) return;
+
+        _tikTokSchedules.Remove(schedule);
+        RefreshScheduleList();
+        SaveTikTokSettings();
+        UpdateTkStatus("Schedule deleted");
+    }
+
+    private void NumTkFrequency_ValueChanged(object? sender, EventArgs e)
+    {
+        SaveTikTokSettings();
+    }
+
+    private void BtnTkStartStop_Click(object? sender, EventArgs e)
+    {
+        if (_tikTokCollector == null) return;
+
+        if (!ServiceContainer.Database.IsConnected)
+        {
+            MessageBox.Show("Please configure database connection first.", "Not Connected",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        if (_tikTokProfiles.Count == 0)
+        {
+            MessageBox.Show("Please add at least one TikTok ID first.", "No IDs",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        if (_tikTokCollector.IsRunning)
+        {
+            _tikTokCollector.Stop();
+        }
+        else
+        {
+            // Update settings before starting
+            _tikTokCollector.UpdateDelaySeconds((int)numTkFrequency.Value);
+            _tikTokCollector.UpdateSchedules(_tikTokSchedules);
+            _tikTokCollector.Start();
+        }
+    }
+
+    private void TikTokCollector_StatusChanged(object? sender, string status)
+    {
+        UpdateTkStatus(status);
+    }
+
+    private void TikTokCollector_ProgressChanged(object? sender, (int current, int total) progress)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => TikTokCollector_ProgressChanged(sender, progress));
+            return;
+        }
+
+        progressBarTk.Visible = progress.current < progress.total;
+        progressBarTk.Maximum = progress.total;
+        progressBarTk.Value = progress.current;
+    }
+
+    private void TikTokCollector_RunningStateChanged(object? sender, bool isRunning)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => TikTokCollector_RunningStateChanged(sender, isRunning));
+            return;
+        }
+
+        btnTkStartStop.Text = isRunning ? "Stop" : "Start";
+        btnTkStartStop.BackColor = isRunning ? Color.FromArgb(180, 0, 0) : Color.FromArgb(0, 120, 0);
+    }
+
+    private void TikTokCollector_DataCollected(object? sender, TkData data)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => TikTokCollector_DataCollected(sender, data));
+            return;
+        }
+
+        // Add to the top of the list
+        _tikTokData.Insert(0, data);
+        if (_tikTokData.Count > 200)
+        {
+            _tikTokData.RemoveAt(_tikTokData.Count - 1);
+        }
+        olvTiktokData.SetObjects(_tikTokData);
+    }
+
+    private void UpdateTkStatus(string message)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => UpdateTkStatus(message));
+            return;
+        }
+
+        lblTkStatus.Text = message;
     }
 
     #endregion

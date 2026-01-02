@@ -155,37 +155,29 @@ public partial class DatabaseConnectionForm : Form
             await conn.OpenAsync();
 
             // Check if tables exist
-            var siteInfoExists = await TableExists(conn, "site_info");
-            var newsInfoExists = await TableExists(conn, "news_info");
-            var appSettingsExists = await TableExists(conn, "app_settings");
+            var tkProfileExists = await TableExists(conn, "tk_profile");
+            var tkDataExists = await TableExists(conn, "tk_data");
 
-            if (siteInfoExists && newsInfoExists && appSettingsExists)
+            if (tkProfileExists && tkDataExists)
             {
                 LogMessage("All tables already exist. Showing structure...");
                 LogMessage("");
-                await ShowTableStructure(conn, "site_info");
-                await ShowTableStructure(conn, "news_info");
-                await ShowTableStructure(conn, "app_settings");
+                await ShowTableStructure(conn, "tk_profile");
+                await ShowTableStructure(conn, "tk_data");
             }
             else
             {
-                // Create tables that don't exist
-                if (!siteInfoExists)
+                // Create tables that don't exist (tk_profile must be created first due to FK)
+                if (!tkProfileExists)
                 {
-                    await CreateSiteInfoTable(conn);
-                    LogMessage("Created table: site_info");
+                    await CreateTkProfileTable(conn);
+                    LogMessage("Created table: tk_profile");
                 }
 
-                if (!newsInfoExists)
+                if (!tkDataExists)
                 {
-                    await CreateNewsInfoTable(conn);
-                    LogMessage("Created table: news_info");
-                }
-
-                if (!appSettingsExists)
-                {
-                    await CreateAppSettingsTable(conn);
-                    LogMessage("Created table: app_settings");
+                    await CreateTkDataTable(conn);
+                    LogMessage("Created table: tk_data");
                 }
 
                 LogMessage("");
@@ -193,9 +185,8 @@ public partial class DatabaseConnectionForm : Form
                 LogMessage("");
 
                 // Show structure of all tables
-                await ShowTableStructure(conn, "site_info");
-                await ShowTableStructure(conn, "news_info");
-                await ShowTableStructure(conn, "app_settings");
+                await ShowTableStructure(conn, "tk_profile");
+                await ShowTableStructure(conn, "tk_data");
             }
         }
         catch (Exception ex)
@@ -212,12 +203,11 @@ public partial class DatabaseConnectionForm : Form
     {
         // Confirm deletion
         var result = MessageBox.Show(
-            "WARNING: This will permanently delete ALL news data!\n\n" +
-            "- All site configurations will be deleted\n" +
-            "- All scraped news articles will be deleted\n" +
-            "- All logo files will be deleted\n\n" +
+            "WARNING: This will permanently delete ALL TikTok data!\n\n" +
+            "- All TikTok profile data will be deleted\n" +
+            "- All TikTok statistics data will be deleted\n\n" +
             "Are you sure you want to continue?",
-            "Delete News Tables",
+            "Delete Tables",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
@@ -256,60 +246,25 @@ public partial class DatabaseConnectionForm : Form
             // Drop tables in correct order (due to foreign key constraints)
             LogMessage("Dropping tables...");
 
-            // Drop news_info first (has FK to site_info)
-            if (await TableExists(conn, "news_info"))
+            // Drop tk_data first (has FK to tk_profile)
+            if (await TableExists(conn, "tk_data"))
             {
                 await using var cmd1 = conn.CreateCommand();
-                cmd1.CommandText = "DROP TABLE news_info CASCADE";
+                cmd1.CommandText = "DROP TABLE tk_data CASCADE";
                 await cmd1.ExecuteNonQueryAsync();
-                LogMessage("  Dropped table: news_info");
+                LogMessage("  Dropped table: tk_data");
             }
 
-            // Drop site_info
-            if (await TableExists(conn, "site_info"))
+            // Drop tk_profile
+            if (await TableExists(conn, "tk_profile"))
             {
                 await using var cmd2 = conn.CreateCommand();
-                cmd2.CommandText = "DROP TABLE site_info CASCADE";
+                cmd2.CommandText = "DROP TABLE tk_profile CASCADE";
                 await cmd2.ExecuteNonQueryAsync();
-                LogMessage("  Dropped table: site_info");
-            }
-
-            // Drop app_settings
-            if (await TableExists(conn, "app_settings"))
-            {
-                await using var cmd3 = conn.CreateCommand();
-                cmd3.CommandText = "DROP TABLE app_settings CASCADE";
-                await cmd3.ExecuteNonQueryAsync();
-                LogMessage("  Dropped table: app_settings");
+                LogMessage("  Dropped table: tk_profile");
             }
 
             LogMessage("All tables dropped successfully.");
-
-            // Delete logo files
-            LogMessage("Deleting logo files...");
-            var logosFolder = ServiceContainer.LogoDownload.GetLogosFolder();
-            if (Directory.Exists(logosFolder))
-            {
-                var files = Directory.GetFiles(logosFolder);
-                int deletedCount = 0;
-                foreach (var file in files)
-                {
-                    try
-                    {
-                        File.Delete(file);
-                        deletedCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessage($"  Failed to delete: {Path.GetFileName(file)} - {ex.Message}");
-                    }
-                }
-                LogMessage($"  Deleted {deletedCount} logo files.");
-            }
-            else
-            {
-                LogMessage("  Logos folder does not exist.");
-            }
 
             LogMessage("");
             LogMessage("=== DATABASE DELETION COMPLETE ===");
@@ -345,84 +300,49 @@ public partial class DatabaseConnectionForm : Form
         return (bool)(await cmd.ExecuteScalarAsync() ?? false);
     }
 
-    private async Task CreateSiteInfoTable(NpgsqlConnection conn)
+    private async Task CreateTkProfileTable(NpgsqlConnection conn)
     {
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            CREATE TABLE site_info (
-                site_id VARCHAR(20) PRIMARY KEY,
-                site_name VARCHAR(255) NOT NULL,
-                site_link VARCHAR(500) NOT NULL,
-                site_logo VARCHAR(500),
-                site_category VARCHAR(100),
-                site_country VARCHAR(100),
-                is_active BOOLEAN DEFAULT TRUE,
-                article_link_selector TEXT,
-                title_selector TEXT,
-                body_selector TEXT,
-                success_count INTEGER DEFAULT 0,
-                failure_count INTEGER DEFAULT 0,
-                last_checked TIMESTAMP,
+            CREATE TABLE tk_profile (
+                status BOOLEAN DEFAULT TRUE,
+                user_id BIGINT PRIMARY KEY,
+                username VARCHAR(100),
+                nickname VARCHAR(255),
+                region VARCHAR(10),
+                created_at_ts TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )";
         await cmd.ExecuteNonQueryAsync();
 
-        // Create index on site_link
+        // Create index on username for searching
         await using var indexCmd = conn.CreateCommand();
-        indexCmd.CommandText = "CREATE INDEX idx_site_info_link ON site_info(site_link)";
+        indexCmd.CommandText = "CREATE INDEX idx_tk_profile_username ON tk_profile(username)";
         await indexCmd.ExecuteNonQueryAsync();
     }
 
-    private async Task CreateNewsInfoTable(NpgsqlConnection conn)
+    private async Task CreateTkDataTable(NpgsqlConnection conn)
     {
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            CREATE TABLE news_info (
-                serial BIGSERIAL PRIMARY KEY,
-                site_id VARCHAR(20) NOT NULL REFERENCES site_info(site_id) ON DELETE CASCADE,
-                news_title TEXT NOT NULL,
-                news_text TEXT,
-                news_url VARCHAR(1000) NOT NULL UNIQUE,
-                is_read BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            CREATE TABLE tk_data (
+                data_id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES tk_profile(user_id) ON DELETE CASCADE,
+                follower_count BIGINT,
+                heart_count BIGINT,
+                video_count INT,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )";
         await cmd.ExecuteNonQueryAsync();
 
         // Create indexes
         await using var indexCmd1 = conn.CreateCommand();
-        indexCmd1.CommandText = "CREATE INDEX idx_news_info_site ON news_info(site_id)";
+        indexCmd1.CommandText = "CREATE INDEX idx_tk_data_user ON tk_data(user_id)";
         await indexCmd1.ExecuteNonQueryAsync();
 
         await using var indexCmd2 = conn.CreateCommand();
-        indexCmd2.CommandText = "CREATE INDEX idx_news_info_created ON news_info(created_at DESC)";
+        indexCmd2.CommandText = "CREATE INDEX idx_tk_data_recorded ON tk_data(recorded_at DESC)";
         await indexCmd2.ExecuteNonQueryAsync();
-
-        await using var indexCmd3 = conn.CreateCommand();
-        indexCmd3.CommandText = "CREATE INDEX idx_news_info_url ON news_info(news_url)";
-        await indexCmd3.ExecuteNonQueryAsync();
-    }
-
-    private async Task CreateAppSettingsTable(NpgsqlConnection conn)
-    {
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            CREATE TABLE app_settings (
-                id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-                check_interval_minutes INTEGER DEFAULT 5,
-                delay_between_links_seconds INTEGER DEFAULT 2,
-                max_articles_per_site INTEGER DEFAULT 10,
-                use_headless_browser BOOLEAN DEFAULT TRUE,
-                browser_timeout_seconds INTEGER DEFAULT 30,
-                auto_start_scraping BOOLEAN DEFAULT FALSE,
-                max_displayed_articles INTEGER DEFAULT 100,
-                last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )";
-        await cmd.ExecuteNonQueryAsync();
-
-        // Insert default settings
-        await using var insertCmd = conn.CreateCommand();
-        insertCmd.CommandText = "INSERT INTO app_settings (id) VALUES (1) ON CONFLICT DO NOTHING";
-        await insertCmd.ExecuteNonQueryAsync();
     }
 
     private async Task ShowTableStructure(NpgsqlConnection conn, string tableName)

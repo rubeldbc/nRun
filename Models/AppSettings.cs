@@ -24,6 +24,10 @@ public class AppSettings
     public string MemuraiPassword { get; set; } = string.Empty;
     public int MemuraiSyncIntervalSeconds { get; set; } = 30;
 
+    // TikTok Settings
+    public int TikTokDelaySeconds { get; set; } = 10;
+    public List<TikTokScheduleSettings> TikTokSchedules { get; set; } = new();
+
     // Database Connection Settings
     public string DbHost { get; set; } = "localhost";
     public int DbPort { get; set; } = 5432;
@@ -81,4 +85,14 @@ public class DbConnectionSettings
         };
         return builder.ConnectionString;
     }
+}
+
+/// <summary>
+/// TikTok schedule settings for persistence
+/// </summary>
+public class TikTokScheduleSettings
+{
+    public int Hour { get; set; }
+    public int Minute { get; set; }
+    public bool IsEnabled { get; set; } = true;
 }

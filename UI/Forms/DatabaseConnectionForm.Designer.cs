@@ -174,23 +174,23 @@ partial class DatabaseConnectionForm
         btnCreateTables.Name = "btnCreateTables";
         btnCreateTables.Size = new Size(161, 28);
         btnCreateTables.TabIndex = 2;
-        btnCreateTables.Text = "Create News Tables";
+        btnCreateTables.Text = "Create Tables";
         btnCreateTables.UseVisualStyleBackColor = true;
         // 
         // btnDeleteDatabase
         // 
         btnDeleteDatabase.ForeColor = Color.DarkRed;
-        btnDeleteDatabase.Location = new Point(404, 5);
+        btnDeleteDatabase.Location = new Point(363, 5);
         btnDeleteDatabase.Name = "btnDeleteDatabase";
         btnDeleteDatabase.Size = new Size(132, 28);
         btnDeleteDatabase.TabIndex = 3;
-        btnDeleteDatabase.Text = "Delete News Tables";
+        btnDeleteDatabase.Text = "Delete Tables";
         btnDeleteDatabase.UseVisualStyleBackColor = true;
         // 
         // btnSave
         // 
         btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-        btnSave.Location = new Point(396, 12);
+        btnSave.Location = new Point(528, 12);
         btnSave.Name = "btnSave";
         btnSave.Size = new Size(80, 28);
         btnSave.TabIndex = 0;
@@ -201,7 +201,7 @@ partial class DatabaseConnectionForm
         // 
         btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         btnCancel.DialogResult = DialogResult.Cancel;
-        btnCancel.Location = new Point(486, 12);
+        btnCancel.Location = new Point(618, 12);
         btnCancel.Name = "btnCancel";
         btnCancel.Size = new Size(80, 28);
         btnCancel.TabIndex = 1;
@@ -239,7 +239,7 @@ partial class DatabaseConnectionForm
         panelButtons.Location = new Point(0, 410);
         panelButtons.Name = "panelButtons";
         panelButtons.Padding = new Padding(10);
-        panelButtons.Size = new Size(607, 50);
+        panelButtons.Size = new Size(739, 50);
         panelButtons.TabIndex = 3;
         // 
         // panelActions
@@ -251,7 +251,7 @@ partial class DatabaseConnectionForm
         panelActions.Controls.Add(lblStatus);
         panelActions.Location = new Point(15, 200);
         panelActions.Name = "panelActions";
-        panelActions.Size = new Size(551, 60);
+        panelActions.Size = new Size(692, 60);
         panelActions.TabIndex = 1;
         // 
         // DatabaseConnectionForm
@@ -260,7 +260,7 @@ partial class DatabaseConnectionForm
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         CancelButton = btnCancel;
-        ClientSize = new Size(607, 460);
+        ClientSize = new Size(739, 460);
         Controls.Add(groupBoxConnection);
         Controls.Add(panelActions);
         Controls.Add(txtLog);

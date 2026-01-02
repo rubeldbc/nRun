@@ -30,4 +30,23 @@ public interface IDatabaseService
     void MarkNewsAsRead(long serial);
     void DeleteNews(long serial);
     long GetNewsCount();
+
+    // TikTok Profile operations
+    List<TkProfile> GetAllTkProfiles();
+    List<TkProfile> GetActiveTkProfiles();
+    TkProfile? GetTkProfileById(long userId);
+    TkProfile? GetTkProfileByUsername(string username);
+    bool TkProfileExists(long userId);
+    void AddTkProfile(TkProfile profile);
+    void UpdateTkProfile(TkProfile profile);
+    void UpdateTkProfileStatus(long userId, bool status);
+    void DeleteTkProfile(long userId);
+
+    // TikTok Data operations
+    void AddTkData(TkData data);
+    void AddTkDataBatch(List<TkData> dataList);
+    List<TkData> GetRecentTkData(int limit = 100);
+    List<TkData> GetTkDataByUserId(long userId, int limit = 50);
+    TkData? GetLatestTkDataByUserId(long userId);
+    long GetTkDataCount();
 }
