@@ -43,9 +43,10 @@ public interface IDatabaseService
     void DeleteTkProfile(long userId);
 
     // TikTok Data operations
-    void AddTkData(TkData data);
+    int AddTkData(TkData data);
     void AddTkDataBatch(List<TkData> dataList);
     List<TkData> GetRecentTkData(int limit = 100);
+    List<TkData> GetFilteredTkData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null, int limit = 500);
     List<TkData> GetTkDataByUserId(long userId, int limit = 50);
     TkData? GetLatestTkDataByUserId(long userId);
     long GetTkDataCount();

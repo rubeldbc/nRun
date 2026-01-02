@@ -12,6 +12,10 @@ public partial class TikTokIdManagerForm : Form
     private bool _isBulkRunning;
     private bool _scraperEventsAttached;
 
+    // Event handler references for cleanup
+    private EventHandler<string>? _scraperStatusHandler;
+    private EventHandler<string>? _scraperErrorHandler;
+
     public TkProfile? ResultProfile => _fetchedProfile;
 
     public TikTokIdManagerForm()
@@ -95,8 +99,16 @@ public partial class TikTokIdManagerForm : Form
         try
         {
             _scraper ??= new TikTokScraperService();
-            _scraper.StatusChanged += (s, msg) => UpdateStatus(msg);
-            _scraper.ErrorOccurred += (s, msg) => UpdateStatus($"Error: {msg}");
+
+            // Only attach events once to prevent memory leaks
+            if (!_scraperEventsAttached)
+            {
+                _scraperStatusHandler = (s, msg) => UpdateStatus(msg);
+                _scraperErrorHandler = (s, msg) => UpdateStatus($"Error: {msg}");
+                _scraper.StatusChanged += _scraperStatusHandler;
+                _scraper.ErrorOccurred += _scraperErrorHandler;
+                _scraperEventsAttached = true;
+            }
 
             var profile = await _scraper.FetchProfileInfoAsync(url);
 
@@ -504,7 +516,36 @@ public partial class TikTokIdManagerForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         base.OnFormClosing(e);
+
+        // Cancel any running operations
         _bulkCts?.Cancel();
+
+        // Unsubscribe event handlers to prevent memory leaks
+        if (_scraper != null && _scraperEventsAttached)
+        {
+            if (_scraperStatusHandler != null)
+                _scraper.StatusChanged -= _scraperStatusHandler;
+            if (_scraperErrorHandler != null)
+                _scraper.ErrorOccurred -= _scraperErrorHandler;
+        }
+
+        // Unsubscribe form event handlers
+        btnFetch.Click -= BtnFetch_Click;
+        btnSave.Click -= BtnSave_Click;
+        btnCancel.Click -= BtnCancel_Click;
+        txtProfileUrl.KeyDown -= TxtProfileUrl_KeyDown;
+        btnImport.Click -= BtnImport_Click;
+        btnExport.Click -= BtnExport_Click;
+        btnStartBulk.Click -= BtnStartBulk_Click;
+        btnStopBulk.Click -= BtnStopBulk_Click;
+        olvBulkList.DragEnter -= OlvBulkList_DragEnter;
+        olvBulkList.DragDrop -= OlvBulkList_DragDrop;
+
+        // Dispose resources
         _scraper?.Dispose();
+        _bulkCts?.Dispose();
+
+        // Clear collections
+        _bulkItems.Clear();
     }
 }

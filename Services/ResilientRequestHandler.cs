@@ -33,7 +33,7 @@ public class ResilientRequestHandler
             try
             {
                 attempt++;
-                var result = await action();
+                var result = await action().ConfigureAwait(false);
 
                 if (result != null)
                 {
@@ -69,7 +69,7 @@ public class ResilientRequestHandler
 
                 try
                 {
-                    await Task.Delay(delay, cancellationToken);
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -89,7 +89,7 @@ public class ResilientRequestHandler
     {
         var delay = _rateLimiter.GetNextDelayMs();
         OnStatus($"Waiting {delay / 1000}s before next request...");
-        await Task.Delay(delay, cancellationToken);
+        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

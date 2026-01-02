@@ -18,6 +18,10 @@ public class TikTokScraperService : IDisposable
     private readonly RateLimiter _rateLimiter;
     private readonly ResilientRequestHandler _requestHandler;
 
+    // Event handler references for cleanup
+    private readonly EventHandler<string>? _requestStatusHandler;
+    private readonly EventHandler<string>? _requestErrorHandler;
+
     private static readonly string TikTokLogosFolder = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "tiktok_logos");
 
@@ -36,8 +40,12 @@ public class TikTokScraperService : IDisposable
     {
         _rateLimiter = new RateLimiter(baseDelaySeconds, jitterMaxSeconds);
         _requestHandler = new ResilientRequestHandler(_rateLimiter);
-        _requestHandler.StatusChanged += (s, msg) => OnStatusChanged(msg);
-        _requestHandler.ErrorOccurred += (s, msg) => OnError(msg);
+
+        // Store handler references for later cleanup
+        _requestStatusHandler = (s, msg) => OnStatusChanged(msg);
+        _requestErrorHandler = (s, msg) => OnError(msg);
+        _requestHandler.StatusChanged += _requestStatusHandler;
+        _requestHandler.ErrorOccurred += _requestErrorHandler;
 
         // Ensure tiktok_logos folder exists
         if (!Directory.Exists(TikTokLogosFolder))
@@ -74,7 +82,7 @@ public class TikTokScraperService : IDisposable
     /// </summary>
     public async Task WaitBeforeNextRequestAsync(CancellationToken cancellationToken = default)
     {
-        await _requestHandler.WaitBeforeNextRequestAsync(cancellationToken);
+        await _requestHandler.WaitBeforeNextRequestAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -94,7 +102,7 @@ public class TikTokScraperService : IDisposable
             OnStatusChanged($"Downloading avatar for @{username}...");
 
             var client = GetHttpClient();
-            var imageBytes = await client.GetByteArrayAsync(avatarUrl);
+            var imageBytes = await client.GetByteArrayAsync(avatarUrl).ConfigureAwait(false);
 
             // Decode image using SkiaSharp
             using var originalBitmap = SKBitmap.Decode(imageBytes);
@@ -641,6 +649,15 @@ public class TikTokScraperService : IDisposable
     {
         if (!_disposed)
         {
+            // Unsubscribe event handlers to prevent memory leaks
+            if (_requestHandler != null)
+            {
+                if (_requestStatusHandler != null)
+                    _requestHandler.StatusChanged -= _requestStatusHandler;
+                if (_requestErrorHandler != null)
+                    _requestHandler.ErrorOccurred -= _requestErrorHandler;
+            }
+
             _webDriver?.Dispose();
             _webDriver = null;
             _httpClient?.Dispose();

@@ -62,11 +62,11 @@ public class DatabaseService : IDatabaseService
         cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS site_info (
                 site_id VARCHAR(20) PRIMARY KEY,
-                site_name VARCHAR(255) NOT NULL,
+                site_name VARCHAR(255) NOT NULL UNIQUE,
                 site_link VARCHAR(500) NOT NULL,
                 site_logo VARCHAR(500),
-                site_category VARCHAR(100),
-                site_country VARCHAR(100),
+                site_category VARCHAR(100) NOT NULL,
+                site_country VARCHAR(100) NOT NULL,
                 is_active BOOLEAN DEFAULT TRUE,
                 article_link_selector TEXT,
                 title_selector TEXT,
@@ -99,11 +99,37 @@ public class DatabaseService : IDatabaseService
                 last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS tk_profile (
+                user_id BIGINT PRIMARY KEY,
+                status BOOLEAN DEFAULT TRUE,
+                username VARCHAR(255),
+                nickname VARCHAR(255),
+                region VARCHAR(100),
+                created_at_ts TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS tk_data (
+                data_id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES tk_profile(user_id) ON DELETE CASCADE,
+                follower_count BIGINT DEFAULT 0,
+                heart_count BIGINT DEFAULT 0,
+                video_count INTEGER DEFAULT 0,
+                followers_change BIGINT DEFAULT 0,
+                hearts_change BIGINT DEFAULT 0,
+                videos_change INTEGER DEFAULT 0,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_site_info_link ON site_info(site_link);
+            CREATE INDEX IF NOT EXISTS idx_site_info_name ON site_info(site_name);
             CREATE INDEX IF NOT EXISTS idx_news_info_site ON news_info(site_id);
             CREATE INDEX IF NOT EXISTS idx_news_info_created ON news_info(created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_news_info_url ON news_info(news_url);
-        ";
+            CREATE INDEX IF NOT EXISTS idx_tk_profile_username ON tk_profile(username);
+            CREATE INDEX IF NOT EXISTS idx_tk_data_user ON tk_data(user_id);
+            CREATE INDEX IF NOT EXISTS idx_tk_data_recorded ON tk_data(recorded_at DESC);
+";
 
         cmd.ExecuteNonQuery();
 
@@ -660,26 +686,83 @@ public class DatabaseService : IDatabaseService
 
     #region TikTok Data Operations
 
-    public void AddTkData(TkData data)
+    public int AddTkData(TkData data)
     {
         if (!IsConnected) throw new InvalidOperationException("Database not connected");
 
         lock (_lock)
         {
             using var conn = GetConnection();
+
+            // Get the latest previous record for this user to calculate changes
+            var previousData = GetLatestTkDataByUserIdInternal(conn, data.UserId);
+            if (previousData != null)
+            {
+                data.FollowersChange = data.FollowerCount - previousData.FollowerCount;
+                data.HeartsChange = data.HeartCount - previousData.HeartCount;
+                data.VideosChange = data.VideoCount - previousData.VideoCount;
+            }
+            else
+            {
+                // First record for this user, no changes
+                data.FollowersChange = 0;
+                data.HeartsChange = 0;
+                data.VideosChange = 0;
+            }
+
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO tk_data (user_id, follower_count, heart_count, video_count, recorded_at)
-                VALUES (@userId, @followerCount, @heartCount, @videoCount, @recordedAt)";
+                INSERT INTO tk_data (user_id, follower_count, heart_count, video_count,
+                    followers_change, hearts_change, videos_change, recorded_at)
+                VALUES (@userId, @followerCount, @heartCount, @videoCount,
+                    @followersChange, @heartsChange, @videosChange, @recordedAt)
+                RETURNING data_id";
 
             cmd.Parameters.AddWithValue("userId", data.UserId);
             cmd.Parameters.AddWithValue("followerCount", data.FollowerCount);
             cmd.Parameters.AddWithValue("heartCount", data.HeartCount);
             cmd.Parameters.AddWithValue("videoCount", data.VideoCount);
+            cmd.Parameters.AddWithValue("followersChange", data.FollowersChange);
+            cmd.Parameters.AddWithValue("heartsChange", data.HeartsChange);
+            cmd.Parameters.AddWithValue("videosChange", data.VideosChange);
             cmd.Parameters.AddWithValue("recordedAt", data.RecordedAt);
 
-            cmd.ExecuteNonQuery();
+            var result = cmd.ExecuteScalar();
+            var dataId = Convert.ToInt32(result);
+            data.DataId = dataId;
+            return dataId;
         }
+    }
+
+    private TkData? GetLatestTkDataByUserIdInternal(NpgsqlConnection conn, long userId)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT data_id, user_id, follower_count, heart_count, video_count,
+                   followers_change, hearts_change, videos_change, recorded_at
+            FROM tk_data
+            WHERE user_id = @userId
+            ORDER BY recorded_at DESC
+            LIMIT 1";
+        cmd.Parameters.AddWithValue("userId", userId);
+
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            return new TkData
+            {
+                DataId = reader.GetInt32(reader.GetOrdinal("data_id")),
+                UserId = reader.GetInt64(reader.GetOrdinal("user_id")),
+                FollowerCount = reader.IsDBNull(reader.GetOrdinal("follower_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("follower_count")),
+                HeartCount = reader.IsDBNull(reader.GetOrdinal("heart_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("heart_count")),
+                VideoCount = reader.IsDBNull(reader.GetOrdinal("video_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("video_count")),
+                FollowersChange = reader.IsDBNull(reader.GetOrdinal("followers_change")) ? 0 : reader.GetInt64(reader.GetOrdinal("followers_change")),
+                HeartsChange = reader.IsDBNull(reader.GetOrdinal("hearts_change")) ? 0 : reader.GetInt64(reader.GetOrdinal("hearts_change")),
+                VideosChange = reader.IsDBNull(reader.GetOrdinal("videos_change")) ? 0 : reader.GetInt32(reader.GetOrdinal("videos_change")),
+                RecordedAt = reader.GetDateTime(reader.GetOrdinal("recorded_at"))
+            };
+        }
+        return null;
     }
 
     public void AddTkDataBatch(List<TkData> dataList)
@@ -734,6 +817,52 @@ public class DatabaseService : IDatabaseService
                 SELECT d.*, p.username, p.nickname
                 FROM tk_data d
                 JOIN tk_profile p ON d.user_id = p.user_id
+                ORDER BY d.recorded_at DESC
+                LIMIT {limit}";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                dataList.Add(MapTkData(reader));
+            }
+            return dataList;
+        }
+    }
+
+    public List<TkData> GetFilteredTkData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null, int limit = 500)
+    {
+        if (!IsConnected) return new List<TkData>();
+
+        lock (_lock)
+        {
+            var dataList = new List<TkData>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+
+            var whereClause = new List<string>();
+            if (!string.IsNullOrEmpty(username))
+            {
+                whereClause.Add("p.username = @username");
+                cmd.Parameters.AddWithValue("username", username);
+            }
+            if (fromDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at >= @fromDate");
+                cmd.Parameters.AddWithValue("fromDate", fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at <= @toDate");
+                cmd.Parameters.AddWithValue("toDate", toDate.Value);
+            }
+
+            var whereStr = whereClause.Count > 0 ? "WHERE " + string.Join(" AND ", whereClause) : "";
+
+            cmd.CommandText = $@"
+                SELECT d.*, p.username, p.nickname
+                FROM tk_data d
+                JOIN tk_profile p ON d.user_id = p.user_id
+                {whereStr}
                 ORDER BY d.recorded_at DESC
                 LIMIT {limit}";
 
@@ -816,10 +945,28 @@ public class DatabaseService : IDatabaseService
         FollowerCount = reader.IsDBNull(reader.GetOrdinal("follower_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("follower_count")),
         HeartCount = reader.IsDBNull(reader.GetOrdinal("heart_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("heart_count")),
         VideoCount = reader.IsDBNull(reader.GetOrdinal("video_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("video_count")),
+        FollowersChange = GetColumnOrDefault(reader, "followers_change", 0L),
+        HeartsChange = GetColumnOrDefault(reader, "hearts_change", 0L),
+        VideosChange = GetColumnOrDefault(reader, "videos_change", 0),
         RecordedAt = reader.GetDateTime(reader.GetOrdinal("recorded_at")),
         Username = reader.IsDBNull(reader.GetOrdinal("username")) ? "" : reader.GetString(reader.GetOrdinal("username")),
         Nickname = reader.IsDBNull(reader.GetOrdinal("nickname")) ? "" : reader.GetString(reader.GetOrdinal("nickname"))
     };
+
+    private static T GetColumnOrDefault<T>(NpgsqlDataReader reader, string columnName, T defaultValue)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal(columnName);
+            if (reader.IsDBNull(ordinal)) return defaultValue;
+            return (T)Convert.ChangeType(reader.GetValue(ordinal), typeof(T));
+        }
+        catch
+        {
+            // Column doesn't exist (old database schema)
+            return defaultValue;
+        }
+    }
 
     #endregion
 }

@@ -331,6 +331,9 @@ public partial class DatabaseConnectionForm : Form
                 follower_count BIGINT,
                 heart_count BIGINT,
                 video_count INT,
+                followers_change BIGINT DEFAULT 0,
+                hearts_change BIGINT DEFAULT 0,
+                videos_change INT DEFAULT 0,
                 recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )";
         await cmd.ExecuteNonQueryAsync();

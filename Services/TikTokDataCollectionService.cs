@@ -12,9 +12,9 @@ public class TikTokDataCollectionService : IDisposable
     private Task? _runningTask;
     private bool _disposed;
     private readonly object _lock = new();
+    private readonly RateLimiter _rateLimiter;
 
     private List<TkSchedule> _schedules = new();
-    private int _delaySeconds = 10;
 
     public bool IsRunning { get; private set; }
 
@@ -22,6 +22,11 @@ public class TikTokDataCollectionService : IDisposable
     public event EventHandler<(int current, int total)>? ProgressChanged;
     public event EventHandler<bool>? RunningStateChanged;
     public event EventHandler<TkData>? DataCollected;
+
+    public TikTokDataCollectionService()
+    {
+        _rateLimiter = new RateLimiter(10, 5); // 10s base + 0-5s jitter
+    }
 
     public void UpdateSchedules(List<TkSchedule> schedules)
     {
@@ -33,7 +38,8 @@ public class TikTokDataCollectionService : IDisposable
 
     public void UpdateDelaySeconds(int seconds)
     {
-        _delaySeconds = Math.Max(1, seconds);
+        _rateLimiter.BaseDelaySeconds = Math.Max(1, seconds);
+        _rateLimiter.JitterMaxSeconds = Math.Max(1, seconds / 2); // Jitter is half of base
     }
 
     public void Start()
@@ -72,7 +78,7 @@ public class TikTokDataCollectionService : IDisposable
         try
         {
             OnStatusChanged("Running initial data collection...");
-            await RunDataCollection(ct);
+            await RunDataCollection(ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -109,14 +115,14 @@ public class TikTokDataCollectionService : IDisposable
 
                 if (shouldRun)
                 {
-                    await RunDataCollection(ct);
+                    await RunDataCollection(ct).ConfigureAwait(false);
                     // Wait at least 2 minutes after collection to avoid re-triggering
-                    await Task.Delay(TimeSpan.FromMinutes(2), ct);
+                    await Task.Delay(TimeSpan.FromMinutes(2), ct).ConfigureAwait(false);
                 }
                 else
                 {
                     // Check every 30 seconds for schedule match
-                    await Task.Delay(TimeSpan.FromSeconds(30), ct);
+                    await Task.Delay(TimeSpan.FromSeconds(30), ct).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -126,14 +132,14 @@ public class TikTokDataCollectionService : IDisposable
             catch (Exception ex)
             {
                 OnStatusChanged($"Error in collection loop: {ex.Message}");
-                await Task.Delay(TimeSpan.FromMinutes(1), ct);
+                await Task.Delay(TimeSpan.FromMinutes(1), ct).ConfigureAwait(false);
             }
         }
     }
 
     public async Task RunDataCollectionNow(CancellationToken ct = default)
     {
-        await RunDataCollection(ct);
+        await RunDataCollection(ct).ConfigureAwait(false);
     }
 
     private async Task RunDataCollection(CancellationToken ct)
@@ -151,7 +157,7 @@ public class TikTokDataCollectionService : IDisposable
             OnProgressChanged(0, profiles.Count);
 
             _scraper ??= new TikTokScraperService();
-            var collectedData = new List<TkData>();
+            int savedCount = 0;
 
             for (int i = 0; i < profiles.Count; i++)
             {
@@ -162,12 +168,17 @@ public class TikTokDataCollectionService : IDisposable
 
                 try
                 {
-                    var data = await _scraper.FetchStatsAsync(profile);
+                    var data = await _scraper.FetchStatsAsync(profile).ConfigureAwait(false);
                     if (data != null)
                     {
-                        collectedData.Add(data);
+                        // Save immediately to get the DataId from database
+                        var dataId = ServiceContainer.Database.AddTkData(data);
+                        data.DataId = dataId;
+                        savedCount++;
+
+                        // Now notify with the correct DataId
                         OnDataCollected(data);
-                        OnStatusChanged($"Collected data for @{profile.Username}: {data.FollowerCountDisplay} followers");
+                        OnStatusChanged($"Collected data for @{profile.Username}: {data.FollowerCountDisplay} followers (ID: {dataId})");
                     }
                     else
                     {
@@ -181,20 +192,18 @@ public class TikTokDataCollectionService : IDisposable
 
                 OnProgressChanged(i + 1, profiles.Count);
 
-                // Wait between profiles (except for the last one)
+                // Wait between profiles with jitter (except for the last one)
                 if (i < profiles.Count - 1 && !ct.IsCancellationRequested)
                 {
-                    OnStatusChanged($"Waiting {_delaySeconds} second(s) before next profile...");
-                    await Task.Delay(TimeSpan.FromSeconds(_delaySeconds), ct);
+                    var delayMs = _rateLimiter.GetNextDelayMs();
+                    OnStatusChanged($"Waiting ({_rateLimiter.GetDelayDescription()}) before next profile...");
+                    await Task.Delay(delayMs, ct).ConfigureAwait(false);
                 }
             }
 
-            // Save all collected data to database
-            if (collectedData.Count > 0)
+            if (savedCount > 0)
             {
-                OnStatusChanged($"Saving {collectedData.Count} records to database...");
-                ServiceContainer.Database.AddTkDataBatch(collectedData);
-                OnStatusChanged($"Data collection complete. Saved {collectedData.Count} records.");
+                OnStatusChanged($"Data collection complete. Saved {savedCount} records.");
             }
             else
             {
@@ -238,6 +247,13 @@ public class TikTokDataCollectionService : IDisposable
         if (!_disposed)
         {
             Stop();
+
+            // Clear schedules to release memory
+            lock (_lock)
+            {
+                _schedules.Clear();
+            }
+
             _scraper?.Dispose();
             _cts?.Dispose();
             _disposed = true;

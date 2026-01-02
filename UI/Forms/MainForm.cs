@@ -86,11 +86,26 @@ public partial class MainForm : Form
         // TikTok events
         btnTkAddId.Click += BtnTkAddId_Click;
         btnTkDeleteId.Click += BtnTkDeleteId_Click;
+        btnTkRefreshId.Click += BtnTkRefreshId_Click;
         btnTkAddSchedule.Click += BtnTkAddSchedule_Click;
         btnTkEditSchedule.Click += BtnTkEditSchedule_Click;
         btnTkDeleteSchedule.Click += BtnTkDeleteSchedule_Click;
+        btnTkSaveSettings.Click += BtnTkSaveSettings_Click;
         btnTkStartStop.Click += BtnTkStartStop_Click;
         numTkFrequency.ValueChanged += NumTkFrequency_ValueChanged;
+
+        // Filter events
+        btnApplyFilter.Click += BtnApplyFilter_Click;
+        btnClearFilter.Click += BtnClearFilter_Click;
+
+        // Schedule checkbox handling
+        olvTiktokSchedule.SubItemChecking += OlvTiktokSchedule_SubItemChecking;
+
+        // TikTok data list formatting for change columns
+        olvTiktokData.FormatCell += OlvTiktokData_FormatCell;
+
+        // Schedule countdown timer
+        timerScheduleCountdown.Tick += TimerScheduleCountdown_Tick;
 
         // TikTok collector events
         if (_tikTokCollector != null)
@@ -139,7 +154,8 @@ public partial class MainForm : Form
         // Load TikTok data and settings
         LoadTikTokSettings();
         LoadTikTokProfiles();
-        LoadTikTokData();
+        InitializeFilterControls();
+        ClearTikTokDataList(); // Clear on app launch
     }
 
     private void LoadTikTokSettings()
@@ -213,6 +229,36 @@ public partial class MainForm : Form
 
         try
         {
+            // Unsubscribe from background scraper events
+            if (_backgroundScraper != null)
+            {
+                _backgroundScraper.ArticleScraped -= BackgroundScraper_ArticleScraped;
+                _backgroundScraper.StatusChanged -= BackgroundScraper_StatusChanged;
+                _backgroundScraper.ProgressChanged -= BackgroundScraper_ProgressChanged;
+                _backgroundScraper.RunningStateChanged -= BackgroundScraper_RunningStateChanged;
+            }
+
+            // Unsubscribe from TikTok collector events
+            if (_tikTokCollector != null)
+            {
+                _tikTokCollector.StatusChanged -= TikTokCollector_StatusChanged;
+                _tikTokCollector.ProgressChanged -= TikTokCollector_ProgressChanged;
+                _tikTokCollector.RunningStateChanged -= TikTokCollector_RunningStateChanged;
+                _tikTokCollector.DataCollected -= TikTokCollector_DataCollected;
+            }
+
+            // Unsubscribe from Memurai service events
+            ServiceContainer.Memurai.StatusChanged -= Memurai_StatusChanged;
+            ServiceContainer.Memurai.RunningStateChanged -= Memurai_RunningStateChanged;
+
+            // Stop and dispose timer
+            timerScheduleCountdown.Stop();
+            timerScheduleCountdown.Tick -= TimerScheduleCountdown_Tick;
+
+            // Unsubscribe from list events
+            olvTiktokData.FormatCell -= OlvTiktokData_FormatCell;
+            olvTiktokSchedule.SubItemChecking -= OlvTiktokSchedule_SubItemChecking;
+
             // Stop and dispose background scraper
             _backgroundScraper?.Stop();
             _backgroundScraper?.Dispose();
@@ -226,6 +272,12 @@ public partial class MainForm : Form
             // Stop and dispose Memurai service
             ServiceContainer.Memurai.Stop();
             ServiceContainer.Memurai.Dispose();
+
+            // Clear collections to release memory
+            _articles.Clear();
+            _tikTokProfiles.Clear();
+            _tikTokSchedules.Clear();
+            _tikTokData.Clear();
 
             // Force cleanup all Chrome/ChromeDriver processes
             ProcessCleanupService.ForceCleanupAll();
@@ -290,6 +342,9 @@ public partial class MainForm : Form
     {
         LoadSites();
         LoadArticles();
+        UpdateArticleCount();
+        LogDebug($"Refreshed. {listBoxSites.Items.Count} sites loaded from database.", "INFO");
+        UpdateStatus($"Synced with database. {listBoxSites.Items.Count} sites loaded.");
     }
 
     private void ListBoxSites_DoubleClick(object? sender, EventArgs e)
@@ -863,14 +918,99 @@ public partial class MainForm : Form
 
         _tikTokProfiles = ServiceContainer.Database.GetAllTkProfiles();
         olvTiktokID.SetObjects(_tikTokProfiles);
+        UpdateTkInfo();
     }
 
-    private void LoadTikTokData()
+    private void LoadTikTokData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
         if (!ServiceContainer.Database.IsConnected) return;
 
-        _tikTokData = ServiceContainer.Database.GetRecentTkData(200);
+        _tikTokData = ServiceContainer.Database.GetFilteredTkData(username, fromDate, toDate, 500);
         olvTiktokData.SetObjects(_tikTokData);
+        UpdateTkInfo();
+    }
+
+    private void OlvTiktokData_FormatCell(object? sender, BrightIdeasSoftware.FormatCellEventArgs e)
+    {
+        if (e.Model is not TkData data) return;
+
+        // Color the change columns based on positive/negative values
+        if (e.Column == olvColDataFollowersChange)
+        {
+            FormatChangeCell(e, data.FollowersChange);
+        }
+        else if (e.Column == olvColDataHeartsChange)
+        {
+            FormatChangeCell(e, data.HeartsChange);
+        }
+        else if (e.Column == olvColDataVideosChange)
+        {
+            FormatChangeCell(e, data.VideosChange);
+        }
+    }
+
+    private static void FormatChangeCell(BrightIdeasSoftware.FormatCellEventArgs e, long change)
+    {
+        if (change > 0)
+        {
+            e.SubItem.ForeColor = Color.LimeGreen;
+        }
+        else if (change < 0)
+        {
+            e.SubItem.ForeColor = Color.OrangeRed;
+        }
+        else
+        {
+            e.SubItem.ForeColor = Color.Gray;
+        }
+    }
+
+    private void ClearTikTokDataList()
+    {
+        _tikTokData.Clear();
+        olvTiktokData.SetObjects(_tikTokData);
+        UpdateTkInfo();
+    }
+
+    private void InitializeFilterControls()
+    {
+        // Populate username dropdown
+        cboFilterUsername.Items.Clear();
+        cboFilterUsername.Items.Add("(All Users)");
+        foreach (var profile in _tikTokProfiles)
+        {
+            cboFilterUsername.Items.Add(profile.Username);
+        }
+        cboFilterUsername.SelectedIndex = 0;
+
+        // Set date/time defaults (last 30 days, from midnight to now)
+        dtpFilterTo.Value = DateTime.Now;
+        dtpFilterFrom.Value = DateTime.Today.AddDays(-30);
+    }
+
+    private void BtnApplyFilter_Click(object? sender, EventArgs e)
+    {
+        string? username = null;
+        if (cboFilterUsername.SelectedIndex > 0)
+        {
+            username = cboFilterUsername.SelectedItem?.ToString();
+        }
+
+        // Use the exact datetime values from the pickers
+        var fromDate = dtpFilterFrom.Value;
+        var toDate = dtpFilterTo.Value;
+
+        LoadTikTokData(username, fromDate, toDate);
+        UpdateTkStatus($"Filter applied. Found {_tikTokData.Count} records.");
+    }
+
+    private void BtnClearFilter_Click(object? sender, EventArgs e)
+    {
+        cboFilterUsername.SelectedIndex = 0;
+        dtpFilterTo.Value = DateTime.Now;
+        dtpFilterFrom.Value = DateTime.Today.AddDays(-30);
+        ClearTikTokDataList();
+        UpdateTkStatus("Filter cleared.");
     }
 
     private void RefreshScheduleList()
@@ -884,6 +1024,22 @@ public partial class MainForm : Form
 
         // Update collector
         _tikTokCollector?.UpdateSchedules(_tikTokSchedules);
+    }
+
+    private void OlvTiktokSchedule_SubItemChecking(object? sender, BrightIdeasSoftware.SubItemCheckingEventArgs e)
+    {
+        if (e.RowObject is TkSchedule schedule)
+        {
+            schedule.IsActive = e.NewValue == CheckState.Checked;
+            SaveTikTokSettings();
+            _tikTokCollector?.UpdateSchedules(_tikTokSchedules);
+        }
+    }
+
+    private void BtnTkSaveSettings_Click(object? sender, EventArgs e)
+    {
+        SaveTikTokSettings();
+        UpdateTkStatus("Settings saved successfully.");
     }
 
     private void BtnTkAddId_Click(object? sender, EventArgs e)
@@ -920,6 +1076,13 @@ public partial class MainForm : Form
             LoadTikTokData();
             UpdateTkStatus($"Deleted profile: @{profile.Username}");
         }
+    }
+
+    private void BtnTkRefreshId_Click(object? sender, EventArgs e)
+    {
+        LoadTikTokProfiles();
+        InitializeFilterControls();
+        UpdateTkStatus($"Refreshed. {_tikTokProfiles.Count} profiles loaded.");
     }
 
     private void BtnTkAddSchedule_Click(object? sender, EventArgs e)
@@ -987,6 +1150,9 @@ public partial class MainForm : Form
         }
         else
         {
+            // Clear data list when starting new fetch
+            ClearTikTokDataList();
+
             // Update settings before starting
             _tikTokCollector.UpdateDelaySeconds((int)numTkFrequency.Value);
             _tikTokCollector.UpdateSchedules(_tikTokSchedules);
@@ -1022,6 +1188,30 @@ public partial class MainForm : Form
 
         btnTkStartStop.Text = isRunning ? "Stop" : "Start";
         btnTkStartStop.BackColor = isRunning ? Color.FromArgb(180, 0, 0) : Color.FromArgb(0, 120, 0);
+
+        // Disable/enable filter controls during fetching
+        SetTikTokFilterEnabled(!isRunning);
+
+        // Start/stop countdown timer
+        if (isRunning)
+        {
+            UpdateNextScheduleLabel();
+            timerScheduleCountdown.Start();
+        }
+        else
+        {
+            timerScheduleCountdown.Stop();
+            lblTkNextSchedule.Text = "Next: --:-- (stopped)";
+        }
+    }
+
+    private void SetTikTokFilterEnabled(bool enabled)
+    {
+        cboFilterUsername.Enabled = enabled;
+        dtpFilterFrom.Enabled = enabled;
+        dtpFilterTo.Enabled = enabled;
+        btnApplyFilter.Enabled = enabled;
+        btnClearFilter.Enabled = enabled;
     }
 
     private void TikTokCollector_DataCollected(object? sender, TkData data)
@@ -1034,11 +1224,16 @@ public partial class MainForm : Form
 
         // Add to the top of the list
         _tikTokData.Insert(0, data);
-        if (_tikTokData.Count > 200)
+
+        // Limit rows to double the number of TikTok profiles
+        int maxRows = Math.Max(10, _tikTokProfiles.Count * 2); // minimum 10 rows
+        while (_tikTokData.Count > maxRows)
         {
             _tikTokData.RemoveAt(_tikTokData.Count - 1);
         }
+
         olvTiktokData.SetObjects(_tikTokData);
+        UpdateTkInfo();
     }
 
     private void UpdateTkStatus(string message)
@@ -1050,6 +1245,86 @@ public partial class MainForm : Form
         }
 
         lblTkStatus.Text = message;
+    }
+
+    private void UpdateTkInfo()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(UpdateTkInfo);
+            return;
+        }
+
+        lblTkInfo.Text = $"Id:{_tikTokProfiles.Count}, Sch:{_tikTokSchedules.Count}, Data:{_tikTokData.Count}";
+    }
+
+    private void TimerScheduleCountdown_Tick(object? sender, EventArgs e)
+    {
+        UpdateNextScheduleLabel();
+    }
+
+    private void UpdateNextScheduleLabel()
+    {
+        var now = DateTime.Now;
+        var currentTime = now.TimeOfDay;
+
+        // Get active schedules
+        var activeSchedules = _tikTokSchedules.Where(s => s.IsActive).ToList();
+        if (activeSchedules.Count == 0)
+        {
+            lblTkNextSchedule.Text = "Next: No active schedules";
+            return;
+        }
+
+        // Find the next schedule time
+        TimeSpan? nextScheduleTime = null;
+        TimeSpan minDiff = TimeSpan.MaxValue;
+
+        foreach (var schedule in activeSchedules)
+        {
+            var scheduleTime = schedule.Timing;
+            TimeSpan diff;
+
+            if (scheduleTime > currentTime)
+            {
+                // Schedule is later today
+                diff = scheduleTime - currentTime;
+            }
+            else
+            {
+                // Schedule is tomorrow (already passed today)
+                diff = TimeSpan.FromDays(1) - currentTime + scheduleTime;
+            }
+
+            if (diff < minDiff)
+            {
+                minDiff = diff;
+                nextScheduleTime = scheduleTime;
+            }
+        }
+
+        if (nextScheduleTime.HasValue)
+        {
+            var scheduleTimeStr = DateTime.Today.Add(nextScheduleTime.Value).ToString("HH:mm");
+            var countdownStr = FormatCountdown(minDiff);
+            lblTkNextSchedule.Text = $"Next: {scheduleTimeStr} ({countdownStr})";
+        }
+    }
+
+    private static string FormatCountdown(TimeSpan diff)
+    {
+        if (diff.TotalHours >= 1)
+        {
+            return $"{(int)diff.TotalHours}h {diff.Minutes:D2}m";
+        }
+        else if (diff.TotalMinutes >= 1)
+        {
+            return $"{diff.Minutes}m {diff.Seconds:D2}s";
+        }
+        else
+        {
+            return $"{diff.Seconds}s";
+        }
     }
 
     #endregion
