@@ -8,11 +8,12 @@ using SkiaSharp;
 namespace nRun.Services;
 
 /// <summary>
-/// Service for scraping TikTok profile information using Selenium WebDriver
+/// Service for scraping TikTok profile information using Selenium WebDriver.
+/// WebDriver is created per-operation and immediately disposed after each fetch
+/// to prevent memory leaks and process accumulation.
 /// </summary>
 public class TikTokScraperService : IDisposable
 {
-    private WebDriverService? _webDriver;
     private HttpClient? _httpClient;
     private bool _disposed;
     private readonly RateLimiter _rateLimiter;
@@ -54,17 +55,12 @@ public class TikTokScraperService : IDisposable
         }
     }
 
-    private WebDriverService GetWebDriver()
+    /// <summary>
+    /// Creates a new WebDriver instance for TikTok scraping
+    /// </summary>
+    private WebDriverService CreateWebDriver()
     {
-        if (_webDriver == null)
-        {
-            _webDriver = new WebDriverService
-            {
-                TimeoutSeconds = TimeoutSeconds,
-                UseHeadless = UseHeadless
-            };
-        }
-        return _webDriver;
+        return WebDriverFactory.Create(UseHeadless, TimeoutSeconds);
     }
 
     private HttpClient GetHttpClient()
@@ -168,15 +164,76 @@ public class TikTokScraperService : IDisposable
     }
 
     /// <summary>
-    /// Fetches TikTok profile information from a profile URL with cancellation support
+    /// Fetches TikTok profile information from a profile URL with cancellation support.
+    /// Creates a new WebDriver for this operation and disposes it after completion.
     /// </summary>
     public async Task<TkProfile?> FetchProfileInfoAsync(string profileUrl, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var profile = await Task.Run(() => FetchProfileInfo(profileUrl), cancellationToken);
+        var username = ExtractUsernameFromUrl(profileUrl);
+        if (string.IsNullOrEmpty(username))
+        {
+            OnError("Invalid TikTok URL. Expected format: https://www.tiktok.com/@username");
+            return null;
+        }
 
-        // Download and convert avatar if URL is available
+        OnStatusChanged($"Fetching profile info for @{username}...");
+
+        WebDriverService? webDriver = null;
+        TkProfile? profile = null;
+
+        try
+        {
+            webDriver = CreateWebDriver();
+            var url = $"https://www.tiktok.com/@{username}";
+
+            await webDriver.NavigateToAsync(url, cancellationToken);
+
+            // Wait for profile to load using async delay
+            await Task.Delay(3000, cancellationToken);
+
+            // Try to extract data from the page's embedded JSON (SIGI_STATE)
+            profile = TryExtractFromSigiState(webDriver, username);
+            if (profile != null)
+            {
+                OnStatusChanged($"Successfully fetched profile: @{username}");
+            }
+            else
+            {
+                // Fallback: Try to extract from page elements
+                profile = TryExtractFromPageElements(webDriver, username);
+                if (profile != null)
+                {
+                    OnStatusChanged($"Successfully fetched profile: @{username}");
+                }
+                else
+                {
+                    OnError($"Could not extract profile data for @{username}");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            OnStatusChanged($"Profile fetch cancelled for @{username}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            OnError($"Error fetching profile: {ex.Message}");
+            profile = null;
+        }
+        finally
+        {
+            // CRITICAL: Always dispose WebDriver after each profile fetch
+            if (webDriver != null)
+            {
+                OnStatusChanged($"Closing browser for @{username}");
+                WebDriverFactory.SafeDispose(webDriver);
+            }
+        }
+
+        // Download and convert avatar if URL is available (after WebDriver is closed)
         if (profile != null && !string.IsNullOrEmpty(profile.AvatarUrl))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -187,106 +244,73 @@ public class TikTokScraperService : IDisposable
     }
 
     /// <summary>
-    /// Fetches TikTok profile information from a profile URL (synchronous)
+    /// Fetches TikTok statistics for a profile.
+    /// Creates a new WebDriver for this operation and disposes it after completion.
     /// </summary>
-    public TkProfile? FetchProfileInfo(string profileUrl)
+    public async Task<TkData?> FetchStatsAsync(TkProfile profile, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        OnStatusChanged($"Fetching stats for @{profile.Username}...");
+
+        WebDriverService? webDriver = null;
+        TkData? stats = null;
+
         try
         {
-            var username = ExtractUsernameFromUrl(profileUrl);
-            if (string.IsNullOrEmpty(username))
-            {
-                OnError("Invalid TikTok URL. Expected format: https://www.tiktok.com/@username");
-                return null;
-            }
-
-            OnStatusChanged($"Fetching profile info for @{username}...");
-
-            var driver = GetWebDriver();
-            var url = $"https://www.tiktok.com/@{username}";
-            driver.NavigateTo(url);
-
-            // Wait for profile to load
-            Thread.Sleep(3000);
-
-            // Try to extract data from the page's embedded JSON (SIGI_STATE)
-            var profile = TryExtractFromSigiState(driver, username);
-            if (profile != null)
-            {
-                OnStatusChanged($"Successfully fetched profile: @{username}");
-                return profile;
-            }
-
-            // Fallback: Try to extract from page elements
-            profile = TryExtractFromPageElements(driver, username);
-            if (profile != null)
-            {
-                OnStatusChanged($"Successfully fetched profile: @{username}");
-                return profile;
-            }
-
-            OnError($"Could not extract profile data for @{username}");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            OnError($"Error fetching profile: {ex.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Fetches TikTok statistics for a profile
-    /// </summary>
-    public async Task<TkData?> FetchStatsAsync(TkProfile profile)
-    {
-        return await Task.Run(() => FetchStats(profile));
-    }
-
-    /// <summary>
-    /// Fetches TikTok statistics for a profile (synchronous)
-    /// </summary>
-    public TkData? FetchStats(TkProfile profile)
-    {
-        try
-        {
-            OnStatusChanged($"Fetching stats for @{profile.Username}...");
-
-            var driver = GetWebDriver();
+            webDriver = CreateWebDriver();
             var url = $"https://www.tiktok.com/@{profile.Username}";
-            driver.NavigateTo(url);
 
-            // Wait for profile to load
-            Thread.Sleep(3000);
+            await webDriver.NavigateToAsync(url, cancellationToken);
+
+            // Wait for profile to load using async delay
+            await Task.Delay(3000, cancellationToken);
 
             // Try to extract stats from SIGI_STATE
-            var stats = TryExtractStatsFromSigiState(driver, profile.UserId);
+            stats = TryExtractStatsFromSigiState(webDriver, profile.UserId);
             if (stats != null)
             {
                 stats.Username = profile.Username;
                 stats.Nickname = profile.Nickname;
                 OnStatusChanged($"Successfully fetched stats for @{profile.Username}");
-                return stats;
             }
-
-            // Fallback: Try to extract from page elements
-            stats = TryExtractStatsFromPageElements(driver, profile.UserId);
-            if (stats != null)
+            else
             {
-                stats.Username = profile.Username;
-                stats.Nickname = profile.Nickname;
-                OnStatusChanged($"Successfully fetched stats for @{profile.Username}");
-                return stats;
+                // Fallback: Try to extract from page elements
+                stats = TryExtractStatsFromPageElements(webDriver, profile.UserId);
+                if (stats != null)
+                {
+                    stats.Username = profile.Username;
+                    stats.Nickname = profile.Nickname;
+                    OnStatusChanged($"Successfully fetched stats for @{profile.Username}");
+                }
+                else
+                {
+                    OnError($"Could not extract stats for @{profile.Username}");
+                }
             }
-
-            OnError($"Could not extract stats for @{profile.Username}");
-            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            OnStatusChanged($"Stats fetch cancelled for @{profile.Username}");
+            throw;
         }
         catch (Exception ex)
         {
             OnError($"Error fetching stats: {ex.Message}");
-            return null;
+            stats = null;
         }
+        finally
+        {
+            // CRITICAL: Always dispose WebDriver after each stats fetch
+            if (webDriver != null)
+            {
+                OnStatusChanged($"Closing browser for @{profile.Username}");
+                WebDriverFactory.SafeDispose(webDriver);
+            }
+        }
+
+        return stats;
     }
 
     private TkProfile? TryExtractFromSigiState(WebDriverService driver, string username)
@@ -625,16 +649,6 @@ public class TikTokScraperService : IDisposable
         return 0;
     }
 
-    public void ResetDriver()
-    {
-        _webDriver?.ResetDriver();
-    }
-
-    public void CloseDriver()
-    {
-        _webDriver?.CloseDriver();
-    }
-
     private void OnStatusChanged(string message)
     {
         StatusChanged?.Invoke(this, message);
@@ -658,8 +672,6 @@ public class TikTokScraperService : IDisposable
                     _requestHandler.ErrorOccurred -= _requestErrorHandler;
             }
 
-            _webDriver?.Dispose();
-            _webDriver = null;
             _httpClient?.Dispose();
             _httpClient = null;
             _disposed = true;

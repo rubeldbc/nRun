@@ -272,7 +272,7 @@ public partial class SiteEditForm : Form
 
         try
         {
-            using var scraper = new NewsScraperService();
+            var scraper = new NewsScraperService();
 
             var (links, title, body) = await scraper.TestSelectorsAsync(
                 txtUrl.Text.Trim(),

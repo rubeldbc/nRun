@@ -18,6 +18,13 @@ public partial class MainForm : Form
     private List<TkData> _tikTokData = new();
     private int _nextScheduleId = 1;
 
+    // Facebook related fields
+    private FacebookDataCollectionService? _facebookCollector;
+    private List<FbProfile> _facebookProfiles = new();
+    private List<FbSchedule> _facebookSchedules = new();
+    private List<FbData> _facebookData = new();
+    private int _nextFbScheduleId = 1;
+
     private int MaxDisplayedArticles => ServiceContainer.Settings.LoadSettings().MaxDisplayedArticles;
 
     public MainForm()
@@ -30,6 +37,7 @@ public partial class MainForm : Form
 
         _backgroundScraper = new BackgroundScraperService();
         _tikTokCollector = new TikTokDataCollectionService();
+        _facebookCollector = new FacebookDataCollectionService();
         SetupEventHandlers();
     }
 
@@ -115,6 +123,29 @@ public partial class MainForm : Form
             _tikTokCollector.RunningStateChanged += TikTokCollector_RunningStateChanged;
             _tikTokCollector.DataCollected += TikTokCollector_DataCollected;
         }
+
+        // Facebook events
+        btnFbAddId.Click += BtnFbAddId_Click;
+        btnFbDeleteId.Click += BtnFbDeleteId_Click;
+        btnFbRefreshId.Click += BtnFbRefreshId_Click;
+        btnFbAddSchedule.Click += BtnFbAddSchedule_Click;
+        btnFbEditSchedule.Click += BtnFbEditSchedule_Click;
+        btnFbDeleteSchedule.Click += BtnFbDeleteSchedule_Click;
+        btnFbSaveSettings.Click += BtnFbSaveSettings_Click;
+        btnFbStartStop.Click += BtnFbStartStop_Click;
+        numFbFrequency.ValueChanged += NumFbFrequency_ValueChanged;
+        btnFbApplyFilter.Click += BtnFbApplyFilter_Click;
+        btnFbClearFilter.Click += BtnFbClearFilter_Click;
+        olvFacebookData.FormatCell += OlvFacebookData_FormatCell;
+
+        // Facebook collector events
+        if (_facebookCollector != null)
+        {
+            _facebookCollector.StatusChanged += FacebookCollector_StatusChanged;
+            _facebookCollector.ProgressChanged += FacebookCollector_ProgressChanged;
+            _facebookCollector.RunningStateChanged += FacebookCollector_RunningStateChanged;
+            _facebookCollector.DataCollected += FacebookCollector_DataCollected;
+        }
     }
 
     private void MainForm_Load(object? sender, EventArgs e)
@@ -156,6 +187,11 @@ public partial class MainForm : Form
         LoadTikTokProfiles();
         InitializeFilterControls();
         ClearTikTokDataList(); // Clear on app launch
+
+        // Load Facebook data and settings
+        LoadFacebookSettings();
+        LoadFacebookProfiles();
+        InitializeFbFilterControls();
     }
 
     private void LoadTikTokSettings()
@@ -245,6 +281,15 @@ public partial class MainForm : Form
                 _tikTokCollector.ProgressChanged -= TikTokCollector_ProgressChanged;
                 _tikTokCollector.RunningStateChanged -= TikTokCollector_RunningStateChanged;
                 _tikTokCollector.DataCollected -= TikTokCollector_DataCollected;
+            }
+
+            // Unsubscribe from Facebook collector events
+            if (_facebookCollector != null)
+            {
+                _facebookCollector.StatusChanged -= FacebookCollector_StatusChanged;
+                _facebookCollector.ProgressChanged -= FacebookCollector_ProgressChanged;
+                _facebookCollector.RunningStateChanged -= FacebookCollector_RunningStateChanged;
+                _facebookCollector.DataCollected -= FacebookCollector_DataCollected;
             }
 
             // Unsubscribe from Memurai service events
@@ -1325,6 +1370,343 @@ public partial class MainForm : Form
         {
             return $"{diff.Seconds}s";
         }
+    }
+
+    #endregion
+
+    #region Facebook Management
+
+    private void LoadFacebookSettings()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+
+        // Load delay setting
+        numFbFrequency.Value = Math.Clamp(settings.FacebookDelaySeconds, 1, 3600);
+
+        // Load chunk settings
+        numFbChunkSize.Value = Math.Clamp(settings.FacebookChunkSize, 1, 1000);
+        numFbChunkDelay.Value = Math.Clamp(settings.FacebookChunkDelayMinutes, 1, 1440);
+
+        // Load schedules
+        _facebookSchedules.Clear();
+        foreach (var schedSetting in settings.FacebookSchedules)
+        {
+            var schedule = new FbSchedule
+            {
+                Id = _nextFbScheduleId++,
+                Timing = new TimeSpan(schedSetting.Hour, schedSetting.Minute, 0),
+                IsActive = schedSetting.IsEnabled
+            };
+            _facebookSchedules.Add(schedule);
+        }
+        RefreshFbScheduleList();
+    }
+
+    private void SaveFacebookSettings()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+
+        // Save delay setting
+        settings.FacebookDelaySeconds = (int)numFbFrequency.Value;
+
+        // Save chunk settings
+        settings.FacebookChunkSize = (int)numFbChunkSize.Value;
+        settings.FacebookChunkDelayMinutes = (int)numFbChunkDelay.Value;
+
+        // Save schedules
+        settings.FacebookSchedules.Clear();
+        foreach (var schedule in _facebookSchedules)
+        {
+            settings.FacebookSchedules.Add(new FacebookScheduleSettings
+            {
+                Hour = schedule.Timing.Hours,
+                Minute = schedule.Timing.Minutes,
+                IsEnabled = schedule.IsActive
+            });
+        }
+
+        ServiceContainer.Settings.SaveSettings(settings);
+    }
+
+    private void LoadFacebookProfiles()
+    {
+        if (!ServiceContainer.Database.IsConnected) return;
+
+        _facebookProfiles = ServiceContainer.Database.GetAllFbProfiles();
+        olvFacebookID.SetObjects(_facebookProfiles);
+        UpdateFbInfo();
+    }
+
+    private void LoadFacebookData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        if (!ServiceContainer.Database.IsConnected) return;
+
+        _facebookData = ServiceContainer.Database.GetFilteredFbData(username, fromDate, toDate, 500);
+        olvFacebookData.SetObjects(_facebookData);
+        UpdateFbInfo();
+    }
+
+    private void RefreshFbScheduleList()
+    {
+        // Update serial numbers
+        for (int i = 0; i < _facebookSchedules.Count; i++)
+        {
+            _facebookSchedules[i].SerialNumber = i + 1;
+        }
+        olvFacebookSchedule.SetObjects(_facebookSchedules);
+    }
+
+    private void BtnFbAddId_Click(object? sender, EventArgs e)
+    {
+        using var form = new FacebookIdManagerForm();
+        if (form.ShowDialog() == DialogResult.OK)
+        {
+            LoadFacebookProfiles();
+            InitializeFbFilterControls();
+        }
+    }
+
+    private void BtnFbDeleteId_Click(object? sender, EventArgs e)
+    {
+        if (olvFacebookID.SelectedObject is not FbProfile profile)
+        {
+            MessageBox.Show("Please select a profile to delete.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Are you sure you want to delete the profile '{profile.Username}'?\n\n" +
+            "This will also delete all associated data records.",
+            "Confirm Delete",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning);
+
+        if (result != DialogResult.Yes) return;
+
+        ServiceContainer.Database.DeleteFbProfile(profile.UserId);
+        LoadFacebookProfiles();
+        LoadFacebookData();
+        InitializeFbFilterControls();
+    }
+
+    private void BtnFbRefreshId_Click(object? sender, EventArgs e)
+    {
+        LoadFacebookProfiles();
+        InitializeFbFilterControls();
+    }
+
+    private void BtnFbAddSchedule_Click(object? sender, EventArgs e)
+    {
+        using var form = new FacebookScheduleForm();
+        if (form.ShowDialog() == DialogResult.OK && form.ResultSchedule != null)
+        {
+            var newSchedule = form.ResultSchedule;
+            newSchedule.Id = _nextFbScheduleId++;
+            _facebookSchedules.Add(newSchedule);
+            RefreshFbScheduleList();
+            SaveFacebookSettings();
+
+            // Update collector with new schedules
+            _facebookCollector?.UpdateSchedules(_facebookSchedules);
+        }
+    }
+
+    private void BtnFbEditSchedule_Click(object? sender, EventArgs e)
+    {
+        if (olvFacebookSchedule.SelectedObject is not FbSchedule schedule)
+        {
+            MessageBox.Show("Please select a schedule to edit.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new FacebookScheduleForm(schedule);
+        if (form.ShowDialog() == DialogResult.OK)
+        {
+            RefreshFbScheduleList();
+            SaveFacebookSettings();
+
+            // Update collector with new schedules
+            _facebookCollector?.UpdateSchedules(_facebookSchedules);
+        }
+    }
+
+    private void BtnFbDeleteSchedule_Click(object? sender, EventArgs e)
+    {
+        if (olvFacebookSchedule.SelectedObject is not FbSchedule schedule)
+        {
+            MessageBox.Show("Please select a schedule to delete.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _facebookSchedules.Remove(schedule);
+        RefreshFbScheduleList();
+        SaveFacebookSettings();
+
+        // Update collector with new schedules
+        _facebookCollector?.UpdateSchedules(_facebookSchedules);
+    }
+
+    private void BtnFbSaveSettings_Click(object? sender, EventArgs e)
+    {
+        SaveFacebookSettings();
+        _facebookCollector?.UpdateDelaySeconds((int)numFbFrequency.Value);
+        UpdateFbStatus("Settings saved");
+    }
+
+    private void BtnFbStartStop_Click(object? sender, EventArgs e)
+    {
+        if (_facebookCollector == null) return;
+
+        if (_facebookCollector.IsRunning)
+        {
+            _facebookCollector.Stop();
+        }
+        else
+        {
+            // Update settings before starting
+            _facebookCollector.UpdateDelaySeconds((int)numFbFrequency.Value);
+            _facebookCollector.UpdateSchedules(_facebookSchedules);
+            _facebookCollector.Start();
+        }
+    }
+
+    private void NumFbFrequency_ValueChanged(object? sender, EventArgs e)
+    {
+        // Update collector delay in real-time
+        _facebookCollector?.UpdateDelaySeconds((int)numFbFrequency.Value);
+    }
+
+    private void BtnFbApplyFilter_Click(object? sender, EventArgs e)
+    {
+        string? username = null;
+        if (cboFbFilterUsername.SelectedIndex > 0)
+        {
+            username = cboFbFilterUsername.SelectedItem?.ToString();
+        }
+
+        var fromDate = dtpFbFilterFrom.Value;
+        var toDate = dtpFbFilterTo.Value;
+
+        LoadFacebookData(username, fromDate, toDate);
+    }
+
+    private void BtnFbClearFilter_Click(object? sender, EventArgs e)
+    {
+        cboFbFilterUsername.SelectedIndex = 0;
+        dtpFbFilterTo.Value = DateTime.Now;
+        dtpFbFilterFrom.Value = DateTime.Today.AddDays(-30);
+        LoadFacebookData();
+    }
+
+    private void InitializeFbFilterControls()
+    {
+        // Populate username dropdown
+        cboFbFilterUsername.Items.Clear();
+        cboFbFilterUsername.Items.Add("(All Pages)");
+        foreach (var profile in _facebookProfiles)
+        {
+            cboFbFilterUsername.Items.Add(profile.Username);
+        }
+        cboFbFilterUsername.SelectedIndex = 0;
+
+        // Set date/time defaults (last 30 days)
+        dtpFbFilterTo.Value = DateTime.Now;
+        dtpFbFilterFrom.Value = DateTime.Today.AddDays(-30);
+    }
+
+    private void OlvFacebookData_FormatCell(object? sender, BrightIdeasSoftware.FormatCellEventArgs e)
+    {
+        if (e.Model is not FbData data) return;
+
+        // Color the change columns based on positive/negative values
+        if (e.Column == olvColFbFollowersChange)
+        {
+            FormatChangeCell(e, data.FollowersChange);
+        }
+        else if (e.Column == olvColFbTalkingAboutChange)
+        {
+            FormatChangeCell(e, data.TalkingAboutChange);
+        }
+    }
+
+    private void FacebookCollector_StatusChanged(object? sender, string e)
+    {
+        UpdateFbStatus(e);
+    }
+
+    private void FacebookCollector_ProgressChanged(object? sender, (int current, int total) e)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => FacebookCollector_ProgressChanged(sender, e));
+            return;
+        }
+
+        progressBarFb.Maximum = Math.Max(1, e.total);
+        progressBarFb.Value = Math.Min(e.current, e.total);
+    }
+
+    private void FacebookCollector_RunningStateChanged(object? sender, bool isRunning)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => FacebookCollector_RunningStateChanged(sender, isRunning));
+            return;
+        }
+
+        btnFbStartStop.Text = isRunning ? "Stop" : "Start";
+        btnFbStartStop.BackColor = isRunning ? Color.FromArgb(180, 0, 0) : Color.FromArgb(0, 120, 0);
+
+        if (!isRunning)
+        {
+            progressBarFb.Value = 0;
+        }
+    }
+
+    private void FacebookCollector_DataCollected(object? sender, FbData data)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => FacebookCollector_DataCollected(sender, data));
+            return;
+        }
+
+        // Add to front of list and refresh
+        _facebookData.Insert(0, data);
+
+        // Keep list size manageable
+        while (_facebookData.Count > 500)
+        {
+            _facebookData.RemoveAt(_facebookData.Count - 1);
+        }
+
+        olvFacebookData.SetObjects(_facebookData);
+        UpdateFbInfo();
+    }
+
+    private void UpdateFbStatus(string message)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => UpdateFbStatus(message));
+            return;
+        }
+
+        lblFbStatus.Text = message;
+    }
+
+    private void UpdateFbInfo()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(UpdateFbInfo);
+            return;
+        }
+
+        lblFbInfo.Text = $"Pages:{_facebookProfiles.Count}, Sch:{_facebookSchedules.Count}, Data:{_facebookData.Count}";
     }
 
     #endregion

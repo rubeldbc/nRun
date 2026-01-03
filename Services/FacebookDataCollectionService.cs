@@ -3,32 +3,35 @@ using nRun.Models;
 namespace nRun.Services;
 
 /// <summary>
-/// Background service for collecting TikTok data on schedule
+/// Background service for collecting Facebook page data on schedule
 /// </summary>
-public class TikTokDataCollectionService : IDisposable
+public class FacebookDataCollectionService : IDisposable
 {
-    private TikTokScraperService? _scraper;
+    private FacebookScraperService? _scraper;
     private CancellationTokenSource? _cts;
     private Task? _runningTask;
     private bool _disposed;
     private readonly object _lock = new();
     private readonly RateLimiter _rateLimiter;
+    private readonly Random _random = new();
 
-    private List<TkSchedule> _schedules = new();
+    private List<FbSchedule> _schedules = new();
+    private int _chunkSize = 10;
+    private int _chunkDelayMinutes = 5;
 
     public bool IsRunning { get; private set; }
 
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<(int current, int total)>? ProgressChanged;
     public event EventHandler<bool>? RunningStateChanged;
-    public event EventHandler<TkData>? DataCollected;
+    public event EventHandler<FbData>? DataCollected;
 
-    public TikTokDataCollectionService()
+    public FacebookDataCollectionService()
     {
         _rateLimiter = new RateLimiter(10, 5); // 10s base + 0-5s jitter
     }
 
-    public void UpdateSchedules(List<TkSchedule> schedules)
+    public void UpdateSchedules(List<FbSchedule> schedules)
     {
         lock (_lock)
         {
@@ -39,7 +42,14 @@ public class TikTokDataCollectionService : IDisposable
     public void UpdateDelaySeconds(int seconds)
     {
         _rateLimiter.BaseDelaySeconds = Math.Max(1, seconds);
-        _rateLimiter.JitterMaxSeconds = Math.Max(1, seconds / 2); // Jitter is half of base
+        // Jitter is 2x base for range base to base*3 (e.g., 15 → 15-45 seconds)
+        _rateLimiter.JitterMaxSeconds = Math.Max(1, seconds * 2);
+    }
+
+    public void UpdateChunkSettings(int chunkSize, int chunkDelayMinutes)
+    {
+        _chunkSize = Math.Max(1, chunkSize);
+        _chunkDelayMinutes = Math.Max(1, chunkDelayMinutes);
     }
 
     public void Start()
@@ -49,7 +59,7 @@ public class TikTokDataCollectionService : IDisposable
         _cts = new CancellationTokenSource();
         IsRunning = true;
         OnRunningStateChanged(true);
-        OnStatusChanged("TikTok data collection started");
+        OnStatusChanged("Facebook data collection started");
 
         _runningTask = Task.Run(() => RunCollectionLoop(_cts.Token));
     }
@@ -59,7 +69,7 @@ public class TikTokDataCollectionService : IDisposable
         if (!IsRunning) return;
 
         IsRunning = false;
-        OnStatusChanged("Stopping TikTok data collection...");
+        OnStatusChanged("Stopping Facebook data collection...");
 
         // Cancel ongoing operations
         try
@@ -92,7 +102,7 @@ public class TikTokDataCollectionService : IDisposable
         }
 
         OnRunningStateChanged(false);
-        OnStatusChanged("TikTok data collection stopped");
+        OnStatusChanged("Facebook data collection stopped");
     }
 
     private async Task RunCollectionLoop(CancellationToken ct)
@@ -117,7 +127,7 @@ public class TikTokDataCollectionService : IDisposable
                 var now = DateTime.Now;
                 var currentTime = now.TimeOfDay;
 
-                List<TkSchedule> activeSchedules;
+                List<FbSchedule> activeSchedules;
                 lock (_lock)
                 {
                     activeSchedules = _schedules.ToList();
@@ -169,64 +179,91 @@ public class TikTokDataCollectionService : IDisposable
     {
         try
         {
-            var profiles = ServiceContainer.Database.GetActiveTkProfiles();
+            var profiles = ServiceContainer.Database.GetActiveFbProfiles();
             if (profiles.Count == 0)
             {
-                OnStatusChanged("No active TikTok profiles to collect data for");
+                OnStatusChanged("No active Facebook profiles to collect data for");
                 return;
             }
 
-            OnStatusChanged($"Starting data collection for {profiles.Count} profiles...");
+            // Calculate chunks
+            int totalChunks = (int)Math.Ceiling((double)profiles.Count / _chunkSize);
+            OnStatusChanged($"Starting data collection for {profiles.Count} profiles in {totalChunks} chunk(s)...");
             OnProgressChanged(0, profiles.Count);
 
-            _scraper ??= new TikTokScraperService();
+            _scraper ??= new FacebookScraperService();
             int savedCount = 0;
+            int processedCount = 0;
 
-            for (int i = 0; i < profiles.Count; i++)
+            for (int chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++)
             {
                 if (ct.IsCancellationRequested) break;
 
-                var profile = profiles[i];
-                OnStatusChanged($"Fetching data for @{profile.Username} ({i + 1}/{profiles.Count})...");
+                int startIdx = chunkIndex * _chunkSize;
+                int endIdx = Math.Min(startIdx + _chunkSize, profiles.Count);
+                int chunkNum = chunkIndex + 1;
 
-                try
+                OnStatusChanged($"Processing chunk {chunkNum}/{totalChunks} ({startIdx + 1}-{endIdx} of {profiles.Count})...");
+
+                // Process profiles in this chunk
+                for (int i = startIdx; i < endIdx; i++)
                 {
-                    var data = await _scraper.FetchStatsAsync(profile).ConfigureAwait(false);
-                    if (data != null)
-                    {
-                        // Save immediately to get the DataId from database
-                        var dataId = ServiceContainer.Database.AddTkData(data);
-                        data.DataId = dataId;
-                        savedCount++;
+                    if (ct.IsCancellationRequested) break;
 
-                        // Now notify with the correct DataId
-                        OnDataCollected(data);
-                        OnStatusChanged($"Collected data for @{profile.Username}: {data.FollowerCountDisplay} followers (ID: {dataId})");
-                    }
-                    else
+                    var profile = profiles[i];
+                    OnStatusChanged($"[Chunk {chunkNum}/{totalChunks}] Fetching {profile.Username} ({i + 1}/{profiles.Count})...");
+
+                    try
                     {
-                        OnStatusChanged($"Failed to fetch data for @{profile.Username}");
+                        var data = await _scraper.FetchStatsAsync(profile, ct).ConfigureAwait(false);
+                        if (data != null)
+                        {
+                            // Save immediately to get the DataId from database
+                            var dataId = ServiceContainer.Database.AddFbData(data);
+                            data.DataId = dataId;
+                            savedCount++;
+
+                            // Now notify with the correct DataId
+                            OnDataCollected(data);
+                            OnStatusChanged($"[Chunk {chunkNum}/{totalChunks}] Collected {profile.Username}: {data.FollowersCountDisplay} followers");
+                        }
+                        else
+                        {
+                            OnStatusChanged($"[Chunk {chunkNum}/{totalChunks}] Failed to fetch {profile.Username}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        OnStatusChanged($"[Chunk {chunkNum}/{totalChunks}] Error fetching {profile.Username}: {ex.Message}");
+                    }
+
+                    processedCount++;
+                    OnProgressChanged(processedCount, profiles.Count);
+
+                    // Wait between profiles with jitter (except for the last one in the entire collection)
+                    if (i < profiles.Count - 1 && !ct.IsCancellationRequested)
+                    {
+                        var delayMs = _rateLimiter.GetNextDelayMs();
+                        OnStatusChanged($"[Chunk {chunkNum}/{totalChunks}] Waiting ({_rateLimiter.GetDelayDescription()})...");
+                        await Task.Delay(delayMs, ct).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex)
-                {
-                    OnStatusChanged($"Error fetching @{profile.Username}: {ex.Message}");
-                }
 
-                OnProgressChanged(i + 1, profiles.Count);
-
-                // Wait between profiles with jitter (except for the last one)
-                if (i < profiles.Count - 1 && !ct.IsCancellationRequested)
+                // Wait between chunks (except for the last chunk)
+                if (chunkIndex < totalChunks - 1 && !ct.IsCancellationRequested)
                 {
-                    var delayMs = _rateLimiter.GetNextDelayMs();
-                    OnStatusChanged($"Waiting ({_rateLimiter.GetDelayDescription()}) before next profile...");
-                    await Task.Delay(delayMs, ct).ConfigureAwait(false);
+                    // Randomize chunk delay: base ± 2 minutes (e.g., 5 min → 3-7 min)
+                    int minDelay = Math.Max(1, _chunkDelayMinutes - 2);
+                    int maxDelay = _chunkDelayMinutes + 2;
+                    int randomDelayMinutes = _random.Next(minDelay, maxDelay + 1);
+                    OnStatusChanged($"Chunk {chunkNum} complete. Waiting {randomDelayMinutes} minute(s) before next chunk...");
+                    await Task.Delay(TimeSpan.FromMinutes(randomDelayMinutes), ct).ConfigureAwait(false);
                 }
             }
 
             if (savedCount > 0)
             {
-                OnStatusChanged($"Data collection complete. Saved {savedCount} records.");
+                OnStatusChanged($"Data collection complete. Saved {savedCount}/{profiles.Count} records.");
             }
             else
             {
@@ -260,7 +297,7 @@ public class TikTokDataCollectionService : IDisposable
         RunningStateChanged?.Invoke(this, isRunning);
     }
 
-    private void OnDataCollected(TkData data)
+    private void OnDataCollected(FbData data)
     {
         DataCollected?.Invoke(this, data);
     }
@@ -284,7 +321,7 @@ public class TikTokDataCollectionService : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    ~TikTokDataCollectionService()
+    ~FacebookDataCollectionService()
     {
         Dispose();
     }

@@ -3,26 +3,15 @@ using nRun.Models;
 namespace nRun.Services;
 
 /// <summary>
-/// Service for scraping news articles from configured sites
+/// Service for scraping news articles from configured sites.
+/// WebDriver is created per-operation and immediately disposed after each scrape
+/// to prevent memory leaks and process accumulation.
 /// </summary>
-public class NewsScraperService : IDisposable
+public class NewsScraperService
 {
-    private readonly WebDriverService _webDriver;
-    private bool _disposed;
-
     public event EventHandler<NewsInfo>? ArticleScraped;
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<(int current, int total)>? ProgressChanged;
-
-    public NewsScraperService()
-    {
-        var settings = ServiceContainer.Settings.LoadSettings();
-        _webDriver = new WebDriverService
-        {
-            UseHeadless = settings.UseHeadlessBrowser,
-            TimeoutSeconds = settings.BrowserTimeoutSeconds
-        };
-    }
 
     public async Task<ScrapeResult> ScrapeAllSitesAsync(CancellationToken cancellationToken = default)
     {
@@ -46,6 +35,11 @@ public class NewsScraperService : IDisposable
                 totalNew += result.NewArticlesCount;
                 totalSkipped += result.SkippedCount;
             }
+            catch (OperationCanceledException)
+            {
+                StatusChanged?.Invoke(this, "Scraping cancelled");
+                break;
+            }
             catch (Exception ex)
             {
                 StatusChanged?.Invoke(this, $"Error scraping {site.SiteName}: {ex.Message}");
@@ -62,44 +56,48 @@ public class NewsScraperService : IDisposable
         var articles = new List<NewsInfo>();
         int newCount = 0, skippedCount = 0;
         var startTime = DateTime.Now;
-        var settings = ServiceContainer.Settings.LoadSettings();
 
+        // Create WebDriver for this scrape operation - will be disposed at the end
+        WebDriverService? webDriver = null;
         try
         {
+            webDriver = WebDriverFactory.Create();
             StatusChanged?.Invoke(this, $"Loading: {site.SiteLink}");
 
-            // Navigate to site
-            await Task.Run(() => _webDriver.NavigateTo(site.SiteLink), cancellationToken);
+            // Navigate to site using async method
+            await webDriver.NavigateToAsync(site.SiteLink, cancellationToken);
 
             // Wait for page to fully load
             StatusChanged?.Invoke(this, $"Waiting for page load: {site.SiteName}");
-            await Task.Run(() =>
+            try
             {
-                try { _webDriver.WaitForPageLoad(15); } catch { }
-            }, cancellationToken);
+                await webDriver.WaitForPageLoadAsync(15, cancellationToken);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch { /* Page load timeout is acceptable */ }
 
             // Wait for JavaScript content to render
             await Task.Delay(2000, cancellationToken);
 
             // Scroll to trigger dynamic content loading
             StatusChanged?.Invoke(this, $"Triggering dynamic content: {site.SiteName}");
-            await Task.Run(() => _webDriver.ScrollAndWait(2, 300), cancellationToken);
+            await webDriver.ScrollAndWaitAsync(2, 300, cancellationToken);
 
             // Wait for article element to appear
             StatusChanged?.Invoke(this, $"Waiting for element: {site.SiteName}");
-            var elementFound = await Task.Run(() => _webDriver.TryWaitForElement(site.ArticleLinkSelector, 10), cancellationToken);
+            var elementFound = await webDriver.TryWaitForElementAsync(site.ArticleLinkSelector, 10, cancellationToken);
 
             if (!elementFound)
             {
                 StatusChanged?.Invoke(this, $"Element not found, retrying: {site.SiteName}");
                 // Retry with more scrolling
-                await Task.Run(() => _webDriver.ScrollAndWait(3, 500), cancellationToken);
+                await webDriver.ScrollAndWaitAsync(3, 500, cancellationToken);
                 await Task.Delay(1000, cancellationToken);
             }
 
             // Find the first article link
             StatusChanged?.Invoke(this, $"Finding first article on: {site.SiteName}");
-            var firstLink = _webDriver.GetFirstLink(site.ArticleLinkSelector);
+            var firstLink = webDriver.GetFirstLink(site.ArticleLinkSelector);
 
             if (string.IsNullOrEmpty(firstLink))
             {
@@ -108,10 +106,7 @@ public class NewsScraperService : IDisposable
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
-            }
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Normalize URL
             var articleUrl = NormalizeUrl(firstLink, site.SiteLink);
@@ -122,9 +117,9 @@ public class NewsScraperService : IDisposable
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
-            // Fetch article content
+            // Fetch article content (using the same WebDriver instance)
             StatusChanged?.Invoke(this, $"Fetching article details...");
-            var article = await ScrapeArticleAsync(site, articleUrl, cancellationToken);
+            var article = await ScrapeArticleInternalAsync(webDriver, site, articleUrl, cancellationToken);
 
             if (article == null)
             {
@@ -159,32 +154,55 @@ public class NewsScraperService : IDisposable
             ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
             return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
         }
+        catch (OperationCanceledException)
+        {
+            StatusChanged?.Invoke(this, $"Scrape cancelled: {site.SiteName}");
+            throw;
+        }
         catch (Exception ex)
         {
             StatusChanged?.Invoke(this, $"Error: {ex.Message}");
             ServiceContainer.Database.UpdateSiteStats(site.SiteId, false);
             return ScrapeResult.Failed(ex.Message);
         }
+        finally
+        {
+            // CRITICAL: Always dispose WebDriver after each site scrape
+            if (webDriver != null)
+            {
+                StatusChanged?.Invoke(this, $"Closing browser for: {site.SiteName}");
+                WebDriverFactory.SafeDispose(webDriver);
+            }
+        }
     }
 
-    private async Task<NewsInfo?> ScrapeArticleAsync(SiteInfo site, string url, CancellationToken cancellationToken)
+    /// <summary>
+    /// Internal method to scrape article using an existing WebDriver instance
+    /// </summary>
+    private async Task<NewsInfo?> ScrapeArticleInternalAsync(
+        WebDriverService webDriver,
+        SiteInfo site,
+        string url,
+        CancellationToken cancellationToken)
     {
         try
         {
             StatusChanged?.Invoke(this, $"Navigating to article: {url}");
-            await Task.Run(() => _webDriver.NavigateTo(url), cancellationToken);
+            await webDriver.NavigateToAsync(url, cancellationToken);
 
             // Wait for article page to load
             StatusChanged?.Invoke(this, $"Waiting for article page load...");
-            await Task.Run(() =>
+            try
             {
-                try { _webDriver.WaitForPageLoad(15); } catch { }
-            }, cancellationToken);
+                await webDriver.WaitForPageLoadAsync(15, cancellationToken);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch { /* Page load timeout is acceptable */ }
 
             // Wait for JavaScript to finish rendering
             await Task.Delay(2000, cancellationToken);
 
-            var pageSource = _webDriver.GetPageSource();
+            var pageSource = webDriver.GetPageSource();
             StatusChanged?.Invoke(this, $"Page source length: {pageSource?.Length ?? 0} chars");
 
             string title = "";
@@ -192,7 +210,7 @@ public class NewsScraperService : IDisposable
 
             // Try getting title with Selenium first (handles dynamic content)
             StatusChanged?.Invoke(this, $"Trying Selenium for title with selector: {site.TitleSelector}");
-            title = _webDriver.GetElementText(site.TitleSelector) ?? "";
+            title = webDriver.GetElementText(site.TitleSelector) ?? "";
 
             if (!string.IsNullOrEmpty(title))
             {
@@ -221,7 +239,7 @@ public class NewsScraperService : IDisposable
             // Extract body content if selector is provided
             if (!string.IsNullOrEmpty(site.BodySelector))
             {
-                body = _webDriver.GetElementText(site.BodySelector) ?? "";
+                body = webDriver.GetElementText(site.BodySelector) ?? "";
 
                 if (string.IsNullOrEmpty(body))
                 {
@@ -250,6 +268,10 @@ public class NewsScraperService : IDisposable
                 CreatedAt = DateTime.Now
             };
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             StatusChanged?.Invoke(this, $"ScrapeArticle error: {ex.Message}");
@@ -257,26 +279,33 @@ public class NewsScraperService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Tests CSS selectors on a target URL (creates its own WebDriver and disposes after)
+    /// </summary>
     public async Task<(List<string> links, string? title, string? body)> TestSelectorsAsync(
         string url,
         string articleLinkSelector,
         string titleSelector,
-        string bodySelector)
+        string bodySelector,
+        CancellationToken cancellationToken = default)
     {
         var links = new List<string>();
         string? title = null;
         string? body = null;
 
+        WebDriverService? webDriver = null;
         try
         {
+            webDriver = WebDriverFactory.Create();
+
             // Navigate to main page
-            await Task.Run(() => _webDriver.NavigateTo(url));
-            await Task.Delay(1000);
+            await webDriver.NavigateToAsync(url, cancellationToken);
+            await Task.Delay(1000, cancellationToken);
 
             // Test article link selector
             if (!string.IsNullOrEmpty(articleLinkSelector))
             {
-                links = _webDriver.GetAllLinks(articleLinkSelector);
+                links = webDriver.GetAllLinks(articleLinkSelector);
             }
 
             // If we found links, navigate to first one to test title/body selectors
@@ -285,24 +314,36 @@ public class NewsScraperService : IDisposable
                 var firstLink = NormalizeUrl(links[0], url);
                 if (!string.IsNullOrEmpty(firstLink))
                 {
-                    await Task.Run(() => _webDriver.NavigateTo(firstLink));
-                    await Task.Delay(500);
+                    await webDriver.NavigateToAsync(firstLink, cancellationToken);
+                    await Task.Delay(500, cancellationToken);
 
                     if (!string.IsNullOrEmpty(titleSelector))
                     {
-                        title = _webDriver.GetElementText(titleSelector);
+                        title = webDriver.GetElementText(titleSelector);
                     }
 
                     if (!string.IsNullOrEmpty(bodySelector))
                     {
-                        body = _webDriver.GetElementText(bodySelector);
+                        body = webDriver.GetElementText(bodySelector);
                     }
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch
         {
             // Return whatever we got
+        }
+        finally
+        {
+            // Always dispose WebDriver after test
+            if (webDriver != null)
+            {
+                WebDriverFactory.SafeDispose(webDriver);
+            }
         }
 
         return (links, title, body);
@@ -378,29 +419,5 @@ public class NewsScraperService : IDisposable
         // Remove excessive whitespace
         text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
         return text.Trim();
-    }
-
-    public void ResetBrowser()
-    {
-        _webDriver.ResetDriver();
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            try
-            {
-                _webDriver.Dispose();
-            }
-            catch { }
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
-    }
-
-    ~NewsScraperService()
-    {
-        Dispose();
     }
 }

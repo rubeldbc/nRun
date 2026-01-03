@@ -32,6 +32,8 @@ partial class DatabaseConnectionForm
         btnConnect = new Button();
         btnCreateTables = new Button();
         btnDeleteDatabase = new Button();
+        btnCreateFbTables = new Button();
+        btnDeleteFbTables = new Button();
         btnSave = new Button();
         btnCancel = new Button();
         lblStatus = new Label();
@@ -176,16 +178,35 @@ partial class DatabaseConnectionForm
         btnCreateTables.TabIndex = 2;
         btnCreateTables.Text = "Create Tables";
         btnCreateTables.UseVisualStyleBackColor = true;
-        // 
+        //
         // btnDeleteDatabase
-        // 
+        //
         btnDeleteDatabase.ForeColor = Color.DarkRed;
         btnDeleteDatabase.Location = new Point(363, 5);
         btnDeleteDatabase.Name = "btnDeleteDatabase";
         btnDeleteDatabase.Size = new Size(132, 28);
         btnDeleteDatabase.TabIndex = 3;
-        btnDeleteDatabase.Text = "Delete Tables";
+        btnDeleteDatabase.Text = "Delete TikTok Tables";
         btnDeleteDatabase.UseVisualStyleBackColor = true;
+        //
+        // btnCreateFbTables
+        //
+        btnCreateFbTables.Location = new Point(0, 38);
+        btnCreateFbTables.Name = "btnCreateFbTables";
+        btnCreateFbTables.Size = new Size(161, 28);
+        btnCreateFbTables.TabIndex = 5;
+        btnCreateFbTables.Text = "Create Facebook Tables";
+        btnCreateFbTables.UseVisualStyleBackColor = true;
+        //
+        // btnDeleteFbTables
+        //
+        btnDeleteFbTables.ForeColor = Color.DarkRed;
+        btnDeleteFbTables.Location = new Point(167, 38);
+        btnDeleteFbTables.Name = "btnDeleteFbTables";
+        btnDeleteFbTables.Size = new Size(161, 28);
+        btnDeleteFbTables.TabIndex = 6;
+        btnDeleteFbTables.Text = "Delete Facebook Tables";
+        btnDeleteFbTables.UseVisualStyleBackColor = true;
         // 
         // btnSave
         // 
@@ -207,28 +228,28 @@ partial class DatabaseConnectionForm
         btnCancel.TabIndex = 1;
         btnCancel.Text = "Cancel";
         btnCancel.UseVisualStyleBackColor = true;
-        // 
+        //
         // lblStatus
-        // 
+        //
         lblStatus.AutoSize = true;
         lblStatus.ForeColor = Color.Gray;
-        lblStatus.Location = new Point(15, 40);
+        lblStatus.Location = new Point(510, 12);
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(86, 15);
         lblStatus.TabIndex = 4;
         lblStatus.Text = "Not connected";
-        // 
+        //
         // txtLog
-        // 
+        //
         txtLog.BackColor = Color.Black;
         txtLog.Font = new Font("Consolas", 9F);
         txtLog.ForeColor = Color.LightGreen;
-        txtLog.Location = new Point(15, 270);
+        txtLog.Location = new Point(15, 300);
         txtLog.Multiline = true;
         txtLog.Name = "txtLog";
         txtLog.ReadOnly = true;
         txtLog.ScrollBars = ScrollBars.Vertical;
-        txtLog.Size = new Size(440, 130);
+        txtLog.Size = new Size(705, 130);
         txtLog.TabIndex = 2;
         // 
         // panelButtons
@@ -241,17 +262,19 @@ partial class DatabaseConnectionForm
         panelButtons.Padding = new Padding(10);
         panelButtons.Size = new Size(739, 50);
         panelButtons.TabIndex = 3;
-        // 
+        //
         // panelActions
-        // 
+        //
         panelActions.Controls.Add(btnTest);
         panelActions.Controls.Add(btnConnect);
         panelActions.Controls.Add(btnCreateTables);
         panelActions.Controls.Add(btnDeleteDatabase);
+        panelActions.Controls.Add(btnCreateFbTables);
+        panelActions.Controls.Add(btnDeleteFbTables);
         panelActions.Controls.Add(lblStatus);
         panelActions.Location = new Point(15, 200);
         panelActions.Name = "panelActions";
-        panelActions.Size = new Size(692, 60);
+        panelActions.Size = new Size(692, 90);
         panelActions.TabIndex = 1;
         // 
         // DatabaseConnectionForm
@@ -260,7 +283,7 @@ partial class DatabaseConnectionForm
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         CancelButton = btnCancel;
-        ClientSize = new Size(739, 460);
+        ClientSize = new Size(739, 490);
         Controls.Add(groupBoxConnection);
         Controls.Add(panelActions);
         Controls.Add(txtLog);
@@ -300,6 +323,8 @@ partial class DatabaseConnectionForm
     private System.Windows.Forms.Button btnConnect;
     private System.Windows.Forms.Button btnCreateTables;
     private System.Windows.Forms.Button btnDeleteDatabase;
+    private System.Windows.Forms.Button btnCreateFbTables;
+    private System.Windows.Forms.Button btnDeleteFbTables;
     private System.Windows.Forms.Label lblStatus;
     private System.Windows.Forms.TextBox txtLog;
     private System.Windows.Forms.Panel panelButtons;

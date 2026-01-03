@@ -3,12 +3,13 @@ using nRun.Models;
 namespace nRun.Services;
 
 /// <summary>
-/// Background service that periodically scrapes news from all active sites
+/// Background service that periodically scrapes news from all active sites.
+/// Creates a fresh NewsScraperService instance for each scraping cycle to ensure
+/// WebDriver resources are properly cleaned up between runs.
 /// </summary>
 public class BackgroundScraperService : IDisposable
 {
     private System.Threading.Timer? _timer;
-    private NewsScraperService? _scraper;
     private CancellationTokenSource? _cts;
     private bool _isRunning;
     private bool _disposed;
@@ -32,10 +33,6 @@ public class BackgroundScraperService : IDisposable
             var intervalMs = settings.CheckIntervalMinutes * 60 * 1000;
 
             _cts = new CancellationTokenSource();
-            _scraper = new NewsScraperService();
-            _scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
-            _scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
-            _scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
 
             _timer = new System.Threading.Timer(
                 async _ => await ExecuteScrapeAsync(),
@@ -52,64 +49,65 @@ public class BackgroundScraperService : IDisposable
 
     public void Stop()
     {
-        lock (_lock)
+        // Don't lock during the entire stop operation - it can cause deadlocks
+        if (!_isRunning) return;
+
+        _isRunning = false;
+        StatusChanged?.Invoke(this, "Stopping scraper...");
+
+        // Cancel any ongoing operations immediately
+        try
         {
-            if (!_isRunning) return;
-
-            // Cancel any ongoing operations
-            try
-            {
-                _cts?.Cancel();
-            }
-            catch { }
-
-            // Stop and dispose the timer
-            try
-            {
-                _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-                _timer?.Dispose();
-            }
-            catch { }
-            finally
-            {
-                _timer = null;
-            }
-
-            // Wait a bit for any executing operation to notice cancellation
-            // but don't wait too long
-            var waitCount = 0;
-            while (_isExecuting && waitCount < 10)
-            {
-                Thread.Sleep(100);
-                waitCount++;
-            }
-
-            // Dispose the scraper (this will close Chrome)
-            try
-            {
-                _scraper?.Dispose();
-            }
-            catch { }
-            finally
-            {
-                _scraper = null;
-            }
-
-            // Dispose the cancellation token source
-            try
-            {
-                _cts?.Dispose();
-            }
-            catch { }
-            finally
-            {
-                _cts = null;
-            }
-
-            _isRunning = false;
-            RunningStateChanged?.Invoke(this, false);
-            StatusChanged?.Invoke(this, "Background scraping stopped");
+            _cts?.Cancel();
         }
+        catch { }
+
+        // Stop the timer immediately (prevents new scrapes from starting)
+        try
+        {
+            _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+        catch { }
+
+        // CRITICAL: Force kill all WebDriver processes immediately on a background thread
+        // This prevents freezing - don't wait for graceful shutdown
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                // Force dispose all WebDriver instances
+                WebDriverFactory.DisposeAll();
+                // Force kill any remaining Chrome/ChromeDriver processes
+                ProcessCleanupService.ForceCleanupAll();
+            }
+            catch { }
+        });
+
+        // Dispose timer on background thread to avoid blocking UI
+        var timerToDispose = _timer;
+        _timer = null;
+        if (timerToDispose != null)
+        {
+            _ = Task.Run(() =>
+            {
+                try { timerToDispose.Dispose(); } catch { }
+            });
+        }
+
+        // Dispose CTS on background thread
+        var ctsToDispose = _cts;
+        _cts = null;
+        if (ctsToDispose != null)
+        {
+            _ = Task.Run(() =>
+            {
+                try { ctsToDispose.Dispose(); } catch { }
+            });
+        }
+
+        _isExecuting = false;
+        RunningStateChanged?.Invoke(this, false);
+        StatusChanged?.Invoke(this, "Background scraping stopped");
     }
 
     public void UpdateInterval()
@@ -128,19 +126,19 @@ public class BackgroundScraperService : IDisposable
 
     public async Task RunOnceAsync()
     {
-        if (_scraper != null && _cts != null)
-        {
-            await _scraper.ScrapeAllSitesAsync(_cts.Token);
-        }
-        else
-        {
-            // Run without background service
-            using var scraper = new NewsScraperService();
-            scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
-            scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
-            scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
+        var scraper = new NewsScraperService();
+        scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
+        scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
+        scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
 
-            await scraper.ScrapeAllSitesAsync();
+        try
+        {
+            await scraper.ScrapeAllSitesAsync(_cts?.Token ?? CancellationToken.None);
+        }
+        finally
+        {
+            // Ensure all WebDrivers are cleaned up
+            WebDriverFactory.DisposeAll();
         }
     }
 
@@ -149,27 +147,28 @@ public class BackgroundScraperService : IDisposable
     /// </summary>
     public async Task RunSiteOnceAsync(SiteInfo site)
     {
-        if (_scraper != null && _cts != null)
-        {
-            ProgressChanged?.Invoke(this, (1, 1));
-            await _scraper.ScrapeSiteAsync(site, _cts.Token);
-        }
-        else
-        {
-            // Run without background service
-            using var scraper = new NewsScraperService();
-            scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
-            scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
-            scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
+        var scraper = new NewsScraperService();
+        scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
+        scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
+        scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
 
+        try
+        {
             ProgressChanged?.Invoke(this, (1, 1));
-            await scraper.ScrapeSiteAsync(site);
+            await scraper.ScrapeSiteAsync(site, _cts?.Token ?? CancellationToken.None);
+        }
+        finally
+        {
+            // Ensure WebDriver is cleaned up
+            // Note: ScrapeSiteAsync already disposes its WebDriver in finally block,
+            // but we call DisposeAll() as an extra safety measure
+            WebDriverFactory.DisposeAll();
         }
     }
 
     private async Task ExecuteScrapeAsync()
     {
-        if (_scraper == null || _cts == null) return;
+        if (_cts == null) return;
 
         // Prevent concurrent executions
         if (_isExecuting) return;
@@ -178,7 +177,13 @@ public class BackgroundScraperService : IDisposable
         try
         {
             StatusChanged?.Invoke(this, "Starting scheduled scrape...");
-            await _scraper.ScrapeAllSitesAsync(_cts.Token);
+
+            var scraper = new NewsScraperService();
+            scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
+            scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
+            scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
+
+            await scraper.ScrapeAllSitesAsync(_cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -191,6 +196,8 @@ public class BackgroundScraperService : IDisposable
         finally
         {
             _isExecuting = false;
+            // Cleanup any remaining WebDriver instances after each scheduled run
+            WebDriverFactory.DisposeAll();
         }
     }
 

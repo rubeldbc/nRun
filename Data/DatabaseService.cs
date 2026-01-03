@@ -32,6 +32,10 @@ public class DatabaseService : IDatabaseService
             {
                 using var conn = GetConnection();
                 EnsureTablesExist(conn);
+
+                // Ensure Facebook tables exist (for databases created before FB feature was added)
+                EnsureFacebookTablesExist(conn);
+
                 _isInitialized = true;
             }
             catch
@@ -48,6 +52,10 @@ public class DatabaseService : IDatabaseService
         {
             using var conn = GetConnection();
             EnsureTablesExist(conn);
+
+            // Ensure Facebook tables exist (for databases created before FB feature was added)
+            EnsureFacebookTablesExist(conn);
+
             _isInitialized = true;
         }
         catch
@@ -121,6 +129,28 @@ public class DatabaseService : IDatabaseService
                 recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS fb_profile (
+                user_id BIGINT PRIMARY KEY,
+                status BOOLEAN DEFAULT TRUE,
+                username VARCHAR(255),
+                nickname VARCHAR(255),
+                company_name VARCHAR(255),
+                company_type VARCHAR(100),
+                page_type VARCHAR(100),
+                region VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS fb_data (
+                data_id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES fb_profile(user_id) ON DELETE CASCADE,
+                followers_count BIGINT DEFAULT 0,
+                talking_about BIGINT DEFAULT 0,
+                followers_change BIGINT DEFAULT 0,
+                talking_about_change BIGINT DEFAULT 0,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_site_info_link ON site_info(site_link);
             CREATE INDEX IF NOT EXISTS idx_site_info_name ON site_info(site_name);
             CREATE INDEX IF NOT EXISTS idx_news_info_site ON news_info(site_id);
@@ -129,6 +159,9 @@ public class DatabaseService : IDatabaseService
             CREATE INDEX IF NOT EXISTS idx_tk_profile_username ON tk_profile(username);
             CREATE INDEX IF NOT EXISTS idx_tk_data_user ON tk_data(user_id);
             CREATE INDEX IF NOT EXISTS idx_tk_data_recorded ON tk_data(recorded_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_fb_profile_username ON fb_profile(username);
+            CREATE INDEX IF NOT EXISTS idx_fb_data_user ON fb_data(user_id);
+            CREATE INDEX IF NOT EXISTS idx_fb_data_recorded ON fb_data(recorded_at DESC);
 ";
 
         cmd.ExecuteNonQuery();
@@ -148,6 +181,39 @@ public class DatabaseService : IDatabaseService
                 END IF;
             END $$;";
         alterCmd.ExecuteNonQuery();
+    }
+
+    private void EnsureFacebookTablesExist(NpgsqlConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS fb_profile (
+                user_id BIGINT PRIMARY KEY,
+                status BOOLEAN DEFAULT TRUE,
+                username VARCHAR(255),
+                nickname VARCHAR(255),
+                company_name VARCHAR(255),
+                company_type VARCHAR(100),
+                page_type VARCHAR(100),
+                region VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS fb_data (
+                data_id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES fb_profile(user_id) ON DELETE CASCADE,
+                followers_count BIGINT DEFAULT 0,
+                talking_about BIGINT DEFAULT 0,
+                followers_change BIGINT DEFAULT 0,
+                talking_about_change BIGINT DEFAULT 0,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_fb_profile_username ON fb_profile(username);
+            CREATE INDEX IF NOT EXISTS idx_fb_data_user ON fb_data(user_id);
+            CREATE INDEX IF NOT EXISTS idx_fb_data_recorded ON fb_data(recorded_at DESC);
+     ";
+        cmd.ExecuteNonQuery();
     }
 
     private NpgsqlConnection GetConnection()
@@ -965,6 +1031,495 @@ public class DatabaseService : IDatabaseService
         {
             // Column doesn't exist (old database schema)
             return defaultValue;
+        }
+    }
+
+    #endregion
+
+    #region Facebook Profile Operations
+
+    public List<FbProfile> GetAllFbProfiles()
+    {
+        if (!IsConnected) return new List<FbProfile>();
+
+        lock (_lock)
+        {
+            var profiles = new List<FbProfile>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM fb_profile ORDER BY username";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                profiles.Add(MapFbProfile(reader));
+            }
+            return profiles;
+        }
+    }
+
+    public List<FbProfile> GetActiveFbProfiles()
+    {
+        if (!IsConnected) return new List<FbProfile>();
+
+        lock (_lock)
+        {
+            var profiles = new List<FbProfile>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM fb_profile WHERE status = TRUE ORDER BY username";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                profiles.Add(MapFbProfile(reader));
+            }
+            return profiles;
+        }
+    }
+
+    public FbProfile? GetFbProfileById(long userId)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM fb_profile WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("userId", userId);
+
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapFbProfile(reader) : null;
+        }
+    }
+
+    public FbProfile? GetFbProfileByUsername(string username)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM fb_profile WHERE username = @username";
+            cmd.Parameters.AddWithValue("username", username);
+
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapFbProfile(reader) : null;
+        }
+    }
+
+    public bool FbProfileExists(long userId)
+    {
+        if (!IsConnected) return false;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM fb_profile WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("userId", userId);
+            return Convert.ToInt64(cmd.ExecuteScalar()) > 0;
+        }
+    }
+
+    public void AddFbProfile(FbProfile profile)
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO fb_profile (status, user_id, username, nickname, company_name, company_type, page_type, region, created_at)
+                VALUES (@status, @userId, @username, @nickname, @companyName, @companyType, @pageType, @region, @createdAt)
+                ON CONFLICT (user_id) DO NOTHING";
+
+            cmd.Parameters.AddWithValue("status", profile.Status);
+            cmd.Parameters.AddWithValue("userId", profile.UserId);
+            cmd.Parameters.AddWithValue("username", profile.Username);
+            cmd.Parameters.AddWithValue("nickname", profile.Nickname);
+            cmd.Parameters.AddWithValue("companyName", profile.CompanyName);
+            cmd.Parameters.AddWithValue("companyType", profile.CompanyType);
+            cmd.Parameters.AddWithValue("pageType", profile.PageType);
+            cmd.Parameters.AddWithValue("region", profile.Region);
+            cmd.Parameters.AddWithValue("createdAt", profile.CreatedAt);
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void UpdateFbProfile(FbProfile profile)
+    {
+        if (!IsConnected) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE fb_profile SET
+                    status = @status,
+                    username = @username,
+                    nickname = @nickname,
+                    company_name = @companyName,
+                    company_type = @companyType,
+                    page_type = @pageType,
+                    region = @region
+                WHERE user_id = @userId";
+
+            cmd.Parameters.AddWithValue("status", profile.Status);
+            cmd.Parameters.AddWithValue("userId", profile.UserId);
+            cmd.Parameters.AddWithValue("username", profile.Username);
+            cmd.Parameters.AddWithValue("nickname", profile.Nickname);
+            cmd.Parameters.AddWithValue("companyName", profile.CompanyName);
+            cmd.Parameters.AddWithValue("companyType", profile.CompanyType);
+            cmd.Parameters.AddWithValue("pageType", profile.PageType);
+            cmd.Parameters.AddWithValue("region", profile.Region);
+
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void UpdateFbProfileStatus(long userId, bool status)
+    {
+        if (!IsConnected) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE fb_profile SET status = @status WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("status", status);
+            cmd.Parameters.AddWithValue("userId", userId);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void DeleteFbProfile(long userId)
+    {
+        if (!IsConnected) return;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM fb_profile WHERE user_id = @userId";
+            cmd.Parameters.AddWithValue("userId", userId);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    private static FbProfile MapFbProfile(NpgsqlDataReader reader) => new()
+    {
+        Status = reader.GetBoolean(reader.GetOrdinal("status")),
+        UserId = reader.GetInt64(reader.GetOrdinal("user_id")),
+        Username = reader.IsDBNull(reader.GetOrdinal("username")) ? "" : reader.GetString(reader.GetOrdinal("username")),
+        Nickname = reader.IsDBNull(reader.GetOrdinal("nickname")) ? "" : reader.GetString(reader.GetOrdinal("nickname")),
+        CompanyName = reader.IsDBNull(reader.GetOrdinal("company_name")) ? "" : reader.GetString(reader.GetOrdinal("company_name")),
+        CompanyType = reader.IsDBNull(reader.GetOrdinal("company_type")) ? "" : reader.GetString(reader.GetOrdinal("company_type")),
+        PageType = reader.IsDBNull(reader.GetOrdinal("page_type")) ? "" : reader.GetString(reader.GetOrdinal("page_type")),
+        Region = reader.IsDBNull(reader.GetOrdinal("region")) ? "" : reader.GetString(reader.GetOrdinal("region")),
+        CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at"))
+    };
+
+    #endregion
+
+    #region Facebook Data Operations
+
+    public int AddFbData(FbData data)
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+
+            // Get the latest previous record for this user to calculate changes
+            var previousData = GetLatestFbDataByUserIdInternal(conn, data.UserId);
+            if (previousData != null)
+            {
+                data.FollowersChange = data.FollowersCount - previousData.FollowersCount;
+                data.TalkingAboutChange = data.TalkingAbout - previousData.TalkingAbout;
+            }
+            else
+            {
+                // First record for this user, no changes
+                data.FollowersChange = 0;
+                data.TalkingAboutChange = 0;
+            }
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                INSERT INTO fb_data (user_id, followers_count, talking_about,
+                    followers_change, talking_about_change, recorded_at)
+                VALUES (@userId, @followersCount, @talkingAbout,
+                    @followersChange, @talkingAboutChange, @recordedAt)
+                RETURNING data_id";
+
+            cmd.Parameters.AddWithValue("userId", data.UserId);
+            cmd.Parameters.AddWithValue("followersCount", data.FollowersCount);
+            cmd.Parameters.AddWithValue("talkingAbout", data.TalkingAbout);
+            cmd.Parameters.AddWithValue("followersChange", data.FollowersChange);
+            cmd.Parameters.AddWithValue("talkingAboutChange", data.TalkingAboutChange);
+            cmd.Parameters.AddWithValue("recordedAt", data.RecordedAt);
+
+            var result = cmd.ExecuteScalar();
+            var dataId = Convert.ToInt32(result);
+            data.DataId = dataId;
+            return dataId;
+        }
+    }
+
+    private FbData? GetLatestFbDataByUserIdInternal(NpgsqlConnection conn, long userId)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT data_id, user_id, followers_count, talking_about,
+                   followers_change, talking_about_change, recorded_at
+            FROM fb_data
+            WHERE user_id = @userId
+            ORDER BY recorded_at DESC
+            LIMIT 1";
+        cmd.Parameters.AddWithValue("userId", userId);
+
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            return new FbData
+            {
+                DataId = reader.GetInt32(reader.GetOrdinal("data_id")),
+                UserId = reader.GetInt64(reader.GetOrdinal("user_id")),
+                FollowersCount = reader.IsDBNull(reader.GetOrdinal("followers_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("followers_count")),
+                TalkingAbout = reader.IsDBNull(reader.GetOrdinal("talking_about")) ? 0 : reader.GetInt64(reader.GetOrdinal("talking_about")),
+                FollowersChange = reader.IsDBNull(reader.GetOrdinal("followers_change")) ? 0 : reader.GetInt64(reader.GetOrdinal("followers_change")),
+                TalkingAboutChange = reader.IsDBNull(reader.GetOrdinal("talking_about_change")) ? 0 : reader.GetInt64(reader.GetOrdinal("talking_about_change")),
+                RecordedAt = reader.GetDateTime(reader.GetOrdinal("recorded_at"))
+            };
+        }
+        return null;
+    }
+
+    public List<FbData> GetRecentFbData(int limit = 100)
+    {
+        if (!IsConnected) return new List<FbData>();
+
+        lock (_lock)
+        {
+            var dataList = new List<FbData>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $@"
+                SELECT d.*, p.username, p.nickname
+                FROM fb_data d
+                JOIN fb_profile p ON d.user_id = p.user_id
+                ORDER BY d.recorded_at DESC
+                LIMIT {limit}";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                dataList.Add(MapFbData(reader));
+            }
+            return dataList;
+        }
+    }
+
+    public List<FbData> GetFilteredFbData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null, int limit = 500)
+    {
+        if (!IsConnected) return new List<FbData>();
+
+        lock (_lock)
+        {
+            var dataList = new List<FbData>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+
+            var whereClause = new List<string>();
+            if (!string.IsNullOrEmpty(username))
+            {
+                whereClause.Add("p.username = @username");
+                cmd.Parameters.AddWithValue("username", username);
+            }
+            if (fromDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at >= @fromDate");
+                cmd.Parameters.AddWithValue("fromDate", fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at <= @toDate");
+                cmd.Parameters.AddWithValue("toDate", toDate.Value);
+            }
+
+            var whereStr = whereClause.Count > 0 ? "WHERE " + string.Join(" AND ", whereClause) : "";
+
+            cmd.CommandText = $@"
+                SELECT d.*, p.username, p.nickname
+                FROM fb_data d
+                JOIN fb_profile p ON d.user_id = p.user_id
+                {whereStr}
+                ORDER BY d.recorded_at DESC
+                LIMIT {limit}";
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                dataList.Add(MapFbData(reader));
+            }
+            return dataList;
+        }
+    }
+
+    public List<FbData> GetFbDataByUserId(long userId, int limit = 50)
+    {
+        if (!IsConnected) return new List<FbData>();
+
+        lock (_lock)
+        {
+            var dataList = new List<FbData>();
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT d.*, p.username, p.nickname
+                FROM fb_data d
+                JOIN fb_profile p ON d.user_id = p.user_id
+                WHERE d.user_id = @userId
+                ORDER BY d.recorded_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("userId", userId);
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                dataList.Add(MapFbData(reader));
+            }
+            return dataList;
+        }
+    }
+
+    public FbData? GetLatestFbDataByUserId(long userId)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT d.*, p.username, p.nickname
+                FROM fb_data d
+                JOIN fb_profile p ON d.user_id = p.user_id
+                WHERE d.user_id = @userId
+                ORDER BY d.recorded_at DESC
+                LIMIT 1";
+            cmd.Parameters.AddWithValue("userId", userId);
+
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapFbData(reader) : null;
+        }
+    }
+
+    public long GetFbDataCount()
+    {
+        if (!IsConnected) return 0;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM fb_data";
+            return Convert.ToInt64(cmd.ExecuteScalar());
+        }
+    }
+
+    private static FbData MapFbData(NpgsqlDataReader reader) => new()
+    {
+        DataId = reader.GetInt32(reader.GetOrdinal("data_id")),
+        UserId = reader.GetInt64(reader.GetOrdinal("user_id")),
+        FollowersCount = reader.IsDBNull(reader.GetOrdinal("followers_count")) ? 0 : reader.GetInt64(reader.GetOrdinal("followers_count")),
+        TalkingAbout = reader.IsDBNull(reader.GetOrdinal("talking_about")) ? 0 : reader.GetInt64(reader.GetOrdinal("talking_about")),
+        FollowersChange = GetColumnOrDefault(reader, "followers_change", 0L),
+        TalkingAboutChange = GetColumnOrDefault(reader, "talking_about_change", 0L),
+        RecordedAt = reader.GetDateTime(reader.GetOrdinal("recorded_at")),
+        Username = reader.IsDBNull(reader.GetOrdinal("username")) ? "" : reader.GetString(reader.GetOrdinal("username")),
+        Nickname = reader.IsDBNull(reader.GetOrdinal("nickname")) ? "" : reader.GetString(reader.GetOrdinal("nickname"))
+    };
+
+    #endregion
+
+    #region Facebook Table Management
+
+    public void CreateFacebookTables()
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS fb_profile (
+                    user_id BIGINT PRIMARY KEY,
+                    status BOOLEAN DEFAULT TRUE,
+                    username VARCHAR(255),
+                    nickname VARCHAR(255),
+                    company_name VARCHAR(255),
+                    company_type VARCHAR(100),
+                    page_type VARCHAR(100),
+                    region VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS fb_data (
+                    data_id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL REFERENCES fb_profile(user_id) ON DELETE CASCADE,
+                    followers_count BIGINT DEFAULT 0,
+                    talking_about BIGINT DEFAULT 0,
+                    followers_change BIGINT DEFAULT 0,
+                    talking_about_change BIGINT DEFAULT 0,
+                    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_fb_profile_username ON fb_profile(username);
+                CREATE INDEX IF NOT EXISTS idx_fb_data_user ON fb_data(user_id);
+                CREATE INDEX IF NOT EXISTS idx_fb_data_recorded ON fb_data(recorded_at DESC);
+            ";
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public void DeleteFacebookTables()
+    {
+        if (!IsConnected) throw new InvalidOperationException("Database not connected");
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                DROP TABLE IF EXISTS fb_data CASCADE;
+                DROP TABLE IF EXISTS fb_profile CASCADE;
+            ";
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public bool FacebookTablesExist()
+    {
+        if (!IsConnected) return false;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_name IN ('fb_profile', 'fb_data')";
+            return Convert.ToInt64(cmd.ExecuteScalar()) == 2;
         }
     }
 

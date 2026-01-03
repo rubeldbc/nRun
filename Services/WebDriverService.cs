@@ -1,12 +1,14 @@
 using System.Diagnostics;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Interactions;
 using OpenQA.Selenium.Support.UI;
 
 namespace nRun.Services;
 
 /// <summary>
-/// Manages Chrome WebDriver lifecycle for headless browser operations
+/// Manages Chrome WebDriver lifecycle for headless browser operations.
+/// Designed to be created per-operation and disposed immediately after use.
 /// </summary>
 public class WebDriverService : IDisposable
 {
@@ -15,10 +17,16 @@ public class WebDriverService : IDisposable
     private readonly object _lock = new();
     private bool _disposed;
     private int _chromeDriverProcessId;
+    private readonly Guid _instanceId = Guid.NewGuid();
 
     public int TimeoutSeconds { get; set; } = 60;
     public bool UseHeadless { get; set; } = true;
     public int MaxRetryAttempts { get; set; } = 3;
+
+    /// <summary>
+    /// Unique identifier for this driver instance (useful for tracking/debugging)
+    /// </summary>
+    public Guid InstanceId => _instanceId;
 
     public IWebDriver GetDriver()
     {
@@ -32,53 +40,64 @@ public class WebDriverService : IDisposable
      }
     }
 
+    // Latest Chrome User-Agent (Windows 10, Chrome 131 - Jan 2025)
+    // IMPORTANT: Must NOT contain "HeadlessChrome"
+    private const string LatestUserAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
     private IWebDriver CreateDriver()
     {
         var options = new ChromeOptions();
 
-    if (UseHeadless)
-      {
-      options.AddArgument("--headless=new");
-    }
+        // New Headless Mode (--headless=new, NOT old --headless flag)
+        if (UseHeadless)
+        {
+            options.AddArgument("--headless=new");
+        }
 
-    // Anti-detection measures
-        options.AddArgument("--disable-blink-features=AutomationControlled");
-        options.AddArgument("--disable-infobars");
-      options.AddArgument("--disable-extensions");
-        options.AddArgument("--disable-gpu");
-        options.AddArgument("--no-sandbox");
-        options.AddArgument("--disable-dev-shm-usage");
+        // Standard window size: 1920x1080 (NOT default 800x600)
         options.AddArgument("--window-size=1920,1080");
-      options.AddArgument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
-     // Additional stability options
-        options.AddArgument("--disable-software-rasterizer");
-        options.AddArgument("--disable-background-timer-throttling");
- options.AddArgument("--disable-backgrounding-occluded-windows");
-        options.AddArgument("--disable-renderer-backgrounding");
-      options.PageLoadStrategy = PageLoadStrategy.Normal;
+        // User-Agent: Latest Chrome on Windows 10 (must NOT contain "HeadlessChrome")
+        options.AddArgument($"--user-agent={LatestUserAgent}");
 
-        // Exclude automation flags
+        // Anti-detection: Disable automation flags
+        options.AddArgument("--disable-blink-features=AutomationControlled");
         options.AddExcludedArgument("enable-automation");
         options.AddAdditionalOption("useAutomationExtension", false);
 
-    // Check for local ChromeDriver path
-      var localDriverPath = ChromeVersionService.GetLocalChromeDriverPath();
+        // Standard browser arguments
+        options.AddArgument("--disable-infobars");
+        options.AddArgument("--disable-extensions");
+        options.AddArgument("--disable-gpu");
+        options.AddArgument("--no-sandbox");
+        options.AddArgument("--disable-dev-shm-usage");
+        options.AddArgument("--lang=en-US");
 
-    if (File.Exists(localDriverPath))
-     {
+        // Additional stability options
+        options.AddArgument("--disable-software-rasterizer");
+        options.AddArgument("--disable-background-timer-throttling");
+        options.AddArgument("--disable-backgrounding-occluded-windows");
+        options.AddArgument("--disable-renderer-backgrounding");
+        options.PageLoadStrategy = PageLoadStrategy.Normal;
+
+        // Check for local ChromeDriver path
+        var localDriverPath = ChromeVersionService.GetLocalChromeDriverPath();
+
+        if (File.Exists(localDriverPath))
+        {
             // Use local ChromeDriver
             _driverService = ChromeDriverService.CreateDefaultService(
-     ChromeVersionService.GetLocalChromeDriverDirectory());
-  }
+                ChromeVersionService.GetLocalChromeDriverDirectory());
+        }
         else
         {
-        // Use ChromeDriver from PATH
+            // Use ChromeDriver from PATH
             _driverService = ChromeDriverService.CreateDefaultService();
- }
+        }
 
         _driverService.HideCommandPromptWindow = true;
- _driverService.SuppressInitialDiagnosticInformation = true;
+        _driverService.SuppressInitialDiagnosticInformation = true;
 
         // Use a slightly larger command timeout than PageLoad to avoid default 30s remote timeouts
         var commandTimeout = TimeSpan.FromSeconds(Math.Max(TimeoutSeconds * 2, 60));
@@ -91,40 +110,105 @@ public class WebDriverService : IDisposable
             ProcessCleanupService.TrackProcess(_chromeDriverProcessId);
         }
         catch { }
+
+        // Set timeouts
         driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(TimeoutSeconds);
-      driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);
+        driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);
         driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(30);
+
+        // Hide navigator.webdriver flag using JavaScript injection
+        HideWebDriverFlag(driver);
 
         return driver;
     }
 
-    public void NavigateTo(string url)
+    /// <summary>
+    /// Hides the navigator.webdriver flag to avoid detection
+    /// </summary>
+    private static void HideWebDriverFlag(IWebDriver driver)
     {
- if (string.IsNullOrWhiteSpace(url))
+        try
         {
-   throw new ArgumentException("URL cannot be null or empty", nameof(url));
+            var js = (IJavaScriptExecutor)driver;
+
+            // Remove webdriver property
+            js.ExecuteScript(@"
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+            ");
+
+            // Override navigator.plugins to appear more like a real browser
+            js.ExecuteScript(@"
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+            ");
+
+            // Override navigator.languages
+            js.ExecuteScript(@"
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en']
+                });
+            ");
+
+            // Hide automation-related chrome properties
+            js.ExecuteScript(@"
+                window.chrome = {
+                    runtime: {}
+                };
+            ");
+
+            // Override permissions query to avoid detection
+            js.ExecuteScript(@"
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                );
+            ");
+        }
+        catch
+        {
+            // Ignore errors - page might not be loaded yet
+        }
+    }
+
+    /// <summary>
+    /// Navigates to a URL asynchronously with retry logic
+    /// </summary>
+    public async Task NavigateToAsync(string url, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            throw new ArgumentException("URL cannot be null or empty", nameof(url));
         }
 
         // Ensure URL has a valid scheme
         if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-          !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-     {
+            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
             url = "https://" + url;
         }
 
         // Validate URL format
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-      {
-          throw new ArgumentException($"Invalid URL format: {url}", nameof(url));
+        {
+            throw new ArgumentException($"Invalid URL format: {url}", nameof(url));
         }
 
         // Navigation with retry logic - catch on every attempt and only rethrow after all attempts
         Exception? lastException = null;
         for (int attempt = 1; attempt <= MaxRetryAttempts; attempt++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             try
             {
-                GetDriver().Navigate().GoToUrl(uri);
+                await Task.Run(() => GetDriver().Navigate().GoToUrl(uri), cancellationToken);
+                // Re-apply anti-detection measures after navigation
+                ReapplyAntiDetection();
                 return; // Success
             }
             catch (WebDriverException ex)
@@ -132,8 +216,8 @@ public class WebDriverService : IDisposable
                 lastException = ex;
 
                 // Detect renderer timeout / page load timeout and try to stop the page load and proceed
-                var isRendererTimeout = ex is OpenQA.Selenium.WebDriverTimeoutException
-                    || (ex.Message != null && ex.Message.IndexOf("Timed out receiving message from renderer", StringComparison.OrdinalIgnoreCase) >= 0);
+                var isRendererTimeout = ex is WebDriverTimeoutException
+                    || (ex.Message != null && ex.Message.Contains("Timed out receiving message from renderer", StringComparison.OrdinalIgnoreCase));
 
                 if (isRendererTimeout)
                 {
@@ -142,7 +226,7 @@ public class WebDriverService : IDisposable
                         var js = (IJavaScriptExecutor)GetDriver();
                         // Stop further loading and give the page a moment
                         js.ExecuteScript("window.stop();");
-                        Thread.Sleep(500);
+                        await Task.Delay(500, cancellationToken);
 
                         // If we have any page source content, assume partial load is acceptable and continue
                         var src = GetDriver().PageSource;
@@ -150,6 +234,10 @@ public class WebDriverService : IDisposable
                         {
                             return;
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch
                     {
@@ -165,12 +253,20 @@ public class WebDriverService : IDisposable
 
                 // Reset driver and retry after a progressive delay
                 try { ResetDriver(); } catch { }
-                Thread.Sleep(1000 * attempt);
+                await Task.Delay(1000 * attempt, cancellationToken);
             }
         }
 
         // All attempts failed - throw a wrapped exception with last captured exception
         throw new WebDriverException($"Failed to navigate to {url} after {MaxRetryAttempts} attempts", lastException);
+    }
+
+    /// <summary>
+    /// Navigates to a URL synchronously (legacy - prefer NavigateToAsync)
+    /// </summary>
+    public void NavigateTo(string url)
+    {
+        NavigateToAsync(url, CancellationToken.None).GetAwaiter().GetResult();
     }
 
     public string GetPageSource()
@@ -254,28 +350,55 @@ return new List<IWebElement>();
     }
 
     /// <summary>
-    /// Waits for element to appear, returns false on timeout instead of throwing
+    /// Waits for element to appear asynchronously, returns false on timeout instead of throwing
     /// </summary>
-    public bool TryWaitForElement(string cssSelector, int timeoutSeconds = 10)
+    public async Task<bool> TryWaitForElementAsync(string cssSelector, int timeoutSeconds = 10, CancellationToken cancellationToken = default)
     {
         try
         {
-     var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
-            wait.Until(d => d.FindElements(By.CssSelector(cssSelector)).Count > 0);
-   return true;
+            return await Task.Run(() =>
+            {
+                var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
+                wait.Until(d => d.FindElements(By.CssSelector(cssSelector)).Count > 0);
+                return true;
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
-         return false;
-  }
+            return false;
+        }
     }
 
     /// <summary>
-    /// Waits for page to fully load
+    /// Waits for element to appear, returns false on timeout instead of throwing (legacy)
+    /// </summary>
+    public bool TryWaitForElement(string cssSelector, int timeoutSeconds = 10)
+    {
+        return TryWaitForElementAsync(cssSelector, timeoutSeconds, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Waits for page to fully load asynchronously
+    /// </summary>
+    public async Task WaitForPageLoadAsync(int timeoutSeconds = 30, CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() =>
+        {
+            var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
+            wait.Until(d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").Equals("complete"));
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Waits for page to fully load (legacy - prefer WaitForPageLoadAsync)
     /// </summary>
     public void WaitForPageLoad(int timeoutSeconds = 30)
     {
- var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
+        var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
         wait.Until(d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").Equals("complete"));
     }
 
@@ -295,29 +418,191 @@ return new List<IWebElement>();
    }
     }
 
-  /// <summary>
-    /// Scrolls the page and waits for content to load
-  /// </summary>
-    public void ScrollAndWait(int scrollCount = 2, int waitMs = 500)
+    /// <summary>
+    /// Scrolls the page and waits for content to load asynchronously
+    /// </summary>
+    public async Task ScrollAndWaitAsync(int scrollCount = 2, int waitMs = 500, CancellationToken cancellationToken = default)
     {
         var js = (IJavaScriptExecutor)GetDriver();
 
         for (int i = 0; i < scrollCount; i++)
-    {
-   js.ExecuteScript("window.scrollBy(0, 300);");
-    Thread.Sleep(waitMs);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            js.ExecuteScript("window.scrollBy(0, 300);");
+            await Task.Delay(waitMs, cancellationToken);
         }
 
         // Return to top
         js.ExecuteScript("window.scrollTo(0, 0);");
-      Thread.Sleep(waitMs);
+        await Task.Delay(waitMs, cancellationToken);
     }
 
-public void ScrollToBottom()
+    /// <summary>
+    /// Scrolls the page and waits for content to load (legacy - prefer ScrollAndWaitAsync)
+    /// </summary>
+    public void ScrollAndWait(int scrollCount = 2, int waitMs = 500)
     {
-var js = (IJavaScriptExecutor)GetDriver();
+        ScrollAndWaitAsync(scrollCount, waitMs, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Scrolls to page bottom asynchronously
+    /// </summary>
+    public async Task ScrollToBottomAsync(int waitMs = 500, CancellationToken cancellationToken = default)
+    {
+        var js = (IJavaScriptExecutor)GetDriver();
         js.ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
-  Thread.Sleep(500);
+        await Task.Delay(waitMs, cancellationToken);
+    }
+
+    /// <summary>
+    /// Scrolls to page bottom (legacy - prefer ScrollToBottomAsync)
+    /// </summary>
+    public void ScrollToBottom()
+    {
+        ScrollToBottomAsync(500, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Simulates human-like mouse movement to an element before clicking.
+    /// This helps avoid detection by moving the cursor gradually instead of direct clicks.
+    /// </summary>
+    public async Task MoveToElementAndClickAsync(IWebElement element, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var driver = GetDriver();
+            var actions = new Actions(driver);
+            var random = new Random();
+
+            // Get element location
+            var location = element.Location;
+            var size = element.Size;
+
+            // Calculate center of element with small random offset
+            var targetX = location.X + size.Width / 2 + random.Next(-5, 5);
+            var targetY = location.Y + size.Height / 2 + random.Next(-5, 5);
+
+            // Simulate gradual mouse movement with multiple steps
+            var steps = random.Next(3, 6);
+            for (int i = 0; i < steps; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Move towards element with some randomness
+                actions.MoveToElement(element, random.Next(-10, 10), random.Next(-10, 10));
+
+                // Small random delay between movements (50-150ms)
+                await Task.Delay(random.Next(50, 150), cancellationToken);
+            }
+
+            // Final move to element center
+            actions.MoveToElement(element);
+
+            // Small delay before click (100-300ms) to simulate human behavior
+            await Task.Delay(random.Next(100, 300), cancellationToken);
+
+            // Perform click
+            actions.Click().Perform();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Fallback to direct click if mouse simulation fails
+            element.Click();
+        }
+    }
+
+    /// <summary>
+    /// Simulates human-like mouse movement to an element (without clicking)
+    /// </summary>
+    public async Task MoveToElementAsync(IWebElement element, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var driver = GetDriver();
+            var actions = new Actions(driver);
+            var random = new Random();
+
+            // Simulate gradual mouse movement
+            var steps = random.Next(2, 4);
+            for (int i = 0; i < steps; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                actions.MoveToElement(element, random.Next(-5, 5), random.Next(-5, 5));
+                await Task.Delay(random.Next(30, 100), cancellationToken);
+            }
+
+            // Final move to element
+            actions.MoveToElement(element).Perform();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Ignore if movement fails
+        }
+    }
+
+    /// <summary>
+    /// Simulates random mouse movements on the page to appear more human-like
+    /// </summary>
+    public async Task SimulateRandomMouseMovementAsync(int movements = 3, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var driver = GetDriver();
+            var actions = new Actions(driver);
+            var random = new Random();
+            var js = (IJavaScriptExecutor)driver;
+
+            // Get viewport size
+            var viewportWidth = Convert.ToInt32(js.ExecuteScript("return window.innerWidth;"));
+            var viewportHeight = Convert.ToInt32(js.ExecuteScript("return window.innerHeight;"));
+
+            for (int i = 0; i < movements; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Move to random position within viewport
+                var x = random.Next(100, viewportWidth - 100);
+                var y = random.Next(100, viewportHeight - 100);
+
+                actions.MoveByOffset(x, y).Perform();
+                actions.MoveByOffset(-x, -y).Perform(); // Reset position
+
+                // Random delay between movements (200-500ms)
+                await Task.Delay(random.Next(200, 500), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Ignore if simulation fails
+        }
+    }
+
+    /// <summary>
+    /// Re-applies webdriver flag hiding after navigation (recommended after each page load)
+    /// </summary>
+    public void ReapplyAntiDetection()
+    {
+        try
+        {
+            HideWebDriverFlag(GetDriver());
+        }
+        catch
+        {
+            // Ignore errors
+        }
     }
 
     public void ResetDriver()
@@ -330,22 +615,40 @@ var js = (IJavaScriptExecutor)GetDriver();
     }
 
     public void CloseDriver()
-{
+    {
         lock (_lock)
         {
-   if (_driver != null)
-{
-         try
+            var processIdToKill = _chromeDriverProcessId;
+
+            if (_driver != null)
+            {
+                // Try graceful quit with timeout - don't let it hang
+                var quitTask = Task.Run(() =>
                 {
-        _driver.Quit();
-   _driver.Dispose();
-    }
-        catch { }
-           finally
-        {
- _driver = null;
-   }
-       }
+                    try
+                    {
+                        _driver.Quit();
+                    }
+                    catch { }
+                });
+
+                // Wait max 3 seconds for graceful quit
+                if (!quitTask.Wait(3000))
+                {
+                    // Quit is hanging - force kill the process
+                    ForceKillProcess(processIdToKill);
+                }
+
+                try
+                {
+                    _driver.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    _driver = null;
+                }
+            }
 
             // Dispose the driver service
             if (_driverService != null)
@@ -367,7 +670,25 @@ var js = (IJavaScriptExecutor)GetDriver();
                     _chromeDriverProcessId = 0;
                 }
             }
+
+            // Ensure process is killed if it's still running
+            ForceKillProcess(processIdToKill);
         }
+    }
+
+    private static void ForceKillProcess(int processId)
+    {
+        if (processId <= 0) return;
+
+        try
+        {
+            var process = Process.GetProcessById(processId);
+            if (!process.HasExited)
+            {
+                process.Kill(true); // Kill entire process tree
+            }
+        }
+        catch { }
     }
 
     public void Dispose()

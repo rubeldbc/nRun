@@ -19,6 +19,8 @@ public partial class DatabaseConnectionForm : Form
         btnConnect.Click += BtnConnect_Click;
         btnCreateTables.Click += BtnCreateTables_Click;
         btnDeleteDatabase.Click += BtnDeleteDatabase_Click;
+        btnCreateFbTables.Click += BtnCreateFbTables_Click;
+        btnDeleteFbTables.Click += BtnDeleteFbTables_Click;
         btnSave.Click += BtnSave_Click;
     }
 
@@ -285,6 +287,200 @@ public partial class DatabaseConnectionForm : Form
         {
             btnDeleteDatabase.Enabled = true;
         }
+    }
+
+    private async void BtnCreateFbTables_Click(object? sender, EventArgs e)
+    {
+        btnCreateFbTables.Enabled = false;
+        LogMessage("Checking Facebook tables...");
+
+        try
+        {
+            var settings = GetConnectionSettings();
+            var connString = settings.GetConnectionString();
+
+            await using var conn = new NpgsqlConnection(connString);
+            await conn.OpenAsync();
+
+            // Check if tables exist
+            var fbProfileExists = await TableExists(conn, "fb_profile");
+            var fbDataExists = await TableExists(conn, "fb_data");
+
+            if (fbProfileExists && fbDataExists)
+            {
+                LogMessage("Facebook tables already exist. Showing structure...");
+                LogMessage("");
+                await ShowTableStructure(conn, "fb_profile");
+                await ShowTableStructure(conn, "fb_data");
+            }
+            else
+            {
+                // Create tables that don't exist (fb_profile must be created first due to FK)
+                if (!fbProfileExists)
+                {
+                    await CreateFbProfileTable(conn);
+                    LogMessage("Created table: fb_profile");
+                }
+
+                if (!fbDataExists)
+                {
+                    await CreateFbDataTable(conn);
+                    LogMessage("Created table: fb_data");
+                }
+
+                LogMessage("");
+                LogMessage("Facebook tables created successfully!");
+                LogMessage("");
+
+                // Show structure of all tables
+                await ShowTableStructure(conn, "fb_profile");
+                await ShowTableStructure(conn, "fb_data");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"ERROR: {ex.Message}");
+        }
+        finally
+        {
+            btnCreateFbTables.Enabled = true;
+        }
+    }
+
+    private async void BtnDeleteFbTables_Click(object? sender, EventArgs e)
+    {
+        // Confirm deletion
+        var result = MessageBox.Show(
+            "WARNING: This will permanently delete ALL Facebook data!\n\n" +
+            "- All Facebook page profile data will be deleted\n" +
+            "- All Facebook statistics data will be deleted\n\n" +
+            "Are you sure you want to continue?",
+            "Delete Facebook Tables",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+
+        if (result != DialogResult.Yes)
+        {
+            LogMessage("Delete operation cancelled.");
+            return;
+        }
+
+        // Second confirmation
+        result = MessageBox.Show(
+            "This action CANNOT be undone!\n\nType 'DELETE' in your mind and click Yes to confirm.",
+            "Final Confirmation",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Stop,
+            MessageBoxDefaultButton.Button2);
+
+        if (result != DialogResult.Yes)
+        {
+            LogMessage("Delete operation cancelled.");
+            return;
+        }
+
+        btnDeleteFbTables.Enabled = false;
+        LogMessage("Starting Facebook table deletion...");
+
+        try
+        {
+            var settings = GetConnectionSettings();
+            var connString = settings.GetConnectionString();
+
+            await using var conn = new NpgsqlConnection(connString);
+            await conn.OpenAsync();
+
+            // Drop tables in correct order (due to foreign key constraints)
+            LogMessage("Dropping Facebook tables...");
+
+            // Drop fb_data first (has FK to fb_profile)
+            if (await TableExists(conn, "fb_data"))
+            {
+                await using var cmd1 = conn.CreateCommand();
+                cmd1.CommandText = "DROP TABLE fb_data CASCADE";
+                await cmd1.ExecuteNonQueryAsync();
+                LogMessage("  Dropped table: fb_data");
+            }
+
+            // Drop fb_profile
+            if (await TableExists(conn, "fb_profile"))
+            {
+                await using var cmd2 = conn.CreateCommand();
+                cmd2.CommandText = "DROP TABLE fb_profile CASCADE";
+                await cmd2.ExecuteNonQueryAsync();
+                LogMessage("  Dropped table: fb_profile");
+            }
+
+            LogMessage("All Facebook tables dropped successfully.");
+
+            LogMessage("");
+            LogMessage("=== FACEBOOK TABLES DELETION COMPLETE ===");
+            LogMessage("You can now click 'Create Facebook Tables' to recreate the database structure.");
+            LogMessage("");
+
+            UpdateStatus("FB Tables deleted", Color.Orange);
+
+            // Reinitialize DatabaseService
+            ServiceContainer.Database.Initialize();
+        }
+        catch (Exception ex)
+        {
+            LogMessage($"ERROR: {ex.Message}");
+            UpdateStatus("Delete Failed", Color.Red);
+        }
+        finally
+        {
+            btnDeleteFbTables.Enabled = true;
+        }
+    }
+
+    private async Task CreateFbProfileTable(NpgsqlConnection conn)
+    {
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE fb_profile (
+                user_id BIGINT PRIMARY KEY,
+                status BOOLEAN DEFAULT TRUE,
+                username VARCHAR(255),
+                nickname VARCHAR(255),
+                company_name VARCHAR(255),
+                company_type VARCHAR(100),
+                page_type VARCHAR(100),
+                region VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )";
+        await cmd.ExecuteNonQueryAsync();
+
+        // Create index on username for searching
+        await using var indexCmd = conn.CreateCommand();
+        indexCmd.CommandText = "CREATE INDEX idx_fb_profile_username ON fb_profile(username)";
+        await indexCmd.ExecuteNonQueryAsync();
+    }
+
+    private async Task CreateFbDataTable(NpgsqlConnection conn)
+    {
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE fb_data (
+                data_id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES fb_profile(user_id) ON DELETE CASCADE,
+                followers_count BIGINT DEFAULT 0,
+                talking_about BIGINT DEFAULT 0,
+                followers_change BIGINT DEFAULT 0,
+                talking_about_change BIGINT DEFAULT 0,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )";
+        await cmd.ExecuteNonQueryAsync();
+
+        // Create indexes
+        await using var indexCmd1 = conn.CreateCommand();
+        indexCmd1.CommandText = "CREATE INDEX idx_fb_data_user ON fb_data(user_id)";
+        await indexCmd1.ExecuteNonQueryAsync();
+
+        await using var indexCmd2 = conn.CreateCommand();
+        indexCmd2.CommandText = "CREATE INDEX idx_fb_data_recorded ON fb_data(recorded_at DESC)";
+        await indexCmd2.ExecuteNonQueryAsync();
     }
 
     private async Task<bool> TableExists(NpgsqlConnection conn, string tableName)

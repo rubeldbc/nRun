@@ -50,4 +50,28 @@ public interface IDatabaseService
     List<TkData> GetTkDataByUserId(long userId, int limit = 50);
     TkData? GetLatestTkDataByUserId(long userId);
     long GetTkDataCount();
+
+    // Facebook Profile operations
+    List<FbProfile> GetAllFbProfiles();
+    List<FbProfile> GetActiveFbProfiles();
+    FbProfile? GetFbProfileById(long userId);
+    FbProfile? GetFbProfileByUsername(string username);
+    bool FbProfileExists(long userId);
+    void AddFbProfile(FbProfile profile);
+    void UpdateFbProfile(FbProfile profile);
+    void UpdateFbProfileStatus(long userId, bool status);
+    void DeleteFbProfile(long userId);
+
+    // Facebook Data operations
+    int AddFbData(FbData data);
+    List<FbData> GetRecentFbData(int limit = 100);
+    List<FbData> GetFilteredFbData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null, int limit = 500);
+    List<FbData> GetFbDataByUserId(long userId, int limit = 50);
+    FbData? GetLatestFbDataByUserId(long userId);
+    long GetFbDataCount();
+
+    // Facebook Table Management
+    void CreateFacebookTables();
+    void DeleteFacebookTables();
+    bool FacebookTablesExist();
 }

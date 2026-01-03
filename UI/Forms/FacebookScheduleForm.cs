@@ -1,0 +1,65 @@
+using nRun.Models;
+
+namespace nRun.UI.Forms;
+
+public partial class FacebookScheduleForm : Form
+{
+    private FbSchedule? _schedule;
+
+    public FbSchedule? ResultSchedule => _schedule;
+
+    public FacebookScheduleForm(FbSchedule? existingSchedule = null)
+    {
+        InitializeComponent();
+        _schedule = existingSchedule;
+
+        if (_schedule != null)
+        {
+            Text = "Edit Schedule";
+            dtpTime.Value = DateTime.Today.Add(_schedule.Timing);
+            chkActive.Checked = _schedule.IsActive;
+        }
+        else
+        {
+            Text = "Add Schedule";
+            dtpTime.Value = DateTime.Today.AddHours(DateTime.Now.Hour).AddMinutes(DateTime.Now.Minute);
+            chkActive.Checked = true;
+        }
+
+        SetupEventHandlers();
+    }
+
+    private void SetupEventHandlers()
+    {
+        btnSave.Click += BtnSave_Click;
+        btnCancel.Click += BtnCancel_Click;
+    }
+
+    private void BtnSave_Click(object? sender, EventArgs e)
+    {
+        var timing = dtpTime.Value.TimeOfDay;
+
+        if (_schedule == null)
+        {
+            _schedule = new FbSchedule
+            {
+                Timing = timing,
+                IsActive = chkActive.Checked
+            };
+        }
+        else
+        {
+            _schedule.Timing = timing;
+            _schedule.IsActive = chkActive.Checked;
+        }
+
+        DialogResult = DialogResult.OK;
+        Close();
+    }
+
+    private void BtnCancel_Click(object? sender, EventArgs e)
+    {
+        DialogResult = DialogResult.Cancel;
+        Close();
+    }
+}

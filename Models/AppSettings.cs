@@ -28,6 +28,13 @@ public class AppSettings
     public int TikTokDelaySeconds { get; set; } = 10;
     public List<TikTokScheduleSettings> TikTokSchedules { get; set; } = new();
 
+    // Facebook Settings
+    public int FacebookDelaySeconds { get; set; } = 10;
+    public int FacebookChunkSize { get; set; } = 10;
+    public int FacebookChunkDelayMinutes { get; set; } = 5;
+    public int FacebookBulkDelaySeconds { get; set; } = 10;
+    public List<FacebookScheduleSettings> FacebookSchedules { get; set; } = new();
+
     // Database Connection Settings
     public string DbHost { get; set; } = "localhost";
     public int DbPort { get; set; } = 5432;
@@ -91,6 +98,16 @@ public class DbConnectionSettings
 /// TikTok schedule settings for persistence
 /// </summary>
 public class TikTokScheduleSettings
+{
+    public int Hour { get; set; }
+    public int Minute { get; set; }
+    public bool IsEnabled { get; set; } = true;
+}
+
+/// <summary>
+/// Facebook schedule settings for persistence
+/// </summary>
+public class FacebookScheduleSettings
 {
     public int Hour { get; set; }
     public int Minute { get; set; }
