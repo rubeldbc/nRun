@@ -22,7 +22,7 @@ public partial class FacebookScheduleForm : Form
         else
         {
             Text = "Add Schedule";
-            dtpTime.Value = DateTime.Today.AddHours(DateTime.Now.Hour).AddMinutes(DateTime.Now.Minute);
+            dtpTime.Value = DateTime.Now.AddMinutes(1);
             chkActive.Checked = true;
         }
 

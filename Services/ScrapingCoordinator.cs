@@ -13,6 +13,15 @@ public class ScrapingCoordinator : IDisposable
     private readonly NewsScraperService _oneTimeScraper;
     private bool _disposed;
 
+    // Store event handler references for cleanup
+    private readonly EventHandler<NewsInfo> _bgArticleScrapedHandler;
+    private readonly EventHandler<string> _bgStatusChangedHandler;
+    private readonly EventHandler<(int current, int total)> _bgProgressChangedHandler;
+    private readonly EventHandler<bool> _bgRunningStateChangedHandler;
+    private readonly EventHandler<NewsInfo> _otArticleScrapedHandler;
+    private readonly EventHandler<string> _otStatusChangedHandler;
+    private readonly EventHandler<(int current, int total)> _otProgressChangedHandler;
+
     public event EventHandler<NewsInfo>? ArticleScraped;
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<(int current, int total)>? ProgressChanged;
@@ -29,15 +38,24 @@ public class ScrapingCoordinator : IDisposable
         _backgroundScraper = new BackgroundScraperService();
         _oneTimeScraper = new NewsScraperService();
 
-        // Wire up events
-        _backgroundScraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
-        _backgroundScraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
-        _backgroundScraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
-        _backgroundScraper.RunningStateChanged += (s, e) => RunningStateChanged?.Invoke(this, e);
+        // Create and store handler references for proper cleanup
+        _bgArticleScrapedHandler = (s, e) => ArticleScraped?.Invoke(this, e);
+        _bgStatusChangedHandler = (s, e) => StatusChanged?.Invoke(this, e);
+        _bgProgressChangedHandler = (s, e) => ProgressChanged?.Invoke(this, e);
+        _bgRunningStateChangedHandler = (s, e) => RunningStateChanged?.Invoke(this, e);
+        _otArticleScrapedHandler = (s, e) => ArticleScraped?.Invoke(this, e);
+        _otStatusChangedHandler = (s, e) => StatusChanged?.Invoke(this, e);
+        _otProgressChangedHandler = (s, e) => ProgressChanged?.Invoke(this, e);
 
-        _oneTimeScraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
-        _oneTimeScraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
-        _oneTimeScraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
+        // Wire up events
+        _backgroundScraper.ArticleScraped += _bgArticleScrapedHandler;
+        _backgroundScraper.StatusChanged += _bgStatusChangedHandler;
+        _backgroundScraper.ProgressChanged += _bgProgressChangedHandler;
+        _backgroundScraper.RunningStateChanged += _bgRunningStateChangedHandler;
+
+        _oneTimeScraper.ArticleScraped += _otArticleScrapedHandler;
+        _oneTimeScraper.StatusChanged += _otStatusChangedHandler;
+        _oneTimeScraper.ProgressChanged += _otProgressChangedHandler;
     }
 
     /// <summary>
@@ -198,6 +216,16 @@ public class ScrapingCoordinator : IDisposable
     {
         if (!_disposed)
         {
+            // Unsubscribe from events to prevent memory leaks
+            _backgroundScraper.ArticleScraped -= _bgArticleScrapedHandler;
+            _backgroundScraper.StatusChanged -= _bgStatusChangedHandler;
+            _backgroundScraper.ProgressChanged -= _bgProgressChangedHandler;
+            _backgroundScraper.RunningStateChanged -= _bgRunningStateChangedHandler;
+
+            _oneTimeScraper.ArticleScraped -= _otArticleScrapedHandler;
+            _oneTimeScraper.StatusChanged -= _otStatusChangedHandler;
+            _oneTimeScraper.ProgressChanged -= _otProgressChangedHandler;
+
             StopBackgroundScraping();
             _backgroundScraper.Dispose();
 

@@ -26,6 +26,16 @@ public partial class FacebookIdManagerForm : Form
         LoadSettings();
     }
 
+    public FacebookIdManagerForm(FbProfile existingProfile) : this()
+    {
+        // Pre-fill the URL textbox for editing
+        txtProfileUrl.Text = $"https://www.facebook.com/{existingProfile.Username}";
+        _fetchedProfile = existingProfile;
+        DisplayProfile(existingProfile);
+        btnSave.Enabled = true;
+        Text = "Edit Facebook Profile";
+    }
+
     private void LoadSettings()
     {
         var settings = ServiceContainer.Settings.LoadSettings();

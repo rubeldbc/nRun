@@ -93,6 +93,14 @@ partial class MainForm
         olvTiktokID = new BrightIdeasSoftware.ObjectListView();
         olvColTkUsername = new BrightIdeasSoftware.OLVColumn();
         olvColTkNickname = new BrightIdeasSoftware.OLVColumn();
+        olvColTkStatus = new BrightIdeasSoftware.OLVColumn();
+        contextMenuTiktokID = new ContextMenuStrip(components);
+        menuItemTkAddId = new ToolStripMenuItem();
+        menuItemTkEditId = new ToolStripMenuItem();
+        menuItemTkDeleteId = new ToolStripMenuItem();
+        menuItemTkSeparator1 = new ToolStripSeparator();
+        menuItemTkRefresh = new ToolStripMenuItem();
+        menuItemTkFetch = new ToolStripMenuItem();
         lblTkNextSchedule = new Label();
         btnTkStartStop = new Button();
         olvTiktokSchedule = new BrightIdeasSoftware.ObjectListView();
@@ -139,7 +147,14 @@ partial class MainForm
         olvFacebookID = new BrightIdeasSoftware.ObjectListView();
         olvColFbUsername = new BrightIdeasSoftware.OLVColumn();
         olvColFbNickname = new BrightIdeasSoftware.OLVColumn();
-        olvColFbCompanyName = new BrightIdeasSoftware.OLVColumn();
+        olvColFbStatus = new BrightIdeasSoftware.OLVColumn();
+        contextMenuFacebookID = new ContextMenuStrip(components);
+        menuItemFbAddId = new ToolStripMenuItem();
+        menuItemFbEditId = new ToolStripMenuItem();
+        menuItemFbDeleteId = new ToolStripMenuItem();
+        menuItemFbSeparator1 = new ToolStripSeparator();
+        menuItemFbRefresh = new ToolStripMenuItem();
+        menuItemFbFetch = new ToolStripMenuItem();
         lblFbNextSchedule = new Label();
         btnFbStartStop = new Button();
         olvFacebookSchedule = new BrightIdeasSoftware.ObjectListView();
@@ -172,6 +187,8 @@ partial class MainForm
         btnMemuraiView = new ToolStripButton();
         toolStripSeparator4 = new ToolStripSeparator();
         lblStatus = new ToolStripLabel();
+        toolStripSeparator5 = new ToolStripSeparator();
+        btnAbout = new ToolStripButton();
         statusStrip = new StatusStrip();
         statusNewsLabel = new ToolStripStatusLabel();
         statusNewsProgress = new ToolStripProgressBar();
@@ -214,6 +231,7 @@ partial class MainForm
         tableLayoutPanel4.SuspendLayout();
         tableLayoutPanel5.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)olvTiktokID).BeginInit();
+        contextMenuTiktokID.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)olvTiktokSchedule).BeginInit();
         tableLayoutPanel6.SuspendLayout();
         tableLayoutPanel7.SuspendLayout();
@@ -227,6 +245,7 @@ partial class MainForm
         tableLayoutPanelFb4.SuspendLayout();
         tableLayoutPanelFb5.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)olvFacebookID).BeginInit();
+        contextMenuFacebookID.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)olvFacebookSchedule).BeginInit();
         tableLayoutPanelFb6.SuspendLayout();
         tableLayoutPanelFb7.SuspendLayout();
@@ -318,7 +337,7 @@ partial class MainForm
         chkNoScrapEnabled.AutoSize = true;
         chkNoScrapEnabled.Location = new Point(10, 5);
         chkNoScrapEnabled.Name = "chkNoScrapEnabled";
-        chkNoScrapEnabled.Size = new Size(150, 19);
+        chkNoScrapEnabled.Size = new Size(149, 19);
         chkNoScrapEnabled.TabIndex = 0;
         chkNoScrapEnabled.Text = "Enable No-Scrape Time";
         chkNoScrapEnabled.UseVisualStyleBackColor = true;
@@ -977,9 +996,9 @@ partial class MainForm
         tableLayoutPanel5.Location = new Point(3, 3);
         tableLayoutPanel5.Name = "tableLayoutPanel5";
         tableLayoutPanel5.RowCount = 7;
-        tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Percent, 60F));
-        tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-        tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
+        tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Percent, 75F));
+        tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
+        tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
         tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
         tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
         tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 55F));
@@ -991,15 +1010,17 @@ partial class MainForm
         // 
         olvTiktokID.AllColumns.Add(olvColTkUsername);
         olvTiktokID.AllColumns.Add(olvColTkNickname);
+        olvTiktokID.AllColumns.Add(olvColTkStatus);
         olvTiktokID.CellEditUseWholeCell = false;
-        olvTiktokID.Columns.AddRange(new ColumnHeader[] { olvColTkUsername, olvColTkNickname });
+        olvTiktokID.Columns.AddRange(new ColumnHeader[] { olvColTkUsername, olvColTkNickname, olvColTkStatus });
+        olvTiktokID.ContextMenuStrip = contextMenuTiktokID;
         olvTiktokID.Dock = DockStyle.Fill;
         olvTiktokID.FullRowSelect = true;
         olvTiktokID.GridLines = true;
         olvTiktokID.Location = new Point(3, 3);
         olvTiktokID.Name = "olvTiktokID";
         olvTiktokID.ShowGroups = false;
-        olvTiktokID.Size = new Size(290, 235);
+        olvTiktokID.Size = new Size(290, 297);
         olvTiktokID.TabIndex = 1;
         olvTiktokID.UseCompatibleStateImageBehavior = false;
         olvTiktokID.View = View.Details;
@@ -1008,22 +1029,72 @@ partial class MainForm
         // 
         olvColTkUsername.AspectName = "Username";
         olvColTkUsername.Text = "Username";
-        olvColTkUsername.Width = 130;
+        olvColTkUsername.Width = 120;
         // 
         // olvColTkNickname
         // 
         olvColTkNickname.AspectName = "Nickname";
         olvColTkNickname.Text = "Nickname";
-        olvColTkNickname.Width = 150;
+        olvColTkNickname.Width = 120;
+        // 
+        // olvColTkStatus
+        // 
+        olvColTkStatus.AspectName = "Status";
+        olvColTkStatus.CheckBoxes = true;
+        olvColTkStatus.HeaderTextAlign = HorizontalAlignment.Center;
+        olvColTkStatus.Text = "Active";
+        olvColTkStatus.TextAlign = HorizontalAlignment.Center;
+        olvColTkStatus.Width = 50;
+        // 
+        // contextMenuTiktokID
+        // 
+        contextMenuTiktokID.Items.AddRange(new ToolStripItem[] { menuItemTkAddId, menuItemTkEditId, menuItemTkDeleteId, menuItemTkSeparator1, menuItemTkRefresh, menuItemTkFetch });
+        contextMenuTiktokID.Name = "contextMenuTiktokID";
+        contextMenuTiktokID.Size = new Size(151, 120);
+        // 
+        // menuItemTkAddId
+        // 
+        menuItemTkAddId.Name = "menuItemTkAddId";
+        menuItemTkAddId.Size = new Size(150, 22);
+        menuItemTkAddId.Text = "Add ID";
+        // 
+        // menuItemTkEditId
+        // 
+        menuItemTkEditId.Name = "menuItemTkEditId";
+        menuItemTkEditId.Size = new Size(150, 22);
+        menuItemTkEditId.Text = "Edit ID";
+        // 
+        // menuItemTkDeleteId
+        // 
+        menuItemTkDeleteId.Name = "menuItemTkDeleteId";
+        menuItemTkDeleteId.Size = new Size(150, 22);
+        menuItemTkDeleteId.Text = "Delete ID";
+        // 
+        // menuItemTkSeparator1
+        // 
+        menuItemTkSeparator1.Name = "menuItemTkSeparator1";
+        menuItemTkSeparator1.Size = new Size(147, 6);
+        // 
+        // menuItemTkRefresh
+        // 
+        menuItemTkRefresh.Name = "menuItemTkRefresh";
+        menuItemTkRefresh.Size = new Size(150, 22);
+        menuItemTkRefresh.Text = "Refresh";
+        // 
+        // menuItemTkFetch
+        // 
+        menuItemTkFetch.Name = "menuItemTkFetch";
+        menuItemTkFetch.Size = new Size(150, 22);
+        menuItemTkFetch.Text = "Fetch Selected";
         // 
         // lblTkNextSchedule
         // 
         lblTkNextSchedule.AutoSize = true;
         lblTkNextSchedule.Dock = DockStyle.Fill;
         lblTkNextSchedule.ForeColor = Color.OliveDrab;
-        lblTkNextSchedule.Location = new Point(3, 566);
+        lblTkNextSchedule.Location = new Point(3, 567);
         lblTkNextSchedule.Name = "lblTkNextSchedule";
-        lblTkNextSchedule.Size = new Size(290, 28);
+        lblTkNextSchedule.Size = new Size(290, 27);
         lblTkNextSchedule.TabIndex = 7;
         lblTkNextSchedule.Text = "Next: --:-- (--:--)";
         lblTkNextSchedule.TextAlign = ContentAlignment.MiddleLeft;
@@ -1034,7 +1105,7 @@ partial class MainForm
         btnTkStartStop.Dock = DockStyle.Fill;
         btnTkStartStop.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnTkStartStop.ForeColor = Color.White;
-        btnTkStartStop.Location = new Point(0, 511);
+        btnTkStartStop.Location = new Point(0, 512);
         btnTkStartStop.Margin = new Padding(0);
         btnTkStartStop.Name = "btnTkStartStop";
         btnTkStartStop.Size = new Size(296, 55);
@@ -1052,10 +1123,10 @@ partial class MainForm
         olvTiktokSchedule.Dock = DockStyle.Fill;
         olvTiktokSchedule.FullRowSelect = true;
         olvTiktokSchedule.GridLines = true;
-        olvTiktokSchedule.Location = new Point(3, 284);
+        olvTiktokSchedule.Location = new Point(3, 344);
         olvTiktokSchedule.Name = "olvTiktokSchedule";
         olvTiktokSchedule.ShowGroups = false;
-        olvTiktokSchedule.Size = new Size(290, 154);
+        olvTiktokSchedule.Size = new Size(290, 95);
         olvTiktokSchedule.TabIndex = 3;
         olvTiktokSchedule.UseCompatibleStateImageBehavior = false;
         olvTiktokSchedule.View = View.Details;
@@ -1088,11 +1159,11 @@ partial class MainForm
         tableLayoutPanel6.Controls.Add(btnTkDeleteId, 1, 0);
         tableLayoutPanel6.Controls.Add(btnTkAddId, 0, 0);
         tableLayoutPanel6.Dock = DockStyle.Fill;
-        tableLayoutPanel6.Location = new Point(3, 244);
+        tableLayoutPanel6.Location = new Point(3, 306);
         tableLayoutPanel6.Name = "tableLayoutPanel6";
         tableLayoutPanel6.RowCount = 1;
         tableLayoutPanel6.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-        tableLayoutPanel6.Size = new Size(290, 34);
+        tableLayoutPanel6.Size = new Size(290, 32);
         tableLayoutPanel6.TabIndex = 2;
         // 
         // btnTkRefreshId
@@ -1101,7 +1172,7 @@ partial class MainForm
         btnTkRefreshId.Location = new Point(186, 0);
         btnTkRefreshId.Margin = new Padding(0);
         btnTkRefreshId.Name = "btnTkRefreshId";
-        btnTkRefreshId.Size = new Size(104, 34);
+        btnTkRefreshId.Size = new Size(104, 32);
         btnTkRefreshId.TabIndex = 4;
         btnTkRefreshId.Text = "Refresh";
         btnTkRefreshId.UseVisualStyleBackColor = true;
@@ -1112,7 +1183,7 @@ partial class MainForm
         btnTkDeleteId.Location = new Point(93, 0);
         btnTkDeleteId.Margin = new Padding(0);
         btnTkDeleteId.Name = "btnTkDeleteId";
-        btnTkDeleteId.Size = new Size(93, 34);
+        btnTkDeleteId.Size = new Size(93, 32);
         btnTkDeleteId.TabIndex = 3;
         btnTkDeleteId.Text = "Delete ID";
         btnTkDeleteId.UseVisualStyleBackColor = true;
@@ -1123,7 +1194,7 @@ partial class MainForm
         btnTkAddId.Location = new Point(0, 0);
         btnTkAddId.Margin = new Padding(0);
         btnTkAddId.Name = "btnTkAddId";
-        btnTkAddId.Size = new Size(93, 34);
+        btnTkAddId.Size = new Size(93, 32);
         btnTkAddId.TabIndex = 2;
         btnTkAddId.Text = "Add ID";
         btnTkAddId.UseVisualStyleBackColor = true;
@@ -1140,7 +1211,7 @@ partial class MainForm
         tableLayoutPanel7.Controls.Add(btnTkDeleteSchedule, 2, 0);
         tableLayoutPanel7.Controls.Add(btnTkEditSchedule, 1, 0);
         tableLayoutPanel7.Dock = DockStyle.Fill;
-        tableLayoutPanel7.Location = new Point(3, 444);
+        tableLayoutPanel7.Location = new Point(3, 445);
         tableLayoutPanel7.Name = "tableLayoutPanel7";
         tableLayoutPanel7.RowCount = 1;
         tableLayoutPanel7.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1199,7 +1270,7 @@ partial class MainForm
         tableLayoutPanel8.Controls.Add(numTkFrequency, 1, 0);
         tableLayoutPanel8.Controls.Add(lblTkFrequency, 0, 0);
         tableLayoutPanel8.Dock = DockStyle.Fill;
-        tableLayoutPanel8.Location = new Point(3, 482);
+        tableLayoutPanel8.Location = new Point(3, 483);
         tableLayoutPanel8.Name = "tableLayoutPanel8";
         tableLayoutPanel8.RowCount = 1;
         tableLayoutPanel8.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1511,9 +1582,9 @@ partial class MainForm
         tableLayoutPanelFb5.Location = new Point(3, 3);
         tableLayoutPanelFb5.Name = "tableLayoutPanelFb5";
         tableLayoutPanelFb5.RowCount = 7;
-        tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Percent, 60F));
-        tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-        tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
+        tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Percent, 75F));
+        tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
+        tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
         tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
         tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));
         tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 55F));
@@ -1525,16 +1596,17 @@ partial class MainForm
         // 
         olvFacebookID.AllColumns.Add(olvColFbUsername);
         olvFacebookID.AllColumns.Add(olvColFbNickname);
-        olvFacebookID.AllColumns.Add(olvColFbCompanyName);
+        olvFacebookID.AllColumns.Add(olvColFbStatus);
         olvFacebookID.CellEditUseWholeCell = false;
-        olvFacebookID.Columns.AddRange(new ColumnHeader[] { olvColFbUsername, olvColFbNickname, olvColFbCompanyName });
+        olvFacebookID.Columns.AddRange(new ColumnHeader[] { olvColFbUsername, olvColFbNickname, olvColFbStatus });
+        olvFacebookID.ContextMenuStrip = contextMenuFacebookID;
         olvFacebookID.Dock = DockStyle.Fill;
         olvFacebookID.FullRowSelect = true;
         olvFacebookID.GridLines = true;
         olvFacebookID.Location = new Point(3, 3);
         olvFacebookID.Name = "olvFacebookID";
         olvFacebookID.ShowGroups = false;
-        olvFacebookID.Size = new Size(290, 206);
+        olvFacebookID.Size = new Size(290, 261);
         olvFacebookID.TabIndex = 1;
         olvFacebookID.UseCompatibleStateImageBehavior = false;
         olvFacebookID.View = View.Details;
@@ -1543,28 +1615,72 @@ partial class MainForm
         // 
         olvColFbUsername.AspectName = "Username";
         olvColFbUsername.Text = "Username";
-        olvColFbUsername.Width = 100;
+        olvColFbUsername.Width = 80;
         // 
         // olvColFbNickname
         // 
         olvColFbNickname.AspectName = "Nickname";
         olvColFbNickname.Text = "Nickname";
-        olvColFbNickname.Width = 100;
+        olvColFbNickname.Width = 120;
         // 
-        // olvColFbCompanyName
+        // olvColFbStatus
         // 
-        olvColFbCompanyName.AspectName = "CompanyName";
-        olvColFbCompanyName.Text = "Company";
-        olvColFbCompanyName.Width = 80;
+        olvColFbStatus.AspectName = "Status";
+        olvColFbStatus.CheckBoxes = true;
+        olvColFbStatus.HeaderTextAlign = HorizontalAlignment.Center;
+        olvColFbStatus.Text = "Active";
+        olvColFbStatus.TextAlign = HorizontalAlignment.Center;
+        olvColFbStatus.Width = 50;
+        // 
+        // contextMenuFacebookID
+        // 
+        contextMenuFacebookID.Items.AddRange(new ToolStripItem[] { menuItemFbAddId, menuItemFbEditId, menuItemFbDeleteId, menuItemFbSeparator1, menuItemFbRefresh, menuItemFbFetch });
+        contextMenuFacebookID.Name = "contextMenuFacebookID";
+        contextMenuFacebookID.Size = new Size(151, 120);
+        // 
+        // menuItemFbAddId
+        // 
+        menuItemFbAddId.Name = "menuItemFbAddId";
+        menuItemFbAddId.Size = new Size(150, 22);
+        menuItemFbAddId.Text = "Add ID";
+        // 
+        // menuItemFbEditId
+        // 
+        menuItemFbEditId.Name = "menuItemFbEditId";
+        menuItemFbEditId.Size = new Size(150, 22);
+        menuItemFbEditId.Text = "Edit ID";
+        // 
+        // menuItemFbDeleteId
+        // 
+        menuItemFbDeleteId.Name = "menuItemFbDeleteId";
+        menuItemFbDeleteId.Size = new Size(150, 22);
+        menuItemFbDeleteId.Text = "Delete ID";
+        // 
+        // menuItemFbSeparator1
+        // 
+        menuItemFbSeparator1.Name = "menuItemFbSeparator1";
+        menuItemFbSeparator1.Size = new Size(147, 6);
+        // 
+        // menuItemFbRefresh
+        // 
+        menuItemFbRefresh.Name = "menuItemFbRefresh";
+        menuItemFbRefresh.Size = new Size(150, 22);
+        menuItemFbRefresh.Text = "Refresh";
+        // 
+        // menuItemFbFetch
+        // 
+        menuItemFbFetch.Name = "menuItemFbFetch";
+        menuItemFbFetch.Size = new Size(150, 22);
+        menuItemFbFetch.Text = "Fetch Selected";
         // 
         // lblFbNextSchedule
         // 
         lblFbNextSchedule.AutoSize = true;
         lblFbNextSchedule.Dock = DockStyle.Fill;
         lblFbNextSchedule.ForeColor = Color.OliveDrab;
-        lblFbNextSchedule.Location = new Point(3, 566);
+        lblFbNextSchedule.Location = new Point(3, 567);
         lblFbNextSchedule.Name = "lblFbNextSchedule";
-        lblFbNextSchedule.Size = new Size(290, 28);
+        lblFbNextSchedule.Size = new Size(290, 27);
         lblFbNextSchedule.TabIndex = 7;
         lblFbNextSchedule.Text = "Next: --:-- (--:--)";
         lblFbNextSchedule.TextAlign = ContentAlignment.MiddleLeft;
@@ -1575,7 +1691,7 @@ partial class MainForm
         btnFbStartStop.Dock = DockStyle.Fill;
         btnFbStartStop.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnFbStartStop.ForeColor = Color.White;
-        btnFbStartStop.Location = new Point(0, 511);
+        btnFbStartStop.Location = new Point(0, 512);
         btnFbStartStop.Margin = new Padding(0);
         btnFbStartStop.Name = "btnFbStartStop";
         btnFbStartStop.Size = new Size(296, 55);
@@ -1593,10 +1709,10 @@ partial class MainForm
         olvFacebookSchedule.Dock = DockStyle.Fill;
         olvFacebookSchedule.FullRowSelect = true;
         olvFacebookSchedule.GridLines = true;
-        olvFacebookSchedule.Location = new Point(3, 255);
+        olvFacebookSchedule.Location = new Point(3, 308);
         olvFacebookSchedule.Name = "olvFacebookSchedule";
         olvFacebookSchedule.ShowGroups = false;
-        olvFacebookSchedule.Size = new Size(290, 135);
+        olvFacebookSchedule.Size = new Size(290, 83);
         olvFacebookSchedule.TabIndex = 3;
         olvFacebookSchedule.UseCompatibleStateImageBehavior = false;
         olvFacebookSchedule.View = View.Details;
@@ -1629,11 +1745,11 @@ partial class MainForm
         tableLayoutPanelFb6.Controls.Add(btnFbDeleteId, 1, 0);
         tableLayoutPanelFb6.Controls.Add(btnFbAddId, 0, 0);
         tableLayoutPanelFb6.Dock = DockStyle.Fill;
-        tableLayoutPanelFb6.Location = new Point(3, 215);
+        tableLayoutPanelFb6.Location = new Point(3, 270);
         tableLayoutPanelFb6.Name = "tableLayoutPanelFb6";
         tableLayoutPanelFb6.RowCount = 1;
         tableLayoutPanelFb6.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-        tableLayoutPanelFb6.Size = new Size(290, 34);
+        tableLayoutPanelFb6.Size = new Size(290, 32);
         tableLayoutPanelFb6.TabIndex = 2;
         // 
         // btnFbRefreshId
@@ -1642,7 +1758,7 @@ partial class MainForm
         btnFbRefreshId.Location = new Point(186, 0);
         btnFbRefreshId.Margin = new Padding(0);
         btnFbRefreshId.Name = "btnFbRefreshId";
-        btnFbRefreshId.Size = new Size(104, 34);
+        btnFbRefreshId.Size = new Size(104, 32);
         btnFbRefreshId.TabIndex = 4;
         btnFbRefreshId.Text = "Refresh";
         btnFbRefreshId.UseVisualStyleBackColor = true;
@@ -1653,7 +1769,7 @@ partial class MainForm
         btnFbDeleteId.Location = new Point(93, 0);
         btnFbDeleteId.Margin = new Padding(0);
         btnFbDeleteId.Name = "btnFbDeleteId";
-        btnFbDeleteId.Size = new Size(93, 34);
+        btnFbDeleteId.Size = new Size(93, 32);
         btnFbDeleteId.TabIndex = 3;
         btnFbDeleteId.Text = "Delete ID";
         btnFbDeleteId.UseVisualStyleBackColor = true;
@@ -1664,7 +1780,7 @@ partial class MainForm
         btnFbAddId.Location = new Point(0, 0);
         btnFbAddId.Margin = new Padding(0);
         btnFbAddId.Name = "btnFbAddId";
-        btnFbAddId.Size = new Size(93, 34);
+        btnFbAddId.Size = new Size(93, 32);
         btnFbAddId.TabIndex = 2;
         btnFbAddId.Text = "Add ID";
         btnFbAddId.UseVisualStyleBackColor = true;
@@ -1681,7 +1797,7 @@ partial class MainForm
         tableLayoutPanelFb7.Controls.Add(btnFbDeleteSchedule, 2, 0);
         tableLayoutPanelFb7.Controls.Add(btnFbEditSchedule, 1, 0);
         tableLayoutPanelFb7.Dock = DockStyle.Fill;
-        tableLayoutPanelFb7.Location = new Point(3, 396);
+        tableLayoutPanelFb7.Location = new Point(3, 397);
         tableLayoutPanelFb7.Name = "tableLayoutPanelFb7";
         tableLayoutPanelFb7.RowCount = 1;
         tableLayoutPanelFb7.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1744,7 +1860,7 @@ partial class MainForm
         tableLayoutPanelFb8.Controls.Add(lblFbChunkDelay, 0, 2);
         tableLayoutPanelFb8.Controls.Add(numFbChunkDelay, 1, 2);
         tableLayoutPanelFb8.Dock = DockStyle.Fill;
-        tableLayoutPanelFb8.Location = new Point(3, 434);
+        tableLayoutPanelFb8.Location = new Point(3, 435);
         tableLayoutPanelFb8.Name = "tableLayoutPanelFb8";
         tableLayoutPanelFb8.RowCount = 3;
         tableLayoutPanelFb8.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
@@ -1821,7 +1937,7 @@ partial class MainForm
         // 
         // toolStripMain
         // 
-        toolStripMain.Items.AddRange(new ToolStripItem[] { btnStartStop, btnScrapeNow, toolStripSeparator2, btnSettings, toolStripSeparator3, btnMemuraiSync, btnMemuraiView, toolStripSeparator4, lblStatus });
+        toolStripMain.Items.AddRange(new ToolStripItem[] { btnStartStop, btnScrapeNow, toolStripSeparator2, btnSettings, toolStripSeparator3, btnMemuraiSync, btnMemuraiView, toolStripSeparator4, lblStatus, toolStripSeparator5, btnAbout });
         toolStripMain.Location = new Point(0, 0);
         toolStripMain.Name = "toolStripMain";
         toolStripMain.Size = new Size(1133, 25);
@@ -1890,6 +2006,19 @@ partial class MainForm
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(39, 22);
         lblStatus.Text = "Ready";
+        // 
+        // toolStripSeparator5
+        // 
+        toolStripSeparator5.Name = "toolStripSeparator5";
+        toolStripSeparator5.Size = new Size(6, 25);
+        // 
+        // btnAbout
+        // 
+        btnAbout.DisplayStyle = ToolStripItemDisplayStyle.Text;
+        btnAbout.Name = "btnAbout";
+        btnAbout.Size = new Size(44, 22);
+        btnAbout.Text = "About";
+        btnAbout.ToolTipText = "About nRun";
         // 
         // statusStrip
         // 
@@ -2035,6 +2164,7 @@ partial class MainForm
         tableLayoutPanel5.ResumeLayout(false);
         tableLayoutPanel5.PerformLayout();
         ((System.ComponentModel.ISupportInitialize)olvTiktokID).EndInit();
+        contextMenuTiktokID.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)olvTiktokSchedule).EndInit();
         tableLayoutPanel6.ResumeLayout(false);
         tableLayoutPanel7.ResumeLayout(false);
@@ -2052,6 +2182,7 @@ partial class MainForm
         tableLayoutPanelFb5.ResumeLayout(false);
         tableLayoutPanelFb5.PerformLayout();
         ((System.ComponentModel.ISupportInitialize)olvFacebookID).EndInit();
+        contextMenuFacebookID.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)olvFacebookSchedule).EndInit();
         tableLayoutPanelFb6.ResumeLayout(false);
         tableLayoutPanelFb7.ResumeLayout(false);
@@ -2118,6 +2249,8 @@ partial class MainForm
     private System.Windows.Forms.ToolStripButton btnMemuraiView;
     private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
     private System.Windows.Forms.ToolStripLabel lblStatus;
+    private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
+    private System.Windows.Forms.ToolStripButton btnAbout;
     private System.Windows.Forms.StatusStrip statusStrip;
     // News Scraping status bar items
     private System.Windows.Forms.ToolStripStatusLabel statusNewsLabel;
@@ -2142,8 +2275,16 @@ partial class MainForm
 
     // TikTok Tab Controls
     private BrightIdeasSoftware.ObjectListView olvTiktokID;
+    private BrightIdeasSoftware.OLVColumn olvColTkStatus;
     private BrightIdeasSoftware.OLVColumn olvColTkUsername;
     private BrightIdeasSoftware.OLVColumn olvColTkNickname;
+    private System.Windows.Forms.ContextMenuStrip contextMenuTiktokID;
+    private System.Windows.Forms.ToolStripMenuItem menuItemTkAddId;
+    private System.Windows.Forms.ToolStripMenuItem menuItemTkEditId;
+    private System.Windows.Forms.ToolStripMenuItem menuItemTkDeleteId;
+    private System.Windows.Forms.ToolStripSeparator menuItemTkSeparator1;
+    private System.Windows.Forms.ToolStripMenuItem menuItemTkRefresh;
+    private System.Windows.Forms.ToolStripMenuItem menuItemTkFetch;
     private BrightIdeasSoftware.ObjectListView olvTiktokSchedule;
     private BrightIdeasSoftware.OLVColumn olvColScheduleSL;
     private BrightIdeasSoftware.OLVColumn olvColScheduleTiming;
@@ -2202,9 +2343,16 @@ partial class MainForm
     private TableLayoutPanel tableLayoutPanelFb7;
     private TableLayoutPanel tableLayoutPanelFb8;
     private BrightIdeasSoftware.ObjectListView olvFacebookID;
+    private BrightIdeasSoftware.OLVColumn olvColFbStatus;
     private BrightIdeasSoftware.OLVColumn olvColFbUsername;
     private BrightIdeasSoftware.OLVColumn olvColFbNickname;
-    private BrightIdeasSoftware.OLVColumn olvColFbCompanyName;
+    private System.Windows.Forms.ContextMenuStrip contextMenuFacebookID;
+    private System.Windows.Forms.ToolStripMenuItem menuItemFbAddId;
+    private System.Windows.Forms.ToolStripMenuItem menuItemFbEditId;
+    private System.Windows.Forms.ToolStripMenuItem menuItemFbDeleteId;
+    private System.Windows.Forms.ToolStripSeparator menuItemFbSeparator1;
+    private System.Windows.Forms.ToolStripMenuItem menuItemFbRefresh;
+    private System.Windows.Forms.ToolStripMenuItem menuItemFbFetch;
     private BrightIdeasSoftware.ObjectListView olvFacebookSchedule;
     private BrightIdeasSoftware.OLVColumn olvColFbScheduleSL;
     private BrightIdeasSoftware.OLVColumn olvColFbScheduleTiming;

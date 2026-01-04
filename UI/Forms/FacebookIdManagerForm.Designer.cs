@@ -17,7 +17,6 @@ partial class FacebookIdManagerForm
 
     private void InitializeComponent()
     {
-        components = new System.ComponentModel.Container();
         lblUrlPrompt = new Label();
         txtProfileUrl = new TextBox();
         btnFetch = new Button();
@@ -58,27 +57,27 @@ partial class FacebookIdManagerForm
         ((System.ComponentModel.ISupportInitialize)olvBulkList).BeginInit();
         ((System.ComponentModel.ISupportInitialize)numDelay).BeginInit();
         SuspendLayout();
-        //
+        // 
         // lblUrlPrompt
-        //
+        // 
         lblUrlPrompt.AutoSize = true;
         lblUrlPrompt.Location = new Point(12, 15);
         lblUrlPrompt.Name = "lblUrlPrompt";
-        lblUrlPrompt.Size = new Size(110, 15);
+        lblUrlPrompt.Size = new Size(114, 15);
         lblUrlPrompt.TabIndex = 0;
         lblUrlPrompt.Text = "Facebook Page URL:";
-        //
+        // 
         // txtProfileUrl
-        //
+        // 
         txtProfileUrl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         txtProfileUrl.Location = new Point(12, 33);
         txtProfileUrl.Name = "txtProfileUrl";
         txtProfileUrl.PlaceholderText = "https://www.facebook.com/pagename";
         txtProfileUrl.Size = new Size(440, 23);
         txtProfileUrl.TabIndex = 1;
-        //
+        // 
         // btnFetch
-        //
+        // 
         btnFetch.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         btnFetch.Location = new Point(458, 32);
         btnFetch.Name = "btnFetch";
@@ -86,9 +85,9 @@ partial class FacebookIdManagerForm
         btnFetch.TabIndex = 2;
         btnFetch.Text = "Fetch";
         btnFetch.UseVisualStyleBackColor = true;
-        //
+        // 
         // grpProfileInfo
-        //
+        // 
         grpProfileInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
         grpProfileInfo.Controls.Add(lblUserId);
         grpProfileInfo.Controls.Add(txtUserId);
@@ -113,142 +112,142 @@ partial class FacebookIdManagerForm
         grpProfileInfo.TabIndex = 3;
         grpProfileInfo.TabStop = false;
         grpProfileInfo.Text = "Single Page Profile";
-        //
+        // 
         // lblUserId
-        //
+        // 
         lblUserId.AutoSize = true;
         lblUserId.Location = new Point(15, 25);
         lblUserId.Name = "lblUserId";
         lblUserId.Size = new Size(47, 15);
         lblUserId.TabIndex = 0;
         lblUserId.Text = "User ID:";
-        //
+        // 
         // txtUserId
-        //
+        // 
         txtUserId.Location = new Point(100, 22);
         txtUserId.Name = "txtUserId";
         txtUserId.ReadOnly = true;
         txtUserId.Size = new Size(150, 23);
         txtUserId.TabIndex = 1;
-        //
+        // 
         // lblUsername
-        //
+        // 
         lblUsername.AutoSize = true;
         lblUsername.Location = new Point(15, 55);
         lblUsername.Name = "lblUsername";
         lblUsername.Size = new Size(63, 15);
         lblUsername.TabIndex = 2;
         lblUsername.Text = "Username:";
-        //
+        // 
         // txtUsername
-        //
+        // 
         txtUsername.Location = new Point(100, 52);
         txtUsername.Name = "txtUsername";
         txtUsername.Size = new Size(150, 23);
         txtUsername.TabIndex = 3;
-        //
+        // 
         // lblNickname
-        //
+        // 
         lblNickname.AutoSize = true;
         lblNickname.Location = new Point(270, 25);
         lblNickname.Name = "lblNickname";
-        lblNickname.Size = new Size(64, 15);
+        lblNickname.Size = new Size(61, 15);
         lblNickname.TabIndex = 4;
         lblNickname.Text = "Page Title:";
-        //
+        // 
         // txtNickname
-        //
+        // 
         txtNickname.Location = new Point(355, 22);
         txtNickname.Name = "txtNickname";
         txtNickname.Size = new Size(150, 23);
         txtNickname.TabIndex = 5;
-        //
+        // 
         // lblCompanyName
-        //
+        // 
         lblCompanyName.AutoSize = true;
         lblCompanyName.Location = new Point(15, 85);
         lblCompanyName.Name = "lblCompanyName";
-        lblCompanyName.Size = new Size(65, 15);
+        lblCompanyName.Size = new Size(62, 15);
         lblCompanyName.TabIndex = 6;
         lblCompanyName.Text = "Company:";
-        //
+        // 
         // txtCompanyName
-        //
+        // 
         txtCompanyName.Location = new Point(100, 82);
         txtCompanyName.Name = "txtCompanyName";
         txtCompanyName.Size = new Size(150, 23);
         txtCompanyName.TabIndex = 7;
-        //
+        // 
         // lblCompanyType
-        //
+        // 
         lblCompanyType.AutoSize = true;
         lblCompanyType.Location = new Point(270, 55);
         lblCompanyType.Name = "lblCompanyType";
-        lblCompanyType.Size = new Size(84, 15);
+        lblCompanyType.Size = new Size(89, 15);
         lblCompanyType.TabIndex = 8;
         lblCompanyType.Text = "Company Type:";
-        //
+        // 
         // txtCompanyType
-        //
+        // 
         txtCompanyType.Location = new Point(355, 52);
         txtCompanyType.Name = "txtCompanyType";
         txtCompanyType.Size = new Size(150, 23);
         txtCompanyType.TabIndex = 9;
-        //
+        // 
         // lblPageType
-        //
+        // 
         lblPageType.AutoSize = true;
         lblPageType.Location = new Point(270, 85);
         lblPageType.Name = "lblPageType";
-        lblPageType.Size = new Size(62, 15);
+        lblPageType.Size = new Size(63, 15);
         lblPageType.TabIndex = 10;
         lblPageType.Text = "Page Type:";
-        //
+        // 
         // txtPageType
-        //
+        // 
         txtPageType.Location = new Point(355, 82);
         txtPageType.Name = "txtPageType";
         txtPageType.Size = new Size(150, 23);
         txtPageType.TabIndex = 11;
-        //
+        // 
         // lblRegion
-        //
+        // 
         lblRegion.AutoSize = true;
         lblRegion.Location = new Point(15, 115);
         lblRegion.Name = "lblRegion";
         lblRegion.Size = new Size(47, 15);
         lblRegion.TabIndex = 12;
         lblRegion.Text = "Region:";
-        //
+        // 
         // txtRegion
-        //
+        // 
         txtRegion.Location = new Point(100, 112);
         txtRegion.Name = "txtRegion";
         txtRegion.Size = new Size(150, 23);
         txtRegion.TabIndex = 13;
-        //
+        // 
         // btnSave
-        //
+        // 
         btnSave.Enabled = false;
-        btnSave.Location = new Point(430, 110);
+        btnSave.Location = new Point(355, 110);
         btnSave.Name = "btnSave";
-        btnSave.Size = new Size(75, 28);
+        btnSave.Size = new Size(150, 28);
         btnSave.TabIndex = 14;
         btnSave.Text = "Save";
         btnSave.UseVisualStyleBackColor = true;
-        //
+        // 
         // lblStatus
-        //
+        // 
         lblStatus.AutoSize = true;
         lblStatus.ForeColor = Color.Gray;
         lblStatus.Location = new Point(15, 150);
         lblStatus.Name = "lblStatus";
-        lblStatus.Size = new Size(208, 15);
+        lblStatus.Size = new Size(203, 15);
         lblStatus.TabIndex = 15;
         lblStatus.Text = "Enter a Facebook URL and click Fetch";
-        //
+        // 
         // progressBar
-        //
+        // 
         progressBar.Location = new Point(15, 175);
         progressBar.MarqueeAnimationSpeed = 30;
         progressBar.Name = "progressBar";
@@ -256,9 +255,9 @@ partial class FacebookIdManagerForm
         progressBar.Style = ProgressBarStyle.Marquee;
         progressBar.TabIndex = 16;
         progressBar.Visible = false;
-        //
+        // 
         // grpBulkImport
-        //
+        // 
         grpBulkImport.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         grpBulkImport.Controls.Add(olvBulkList);
         grpBulkImport.Controls.Add(btnImport);
@@ -275,9 +274,9 @@ partial class FacebookIdManagerForm
         grpBulkImport.TabIndex = 4;
         grpBulkImport.TabStop = false;
         grpBulkImport.Text = "Bulk Import (CSV: page_link, company_type, page_type, region)";
-        //
+        // 
         // olvBulkList
-        //
+        // 
         olvBulkList.AllColumns.Add(olvColBulkUsername);
         olvBulkList.AllColumns.Add(olvColBulkCompanyName);
         olvBulkList.AllColumns.Add(olvColBulkStatus);
@@ -294,64 +293,45 @@ partial class FacebookIdManagerForm
         olvBulkList.TabIndex = 0;
         olvBulkList.UseCompatibleStateImageBehavior = false;
         olvBulkList.View = View.Details;
-        //
+        // 
         // olvColBulkUsername
-        //
+        // 
         olvColBulkUsername.AspectName = "Username";
         olvColBulkUsername.Text = "Username";
         olvColBulkUsername.Width = 130;
-        //
+        // 
         // olvColBulkCompanyName
-        //
+        // 
         olvColBulkCompanyName.AspectName = "CompanyName";
         olvColBulkCompanyName.Text = "Company";
         olvColBulkCompanyName.Width = 150;
-        //
+        // 
         // olvColBulkStatus
-        //
+        // 
         olvColBulkStatus.AspectName = "Status";
         olvColBulkStatus.Text = "Status";
         olvColBulkStatus.Width = 170;
-        //
+        // 
         // btnImport
-        //
+        // 
         btnImport.Location = new Point(15, 22);
         btnImport.Name = "btnImport";
         btnImport.Size = new Size(80, 25);
         btnImport.TabIndex = 1;
         btnImport.Text = "Import...";
         btnImport.UseVisualStyleBackColor = true;
-        //
+        // 
         // btnExport
-        //
+        // 
         btnExport.Location = new Point(100, 22);
         btnExport.Name = "btnExport";
         btnExport.Size = new Size(80, 25);
         btnExport.TabIndex = 2;
         btnExport.Text = "Export...";
         btnExport.UseVisualStyleBackColor = true;
-        //
-        // lblDelay
-        //
-        lblDelay.AutoSize = true;
-        lblDelay.Location = new Point(200, 27);
-        lblDelay.Name = "lblDelay";
-        lblDelay.Size = new Size(66, 15);
-        lblDelay.TabIndex = 3;
-        lblDelay.Text = "Delay (sec):";
-        //
-        // numDelay
-        //
-        numDelay.Location = new Point(270, 24);
-        numDelay.Maximum = new decimal(new int[] { 3600, 0, 0, 0 });
-        numDelay.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-        numDelay.Name = "numDelay";
-        numDelay.Size = new Size(60, 23);
-        numDelay.TabIndex = 4;
-        numDelay.Value = new decimal(new int[] { 10, 0, 0, 0 });
-        //
+        // 
         // btnStartBulk
-        //
+        // 
         btnStartBulk.BackColor = Color.FromArgb(0, 120, 0);
         btnStartBulk.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
         btnStartBulk.ForeColor = Color.White;
@@ -361,9 +341,9 @@ partial class FacebookIdManagerForm
         btnStartBulk.TabIndex = 5;
         btnStartBulk.Text = "Start";
         btnStartBulk.UseVisualStyleBackColor = false;
-        //
+        // 
         // btnStopBulk
-        //
+        // 
         btnStopBulk.BackColor = Color.FromArgb(180, 0, 0);
         btnStopBulk.Enabled = false;
         btnStopBulk.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -374,17 +354,36 @@ partial class FacebookIdManagerForm
         btnStopBulk.TabIndex = 6;
         btnStopBulk.Text = "Stop";
         btnStopBulk.UseVisualStyleBackColor = false;
-        //
+        // 
+        // lblDelay
+        // 
+        lblDelay.AutoSize = true;
+        lblDelay.Location = new Point(200, 27);
+        lblDelay.Name = "lblDelay";
+        lblDelay.Size = new Size(67, 15);
+        lblDelay.TabIndex = 3;
+        lblDelay.Text = "Delay (sec):";
+        // 
+        // numDelay
+        // 
+        numDelay.Location = new Point(270, 24);
+        numDelay.Maximum = new decimal(new int[] { 3600, 0, 0, 0 });
+        numDelay.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+        numDelay.Name = "numDelay";
+        numDelay.Size = new Size(60, 23);
+        numDelay.TabIndex = 4;
+        numDelay.Value = new decimal(new int[] { 10, 0, 0, 0 });
+        // 
         // progressBarBulk
-        //
+        // 
         progressBarBulk.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         progressBarBulk.Location = new Point(15, 215);
         progressBarBulk.Name = "progressBarBulk";
         progressBarBulk.Size = new Size(490, 20);
         progressBarBulk.TabIndex = 7;
-        //
+        // 
         // lblBulkStatus
-        //
+        // 
         lblBulkStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         lblBulkStatus.ForeColor = Color.Gray;
         lblBulkStatus.Location = new Point(15, 245);
@@ -392,9 +391,9 @@ partial class FacebookIdManagerForm
         lblBulkStatus.Size = new Size(490, 25);
         lblBulkStatus.TabIndex = 8;
         lblBulkStatus.Text = "Import a CSV file with page URLs to begin bulk fetch";
-        //
+        // 
         // btnCancel
-        //
+        // 
         btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
         btnCancel.Location = new Point(458, 567);
         btnCancel.Name = "btnCancel";
@@ -402,9 +401,9 @@ partial class FacebookIdManagerForm
         btnCancel.TabIndex = 5;
         btnCancel.Text = "Close";
         btnCancel.UseVisualStyleBackColor = true;
-        //
+        // 
         // FacebookIdManagerForm
-        //
+        // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         CancelButton = btnCancel;

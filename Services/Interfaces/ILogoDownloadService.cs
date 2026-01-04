@@ -3,7 +3,7 @@ namespace nRun.Services.Interfaces;
 /// <summary>
 /// Interface for downloading and managing website logos
 /// </summary>
-public interface ILogoDownloadService
+public interface ILogoDownloadService : IDisposable
 {
     /// <summary>
     /// Downloads and processes a website logo

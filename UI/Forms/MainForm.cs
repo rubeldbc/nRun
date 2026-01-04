@@ -54,6 +54,7 @@ public partial class MainForm : Form
         btnStartStop.Click += BtnStartStop_Click;
         btnScrapeNow.Click += BtnScrapeNow_Click;
         btnSettings.Click += BtnSettings_Click;
+        btnAbout.Click += BtnAbout_Click;
 
         // Site list events
         btnAddSite.Click += BtnAddSite_Click;
@@ -116,6 +117,22 @@ public partial class MainForm : Form
 
         // Schedule checkbox handling
         olvTiktokSchedule.SubItemChecking += OlvTiktokSchedule_SubItemChecking;
+
+        // TikTok ID status checkbox and context menu
+        olvTiktokID.SubItemChecking += OlvTiktokID_SubItemChecking;
+        menuItemTkAddId.Click += MenuItemTkAddId_Click;
+        menuItemTkEditId.Click += MenuItemTkEditId_Click;
+        menuItemTkDeleteId.Click += MenuItemTkDeleteId_Click;
+        menuItemTkRefresh.Click += MenuItemTkRefresh_Click;
+        menuItemTkFetch.Click += MenuItemTkFetch_Click;
+
+        // Facebook ID status checkbox and context menu
+        olvFacebookID.SubItemChecking += OlvFacebookID_SubItemChecking;
+        menuItemFbAddId.Click += MenuItemFbAddId_Click;
+        menuItemFbEditId.Click += MenuItemFbEditId_Click;
+        menuItemFbDeleteId.Click += MenuItemFbDeleteId_Click;
+        menuItemFbRefresh.Click += MenuItemFbRefresh_Click;
+        menuItemFbFetch.Click += MenuItemFbFetch_Click;
 
         // TikTok data list formatting for change columns
         olvTiktokData.FormatCell += OlvTiktokData_FormatCell;
@@ -351,12 +368,18 @@ public partial class MainForm : Form
 
     #region Site Management
 
-    private void LoadSites()
+    private async Task LoadSitesAsync()
     {
-        var sites = ServiceContainer.Database.GetAllSites();
+        var sites = await ServiceContainer.Database.GetAllSitesAsync().ConfigureAwait(true);
         listBoxSites.DataSource = null;
         listBoxSites.DataSource = sites;
         listBoxSites.DisplayMember = "SiteName";
+    }
+
+    private void LoadSites()
+    {
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = LoadSitesAsync();
     }
 
     private void BtnAddSite_Click(object? sender, EventArgs e)
@@ -450,19 +473,31 @@ public partial class MainForm : Form
 
     #region Article Management
 
-    private void LoadArticles()
+    private async Task LoadArticlesAsync()
     {
         var limit = MaxDisplayedArticles;
         LogDebug($"Loading articles with limit: {limit}", "INFO");
-        _articles = ServiceContainer.Database.GetRecentNews(limit);
+        _articles = await ServiceContainer.Database.GetRecentNewsAsync(limit).ConfigureAwait(true);
         olvArticles.SetObjects(_articles);
         UpdateMemuraiButtonState();
     }
 
+    private void LoadArticles()
+    {
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = LoadArticlesAsync();
+    }
+
+    private async Task UpdateArticleCountAsync()
+    {
+        var count = await ServiceContainer.Database.GetNewsCountAsync().ConfigureAwait(true);
+        statusNewsCount.Text = $"{count} articles";
+    }
+
     private void UpdateArticleCount()
     {
-        var count = ServiceContainer.Database.GetNewsCount();
-        statusNewsCount.Text = $"{count} articles";
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = UpdateArticleCountAsync();
     }
 
     private void UpdateMemuraiButtonState()
@@ -641,9 +676,10 @@ public partial class MainForm : Form
                 // In no-scrap window - don't start, but set button to Stop state
                 _waitingForNoScrapEnd = true;
                 var remaining = GetNoScrapRemainingTime();
+                var (start, end) = ServiceContainer.NoScrapWindow.GetWindowTimes();
                 LogDebug($"═══════════════════════════════════════════════════", "WARNING");
                 LogDebug($"NO-SCRAPE WINDOW ACTIVE", "WARNING");
-                LogDebug($"Window: {dtpNoScrapStart.Value:HH:mm} - {dtpNoScrapEnd.Value:HH:mm}", "WARNING");
+                LogDebug($"Window: {DateTime.Today.Add(start):HH:mm} - {DateTime.Today.Add(end):HH:mm}", "WARNING");
                 LogDebug($"Time remaining: {remaining:hh\\:mm\\:ss}", "WARNING");
                 LogDebug($"Scraping will automatically start when window ends", "INFO");
                 LogDebug($"WebDriver will NOT be initialized during this time", "WARNING");
@@ -675,9 +711,10 @@ public partial class MainForm : Form
         if (IsInNoScrapWindow())
         {
             var remaining = GetNoScrapRemainingTime();
+            var (start, end) = ServiceContainer.NoScrapWindow.GetWindowTimes();
             MessageBox.Show(
                 $"Scraping is disabled during No-Scrape time window.\n\n" +
-                $"Window: {dtpNoScrapStart.Value:HH:mm} - {dtpNoScrapEnd.Value:HH:mm}\n" +
+                $"Window: {DateTime.Today.Add(start):HH:mm} - {DateTime.Today.Add(end):HH:mm}\n" +
                 $"Time remaining: {remaining:hh\\:mm\\:ss}",
                 "No-Scrape Active",
                 MessageBoxButtons.OK,
@@ -734,6 +771,12 @@ public partial class MainForm : Form
                 lblStatus.ForeColor = SystemColors.ControlText;
             }
         }
+    }
+
+    private void BtnAbout_Click(object? sender, EventArgs e)
+    {
+        using var form = new AboutForm();
+        form.ShowDialog(this);
     }
 
     #endregion
@@ -1024,22 +1067,34 @@ public partial class MainForm : Form
 
     #region TikTok Management
 
-    private void LoadTikTokProfiles()
+    private async Task LoadTikTokProfilesAsync()
     {
         if (!ServiceContainer.Database.IsConnected) return;
 
-        _tikTokProfiles = ServiceContainer.Database.GetAllTkProfiles();
+        _tikTokProfiles = await ServiceContainer.Database.GetAllTkProfilesAsync().ConfigureAwait(true);
         olvTiktokID.SetObjects(_tikTokProfiles);
+        UpdateTkInfo();
+    }
+
+    private void LoadTikTokProfiles()
+    {
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = LoadTikTokProfilesAsync();
+    }
+
+    private async Task LoadTikTokDataAsync(string? username = null, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        if (!ServiceContainer.Database.IsConnected) return;
+
+        _tikTokData = await ServiceContainer.Database.GetFilteredTkDataAsync(username, fromDate, toDate, 500).ConfigureAwait(true);
+        olvTiktokData.SetObjects(_tikTokData);
         UpdateTkInfo();
     }
 
     private void LoadTikTokData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        if (!ServiceContainer.Database.IsConnected) return;
-
-        _tikTokData = ServiceContainer.Database.GetFilteredTkData(username, fromDate, toDate, 500);
-        olvTiktokData.SetObjects(_tikTokData);
-        UpdateTkInfo();
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = LoadTikTokDataAsync(username, fromDate, toDate);
     }
 
     private void OlvTiktokData_FormatCell(object? sender, BrightIdeasSoftware.FormatCellEventArgs e)
@@ -1095,9 +1150,9 @@ public partial class MainForm : Form
         }
         cboFilterUsername.SelectedIndex = 0;
 
-        // Set date/time defaults (last 30 days, from midnight to now)
+        // Set date/time defaults (last 2 days)
         dtpFilterTo.Value = DateTime.Now;
-        dtpFilterFrom.Value = DateTime.Today.AddDays(-30);
+        dtpFilterFrom.Value = DateTime.Today.AddDays(-2);
     }
 
     private void BtnApplyFilter_Click(object? sender, EventArgs e)
@@ -1120,7 +1175,7 @@ public partial class MainForm : Form
     {
         cboFilterUsername.SelectedIndex = 0;
         dtpFilterTo.Value = DateTime.Now;
-        dtpFilterFrom.Value = DateTime.Today.AddDays(-30);
+        dtpFilterFrom.Value = DateTime.Today.AddDays(-2);
         ClearTikTokDataList();
         UpdateTkStatus("Filter cleared.");
     }
@@ -1195,6 +1250,106 @@ public partial class MainForm : Form
         LoadTikTokProfiles();
         InitializeFilterControls();
         UpdateTkStatus($"Refreshed. {_tikTokProfiles.Count} profiles loaded.");
+    }
+
+    private void OlvTiktokID_SubItemChecking(object? sender, BrightIdeasSoftware.SubItemCheckingEventArgs e)
+    {
+        if (e.RowObject is TkProfile profile)
+        {
+            profile.Status = e.NewValue == CheckState.Checked;
+            ServiceContainer.Database.UpdateTkProfileStatus(profile.UserId, profile.Status);
+            UpdateTkStatus($"@{profile.Username} status: {(profile.Status ? "Active" : "Inactive")}");
+        }
+    }
+
+    private void MenuItemTkAddId_Click(object? sender, EventArgs e)
+    {
+        BtnTkAddId_Click(sender, e);
+    }
+
+    private void MenuItemTkEditId_Click(object? sender, EventArgs e)
+    {
+        if (olvTiktokID.SelectedObject is not TkProfile profile)
+        {
+            MessageBox.Show("Please select a profile to edit.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new TikTokIdManagerForm(profile);
+        if (form.ShowDialog(this) == DialogResult.OK)
+        {
+            LoadTikTokProfiles();
+            UpdateTkStatus($"Updated profile: @{profile.Username}");
+        }
+    }
+
+    private void MenuItemTkDeleteId_Click(object? sender, EventArgs e)
+    {
+        BtnTkDeleteId_Click(sender, e);
+    }
+
+    private void MenuItemTkRefresh_Click(object? sender, EventArgs e)
+    {
+        BtnTkRefreshId_Click(sender, e);
+    }
+
+    private async void MenuItemTkFetch_Click(object? sender, EventArgs e)
+    {
+        if (olvTiktokID.SelectedObject is not TkProfile profile)
+        {
+            MessageBox.Show("Please select a profile to fetch.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        await FetchTikTokProfileAsync(profile);
+    }
+
+    private async Task FetchTikTokProfileAsync(TkProfile profile)
+    {
+        try
+        {
+            UpdateTkStatus($"Fetching @{profile.Username}...");
+            progressBarTk.Visible = true;
+            progressBarTk.Style = ProgressBarStyle.Marquee;
+
+            var scraper = new TikTokScraperService();
+            var data = await scraper.FetchStatsAsync(profile);
+
+            if (data != null)
+            {
+                var dataId = ServiceContainer.Database.AddTkData(data);
+                data.DataId = dataId;
+
+                // Add to data list display
+                _tikTokData.Insert(0, data);
+                int maxRows = Math.Max(10, _tikTokProfiles.Count * 2);
+                while (_tikTokData.Count > maxRows)
+                {
+                    _tikTokData.RemoveAt(_tikTokData.Count - 1);
+                }
+                olvTiktokData.SetObjects(_tikTokData);
+                UpdateTkInfo();
+
+                UpdateTkStatus($"Fetched @{profile.Username}: {data.FollowerCount:N0} followers");
+            }
+            else
+            {
+                UpdateTkStatus($"Failed to fetch @{profile.Username}");
+            }
+
+            scraper.Dispose();
+        }
+        catch (Exception ex)
+        {
+            UpdateTkStatus($"Error fetching @{profile.Username}: {ex.Message}");
+        }
+        finally
+        {
+            progressBarTk.Visible = false;
+            progressBarTk.Style = ProgressBarStyle.Blocks;
+        }
     }
 
     private void BtnTkAddSchedule_Click(object? sender, EventArgs e)
@@ -1413,117 +1568,35 @@ public partial class MainForm : Form
 
     private void UpdateNextScheduleLabel()
     {
-        var now = DateTime.Now;
-        var currentTime = now.TimeOfDay;
+        var activeSchedules = _tikTokSchedules.Where(s => s.IsActive).Select(s => s.Timing);
+        var result = ServiceContainer.ScheduleCalculation.CalculateNextSchedule(activeSchedules);
 
-        // Get active schedules
-        var activeSchedules = _tikTokSchedules.Where(s => s.IsActive).ToList();
-        if (activeSchedules.Count == 0)
+        if (result.NextScheduleTime == null)
         {
             lblTkNextSchedule.Text = "Next: No active schedules";
             statusTikTokSchedule.Text = "No schedules";
-            return;
-        }
-
-        // Find the next schedule time
-        TimeSpan? nextScheduleTime = null;
-        TimeSpan minDiff = TimeSpan.MaxValue;
-
-        foreach (var schedule in activeSchedules)
-        {
-            var scheduleTime = schedule.Timing;
-            TimeSpan diff;
-
-            if (scheduleTime > currentTime)
-            {
-                // Schedule is later today
-                diff = scheduleTime - currentTime;
-            }
-            else
-            {
-                // Schedule is tomorrow (already passed today)
-                diff = TimeSpan.FromDays(1) - currentTime + scheduleTime;
-            }
-
-            if (diff < minDiff)
-            {
-                minDiff = diff;
-                nextScheduleTime = scheduleTime;
-            }
-        }
-
-        if (nextScheduleTime.HasValue)
-        {
-            var scheduleTimeStr = DateTime.Today.Add(nextScheduleTime.Value).ToString("HH:mm");
-            var countdownStr = FormatCountdown(minDiff);
-            lblTkNextSchedule.Text = $"Next: {scheduleTimeStr} ({countdownStr})";
-            statusTikTokSchedule.Text = $"{scheduleTimeStr} ({countdownStr})";
-        }
-    }
-
-    private static string FormatCountdown(TimeSpan diff)
-    {
-        if (diff.TotalHours >= 1)
-        {
-            return $"{(int)diff.TotalHours}h {diff.Minutes:D2}m";
-        }
-        else if (diff.TotalMinutes >= 1)
-        {
-            return $"{diff.Minutes}m {diff.Seconds:D2}s";
         }
         else
         {
-            return $"{diff.Seconds}s";
+            lblTkNextSchedule.Text = $"Next: {result.FormattedTime} ({result.FormattedCountdown})";
+            statusTikTokSchedule.Text = $"{result.FormattedTime} ({result.FormattedCountdown})";
         }
     }
 
     private void UpdateFbNextScheduleLabel()
     {
-        var now = DateTime.Now;
-        var currentTime = now.TimeOfDay;
+        var activeSchedules = _facebookSchedules.Where(s => s.IsActive).Select(s => s.Timing);
+        var result = ServiceContainer.ScheduleCalculation.CalculateNextSchedule(activeSchedules);
 
-        // Get active schedules
-        var activeSchedules = _facebookSchedules.Where(s => s.IsActive).ToList();
-        if (activeSchedules.Count == 0)
+        if (result.NextScheduleTime == null)
         {
             lblFbNextSchedule.Text = "Next: No active schedules";
             statusFacebookSchedule.Text = "No schedules";
-            return;
         }
-
-        // Find the next schedule time
-        TimeSpan? nextScheduleTime = null;
-        TimeSpan minDiff = TimeSpan.MaxValue;
-
-        foreach (var schedule in activeSchedules)
+        else
         {
-            var scheduleTime = schedule.Timing;
-            TimeSpan diff;
-
-            if (scheduleTime > currentTime)
-            {
-                // Schedule is later today
-                diff = scheduleTime - currentTime;
-            }
-            else
-            {
-                // Schedule is tomorrow (already passed today)
-                diff = TimeSpan.FromDays(1) - currentTime + scheduleTime;
-            }
-
-            if (diff < minDiff)
-            {
-                minDiff = diff;
-                nextScheduleTime = scheduleTime;
-            }
-        }
-
-        if (nextScheduleTime.HasValue)
-        {
-            var scheduleTimeStr = DateTime.Today.Add(nextScheduleTime.Value).ToString("HH:mm");
-            var countdownStr = FormatCountdown(minDiff);
-            lblFbNextSchedule.Text = $"Next: {scheduleTimeStr} ({countdownStr})";
-            statusFacebookSchedule.Text = $"{scheduleTimeStr} ({countdownStr})";
+            lblFbNextSchedule.Text = $"Next: {result.FormattedTime} ({result.FormattedCountdown})";
+            statusFacebookSchedule.Text = $"{result.FormattedTime} ({result.FormattedCountdown})";
         }
     }
 
@@ -1630,24 +1703,7 @@ public partial class MainForm : Form
 
     private bool IsInNoScrapWindow()
     {
-        if (!chkNoScrapEnabled.Checked)
-            return false;
-
-        var now = DateTime.Now.TimeOfDay;
-        var start = dtpNoScrapStart.Value.TimeOfDay;
-        var end = dtpNoScrapEnd.Value.TimeOfDay;
-
-        // Handle overnight window (e.g., 22:00 to 06:00)
-        if (start <= end)
-        {
-            // Same day window (e.g., 01:00 to 06:00)
-            return now >= start && now < end;
-        }
-        else
-        {
-            // Overnight window (e.g., 22:00 to 06:00)
-            return now >= start || now < end;
-        }
+        return ServiceContainer.NoScrapWindow.IsInNoScrapWindow();
     }
 
     private void CheckNoScrapWindow()
@@ -1663,9 +1719,10 @@ public partial class MainForm : Form
             _backgroundScraper.Stop();
             _waitingForNoScrapEnd = true;
             _noScrapAutoStopped = true;
+            var (start, end) = ServiceContainer.NoScrapWindow.GetWindowTimes();
             LogDebug($"═══════════════════════════════════════════════════", "WARNING");
             LogDebug($"ENTERING NO-SCRAPE WINDOW", "WARNING");
-            LogDebug($"Window: {dtpNoScrapStart.Value:HH:mm} - {dtpNoScrapEnd.Value:HH:mm}", "WARNING");
+            LogDebug($"Window: {DateTime.Today.Add(start):HH:mm} - {DateTime.Today.Add(end):HH:mm}", "WARNING");
             LogDebug($"Scraping paused - WebDriver stopped", "WARNING");
             LogDebug($"═══════════════════════════════════════════════════", "WARNING");
         }
@@ -1691,33 +1748,7 @@ public partial class MainForm : Form
 
     private TimeSpan GetNoScrapRemainingTime()
     {
-        var now = DateTime.Now.TimeOfDay;
-        var end = dtpNoScrapEnd.Value.TimeOfDay;
-        var start = dtpNoScrapStart.Value.TimeOfDay;
-
-        TimeSpan remaining;
-
-        if (start <= end)
-        {
-            // Same day window
-            remaining = end - now;
-        }
-        else
-        {
-            // Overnight window
-            if (now >= start)
-            {
-                // We're in the evening part (e.g., after 22:00)
-                remaining = TimeSpan.FromDays(1) - now + end;
-            }
-            else
-            {
-                // We're in the morning part (e.g., before 06:00)
-                remaining = end - now;
-            }
-        }
-
-        return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+        return ServiceContainer.NoScrapWindow.GetRemainingTime();
     }
 
     private void UpdateNoScrapStatus()
@@ -1759,22 +1790,34 @@ public partial class MainForm : Form
 
     #endregion
 
-    private void LoadFacebookProfiles()
+    private async Task LoadFacebookProfilesAsync()
     {
         if (!ServiceContainer.Database.IsConnected) return;
 
-        _facebookProfiles = ServiceContainer.Database.GetAllFbProfiles();
+        _facebookProfiles = await ServiceContainer.Database.GetAllFbProfilesAsync().ConfigureAwait(true);
         olvFacebookID.SetObjects(_facebookProfiles);
+        UpdateFbInfo();
+    }
+
+    private void LoadFacebookProfiles()
+    {
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = LoadFacebookProfilesAsync();
+    }
+
+    private async Task LoadFacebookDataAsync(string? username = null, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        if (!ServiceContainer.Database.IsConnected) return;
+
+        _facebookData = await ServiceContainer.Database.GetFilteredFbDataAsync(username, fromDate, toDate, 500).ConfigureAwait(true);
+        olvFacebookData.SetObjects(_facebookData);
         UpdateFbInfo();
     }
 
     private void LoadFacebookData(string? username = null, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        if (!ServiceContainer.Database.IsConnected) return;
-
-        _facebookData = ServiceContainer.Database.GetFilteredFbData(username, fromDate, toDate, 500);
-        olvFacebookData.SetObjects(_facebookData);
-        UpdateFbInfo();
+        // Sync version for backwards compatibility - fires and forgets the async version
+        _ = LoadFacebookDataAsync(username, fromDate, toDate);
     }
 
     private void RefreshFbScheduleList()
@@ -1825,6 +1868,105 @@ public partial class MainForm : Form
     {
         LoadFacebookProfiles();
         InitializeFbFilterControls();
+    }
+
+    private void OlvFacebookID_SubItemChecking(object? sender, BrightIdeasSoftware.SubItemCheckingEventArgs e)
+    {
+        if (e.RowObject is FbProfile profile)
+        {
+            profile.Status = e.NewValue == CheckState.Checked;
+            ServiceContainer.Database.UpdateFbProfileStatus(profile.UserId, profile.Status);
+            UpdateFbStatus($"{profile.Username} status: {(profile.Status ? "Active" : "Inactive")}");
+        }
+    }
+
+    private void MenuItemFbAddId_Click(object? sender, EventArgs e)
+    {
+        BtnFbAddId_Click(sender, e);
+    }
+
+    private void MenuItemFbEditId_Click(object? sender, EventArgs e)
+    {
+        if (olvFacebookID.SelectedObject is not FbProfile profile)
+        {
+            MessageBox.Show("Please select a profile to edit.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new FacebookIdManagerForm(profile);
+        if (form.ShowDialog(this) == DialogResult.OK)
+        {
+            LoadFacebookProfiles();
+            UpdateFbStatus($"Updated profile: {profile.Username}");
+        }
+    }
+
+    private void MenuItemFbDeleteId_Click(object? sender, EventArgs e)
+    {
+        BtnFbDeleteId_Click(sender, e);
+    }
+
+    private void MenuItemFbRefresh_Click(object? sender, EventArgs e)
+    {
+        BtnFbRefreshId_Click(sender, e);
+    }
+
+    private async void MenuItemFbFetch_Click(object? sender, EventArgs e)
+    {
+        if (olvFacebookID.SelectedObject is not FbProfile profile)
+        {
+            MessageBox.Show("Please select a profile to fetch.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        await FetchFacebookProfileAsync(profile);
+    }
+
+    private async Task FetchFacebookProfileAsync(FbProfile profile)
+    {
+        try
+        {
+            UpdateFbStatus($"Fetching {profile.Username}...");
+            progressBarFb.Visible = true;
+            progressBarFb.Style = ProgressBarStyle.Marquee;
+
+            var scraper = new FacebookScraperService();
+            var data = await scraper.FetchStatsAsync(profile);
+
+            if (data != null)
+            {
+                var dataId = ServiceContainer.Database.AddFbData(data);
+                data.DataId = dataId;
+
+                // Add to data list display
+                _facebookData.Insert(0, data);
+                while (_facebookData.Count > 500)
+                {
+                    _facebookData.RemoveAt(_facebookData.Count - 1);
+                }
+                olvFacebookData.SetObjects(_facebookData);
+                UpdateFbInfo();
+
+                UpdateFbStatus($"Fetched {profile.Username}: {data.FollowersCount:N0} followers");
+            }
+            else
+            {
+                UpdateFbStatus($"Failed to fetch {profile.Username}");
+            }
+
+            scraper.Dispose();
+        }
+        catch (Exception ex)
+        {
+            UpdateFbStatus($"Error fetching {profile.Username}: {ex.Message}");
+        }
+        finally
+        {
+            progressBarFb.Visible = false;
+            progressBarFb.Style = ProgressBarStyle.Blocks;
+        }
     }
 
     private void BtnFbAddSchedule_Click(object? sender, EventArgs e)
@@ -1958,7 +2100,7 @@ public partial class MainForm : Form
     {
         cboFbFilterUsername.SelectedIndex = 0;
         dtpFbFilterTo.Value = DateTime.Now;
-        dtpFbFilterFrom.Value = DateTime.Today.AddDays(-30);
+        dtpFbFilterFrom.Value = DateTime.Today.AddDays(-2);
         LoadFacebookData();
     }
 
@@ -1980,9 +2122,9 @@ public partial class MainForm : Form
         }
         cboFbFilterUsername.SelectedIndex = 0;
 
-        // Set date/time defaults (last 30 days)
+        // Set date/time defaults (last 2 days)
         dtpFbFilterTo.Value = DateTime.Now;
-        dtpFbFilterFrom.Value = DateTime.Today.AddDays(-30);
+        dtpFbFilterFrom.Value = DateTime.Today.AddDays(-2);
     }
 
     private void OlvFacebookData_FormatCell(object? sender, BrightIdeasSoftware.FormatCellEventArgs e)

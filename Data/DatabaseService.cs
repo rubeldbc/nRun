@@ -1,5 +1,6 @@
 using Npgsql;
 using nRun.Models;
+using nRun.Services;
 using nRun.Services.Interfaces;
 
 namespace nRun.Data;
@@ -12,6 +13,7 @@ public class DatabaseService : IDatabaseService
     private readonly ISettingsManager _settingsManager;
     private string _connectionString = string.Empty;
     private readonly object _lock = new();
+    private readonly SemaphoreSlim _asyncLock = new(1, 1);
     private bool _isInitialized = false;
 
     public bool IsConnected => _isInitialized && !string.IsNullOrEmpty(_connectionString);
@@ -229,40 +231,46 @@ public class DatabaseService : IDatabaseService
     {
         if (!IsConnected) return new List<SiteInfo>();
 
-        lock (_lock)
+        return ServiceContainer.Cache.GetOrSet(CacheService.Keys.AllSites, () =>
         {
-            var sites = new List<SiteInfo>();
-            using var conn = GetConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM site_info ORDER BY site_name";
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            lock (_lock)
             {
-                sites.Add(MapSiteInfo(reader));
+                var sites = new List<SiteInfo>();
+                using var conn = GetConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM site_info ORDER BY site_name";
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    sites.Add(MapSiteInfo(reader));
+                }
+                return sites;
             }
-            return sites;
-        }
+        });
     }
 
     public List<SiteInfo> GetActiveSites()
     {
         if (!IsConnected) return new List<SiteInfo>();
 
-        lock (_lock)
+        return ServiceContainer.Cache.GetOrSet(CacheService.Keys.ActiveSites, () =>
         {
-            var sites = new List<SiteInfo>();
-            using var conn = GetConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM site_info WHERE is_active = TRUE ORDER BY site_name";
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            lock (_lock)
             {
-                sites.Add(MapSiteInfo(reader));
+                var sites = new List<SiteInfo>();
+                using var conn = GetConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM site_info WHERE is_active = TRUE ORDER BY site_name";
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    sites.Add(MapSiteInfo(reader));
+                }
+                return sites;
             }
-            return sites;
-        }
+        });
     }
 
     public SiteInfo? GetSiteById(string siteId)
@@ -307,7 +315,12 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("titleSelector", site.TitleSelector ?? "");
             cmd.Parameters.AddWithValue("bodySelector", site.BodySelector ?? "");
 
-            return cmd.ExecuteScalar()?.ToString() ?? site.SiteId;
+            var result = cmd.ExecuteScalar()?.ToString() ?? site.SiteId;
+
+            // Invalidate site caches
+            ServiceContainer.Cache.InvalidatePrefix("sites:");
+
+            return result;
         }
     }
 
@@ -344,6 +357,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("bodySelector", site.BodySelector ?? "");
 
             cmd.ExecuteNonQuery();
+
+            // Invalidate site caches
+            ServiceContainer.Cache.InvalidatePrefix("sites:");
         }
     }
 
@@ -376,6 +392,9 @@ public class DatabaseService : IDatabaseService
             cmd.CommandText = "DELETE FROM site_info WHERE site_id = @siteId";
             cmd.Parameters.AddWithValue("siteId", siteId);
             cmd.ExecuteNonQuery();
+
+            // Invalidate site caches
+            ServiceContainer.Cache.InvalidatePrefix("sites:");
         }
     }
 
@@ -573,40 +592,46 @@ public class DatabaseService : IDatabaseService
     {
         if (!IsConnected) return new List<TkProfile>();
 
-        lock (_lock)
+        return ServiceContainer.Cache.GetOrSet(CacheService.Keys.AllTkProfiles, () =>
         {
-            var profiles = new List<TkProfile>();
-            using var conn = GetConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM tk_profile ORDER BY username";
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            lock (_lock)
             {
-                profiles.Add(MapTkProfile(reader));
+                var profiles = new List<TkProfile>();
+                using var conn = GetConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM tk_profile ORDER BY username";
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    profiles.Add(MapTkProfile(reader));
+                }
+                return profiles;
             }
-            return profiles;
-        }
+        });
     }
 
     public List<TkProfile> GetActiveTkProfiles()
     {
         if (!IsConnected) return new List<TkProfile>();
 
-        lock (_lock)
+        return ServiceContainer.Cache.GetOrSet(CacheService.Keys.ActiveTkProfiles, () =>
         {
-            var profiles = new List<TkProfile>();
-            using var conn = GetConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM tk_profile WHERE status = TRUE ORDER BY username";
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            lock (_lock)
             {
-                profiles.Add(MapTkProfile(reader));
+                var profiles = new List<TkProfile>();
+                using var conn = GetConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM tk_profile WHERE status = TRUE ORDER BY username";
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    profiles.Add(MapTkProfile(reader));
+                }
+                return profiles;
             }
-            return profiles;
-        }
+        });
     }
 
     public TkProfile? GetTkProfileById(long userId)
@@ -677,6 +702,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("createdAt", profile.CreatedAt);
 
             cmd.ExecuteNonQuery();
+
+            // Invalidate TikTok profile caches
+            ServiceContainer.Cache.InvalidatePrefix("tk:");
         }
     }
 
@@ -705,6 +733,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("createdAtTs", profile.CreatedAtTs.HasValue ? profile.CreatedAtTs.Value : DBNull.Value);
 
             cmd.ExecuteNonQuery();
+
+            // Invalidate TikTok profile caches
+            ServiceContainer.Cache.InvalidatePrefix("tk:");
         }
     }
 
@@ -720,6 +751,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("status", status);
             cmd.Parameters.AddWithValue("userId", userId);
             cmd.ExecuteNonQuery();
+
+            // Invalidate TikTok profile caches
+            ServiceContainer.Cache.InvalidatePrefix("tk:");
         }
     }
 
@@ -734,6 +768,9 @@ public class DatabaseService : IDatabaseService
             cmd.CommandText = "DELETE FROM tk_profile WHERE user_id = @userId";
             cmd.Parameters.AddWithValue("userId", userId);
             cmd.ExecuteNonQuery();
+
+            // Invalidate TikTok profile caches
+            ServiceContainer.Cache.InvalidatePrefix("tk:");
         }
     }
 
@@ -1042,40 +1079,46 @@ public class DatabaseService : IDatabaseService
     {
         if (!IsConnected) return new List<FbProfile>();
 
-        lock (_lock)
+        return ServiceContainer.Cache.GetOrSet(CacheService.Keys.AllFbProfiles, () =>
         {
-            var profiles = new List<FbProfile>();
-            using var conn = GetConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM fb_profile ORDER BY username";
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            lock (_lock)
             {
-                profiles.Add(MapFbProfile(reader));
+                var profiles = new List<FbProfile>();
+                using var conn = GetConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM fb_profile ORDER BY username";
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    profiles.Add(MapFbProfile(reader));
+                }
+                return profiles;
             }
-            return profiles;
-        }
+        });
     }
 
     public List<FbProfile> GetActiveFbProfiles()
     {
         if (!IsConnected) return new List<FbProfile>();
 
-        lock (_lock)
+        return ServiceContainer.Cache.GetOrSet(CacheService.Keys.ActiveFbProfiles, () =>
         {
-            var profiles = new List<FbProfile>();
-            using var conn = GetConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT * FROM fb_profile WHERE status = TRUE ORDER BY username";
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            lock (_lock)
             {
-                profiles.Add(MapFbProfile(reader));
+                var profiles = new List<FbProfile>();
+                using var conn = GetConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM fb_profile WHERE status = TRUE ORDER BY username";
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    profiles.Add(MapFbProfile(reader));
+                }
+                return profiles;
             }
-            return profiles;
-        }
+        });
     }
 
     public FbProfile? GetFbProfileById(long userId)
@@ -1148,6 +1191,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("createdAt", profile.CreatedAt);
 
             cmd.ExecuteNonQuery();
+
+            // Invalidate Facebook profile caches
+            ServiceContainer.Cache.InvalidatePrefix("fb:");
         }
     }
 
@@ -1180,6 +1226,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("region", profile.Region);
 
             cmd.ExecuteNonQuery();
+
+            // Invalidate Facebook profile caches
+            ServiceContainer.Cache.InvalidatePrefix("fb:");
         }
     }
 
@@ -1195,6 +1244,9 @@ public class DatabaseService : IDatabaseService
             cmd.Parameters.AddWithValue("status", status);
             cmd.Parameters.AddWithValue("userId", userId);
             cmd.ExecuteNonQuery();
+
+            // Invalidate Facebook profile caches
+            ServiceContainer.Cache.InvalidatePrefix("fb:");
         }
     }
 
@@ -1209,6 +1261,9 @@ public class DatabaseService : IDatabaseService
             cmd.CommandText = "DELETE FROM fb_profile WHERE user_id = @userId";
             cmd.Parameters.AddWithValue("userId", userId);
             cmd.ExecuteNonQuery();
+
+            // Invalidate Facebook profile caches
+            ServiceContainer.Cache.InvalidatePrefix("fb:");
         }
     }
 
@@ -1520,6 +1575,317 @@ public class DatabaseService : IDatabaseService
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_name IN ('fb_profile', 'fb_data')";
             return Convert.ToInt64(cmd.ExecuteScalar()) == 2;
+        }
+    }
+
+    #endregion
+
+    #region Async Methods
+
+    public async Task<List<SiteInfo>> GetAllSitesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<SiteInfo>();
+
+        return await ServiceContainer.Cache.GetOrSetAsync(CacheService.Keys.AllSites, async () =>
+        {
+            await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var sites = new List<SiteInfo>();
+                await using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM site_info ORDER BY site_name";
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    sites.Add(MapSiteInfo(reader));
+                }
+                return sites;
+            }
+            finally
+            {
+                _asyncLock.Release();
+            }
+        }).ConfigureAwait(false);
+    }
+
+    public async Task<List<NewsInfo>> GetRecentNewsAsync(int limit = 100, CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<NewsInfo>();
+
+        await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var news = new List<NewsInfo>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT n.*, s.site_name, s.site_logo
+                FROM news_info n
+                JOIN site_info s ON n.site_id = s.site_id
+                ORDER BY n.created_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                news.Add(MapNewsInfo(reader));
+            }
+            return news;
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
+    }
+
+    public async Task<long> GetNewsCountAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return 0;
+
+        await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM news_info";
+            var result = await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            return Convert.ToInt64(result);
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
+    }
+
+    public async Task<List<TkProfile>> GetAllTkProfilesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<TkProfile>();
+
+        return await ServiceContainer.Cache.GetOrSetAsync(CacheService.Keys.AllTkProfiles, async () =>
+        {
+            await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var profiles = new List<TkProfile>();
+                await using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM tk_profile ORDER BY nickname";
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    profiles.Add(MapTkProfile(reader));
+                }
+                return profiles;
+            }
+            finally
+            {
+                _asyncLock.Release();
+            }
+        }).ConfigureAwait(false);
+    }
+
+    public async Task<List<TkData>> GetRecentTkDataAsync(int limit = 100, CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<TkData>();
+
+        await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var data = new List<TkData>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT d.*, p.username, p.nickname
+                FROM tk_data d
+                JOIN tk_profile p ON d.user_id = p.user_id
+                ORDER BY d.recorded_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                data.Add(MapTkData(reader));
+            }
+            return data;
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
+    }
+
+    public async Task<List<TkData>> GetFilteredTkDataAsync(string? username = null, DateTime? fromDate = null, DateTime? toDate = null, int limit = 500, CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<TkData>();
+
+        await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var data = new List<TkData>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = conn.CreateCommand();
+
+            var whereClause = new List<string>();
+            if (!string.IsNullOrEmpty(username))
+            {
+                whereClause.Add("p.username = @username");
+                cmd.Parameters.AddWithValue("username", username);
+            }
+            if (fromDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at >= @fromDate");
+                cmd.Parameters.AddWithValue("fromDate", fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at <= @toDate");
+                cmd.Parameters.AddWithValue("toDate", toDate.Value.AddDays(1));
+            }
+
+            var where = whereClause.Count > 0 ? "WHERE " + string.Join(" AND ", whereClause) : "";
+            cmd.CommandText = $@"
+                SELECT d.*, p.username, p.nickname
+                FROM tk_data d
+                JOIN tk_profile p ON d.user_id = p.user_id
+                {where}
+                ORDER BY d.recorded_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                data.Add(MapTkData(reader));
+            }
+            return data;
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
+    }
+
+    public async Task<List<FbProfile>> GetAllFbProfilesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<FbProfile>();
+
+        return await ServiceContainer.Cache.GetOrSetAsync(CacheService.Keys.AllFbProfiles, async () =>
+        {
+            await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var profiles = new List<FbProfile>();
+                await using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM fb_profile ORDER BY username";
+
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    profiles.Add(MapFbProfile(reader));
+                }
+                return profiles;
+            }
+            finally
+            {
+                _asyncLock.Release();
+            }
+        }).ConfigureAwait(false);
+    }
+
+    public async Task<List<FbData>> GetRecentFbDataAsync(int limit = 100, CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<FbData>();
+
+        await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var data = new List<FbData>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT d.*, p.username, p.nickname
+                FROM fb_data d
+                JOIN fb_profile p ON d.user_id = p.user_id
+                ORDER BY d.recorded_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                data.Add(MapFbData(reader));
+            }
+            return data;
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
+    }
+
+    public async Task<List<FbData>> GetFilteredFbDataAsync(string? username = null, DateTime? fromDate = null, DateTime? toDate = null, int limit = 500, CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected) return new List<FbData>();
+
+        await _asyncLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var data = new List<FbData>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = conn.CreateCommand();
+
+            var whereClause = new List<string>();
+            if (!string.IsNullOrEmpty(username))
+            {
+                whereClause.Add("p.username = @username");
+                cmd.Parameters.AddWithValue("username", username);
+            }
+            if (fromDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at >= @fromDate");
+                cmd.Parameters.AddWithValue("fromDate", fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                whereClause.Add("d.recorded_at <= @toDate");
+                cmd.Parameters.AddWithValue("toDate", toDate.Value.AddDays(1));
+            }
+
+            var where = whereClause.Count > 0 ? "WHERE " + string.Join(" AND ", whereClause) : "";
+            cmd.CommandText = $@"
+                SELECT d.*, p.username, p.nickname
+                FROM fb_data d
+                JOIN fb_profile p ON d.user_id = p.user_id
+                {where}
+                ORDER BY d.recorded_at DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("limit", limit);
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                data.Add(MapFbData(reader));
+            }
+            return data;
+        }
+        finally
+        {
+            _asyncLock.Release();
         }
     }
 

@@ -57,7 +57,13 @@ public class AppSettings
             Port = DbPort,
             Database = DbName,
             Username = DbUser,
-            Password = DbPassword
+            Password = DbPassword,
+            // Connection pooling settings
+            Pooling = true,
+            MinPoolSize = 1,
+            MaxPoolSize = 20,
+            ConnectionIdleLifetime = 300, // 5 minutes
+            ConnectionPruningInterval = 10
         };
         return builder.ConnectionString;
     }
@@ -82,7 +88,13 @@ public class DbConnectionSettings
             Port = Port,
             Database = Database,
             Username = Username,
-            Password = Password
+            Password = Password,
+            // Connection pooling settings
+            Pooling = true,
+            MinPoolSize = 1,
+            MaxPoolSize = 20,
+            ConnectionIdleLifetime = 300,
+            ConnectionPruningInterval = 10
         };
         return builder.ConnectionString;
     }
@@ -95,7 +107,10 @@ public class DbConnectionSettings
             Port = Port,
             Database = "postgres",
             Username = Username,
-            Password = Password
+            Password = Password,
+            Pooling = true,
+            MinPoolSize = 1,
+            MaxPoolSize = 5
         };
         return builder.ConnectionString;
     }

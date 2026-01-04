@@ -302,4 +302,10 @@ public class LogoDownloadService : ILogoDownloadService
     }
 
     public string GetLogosFolder() => _logosFolder;
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

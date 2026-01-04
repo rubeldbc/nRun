@@ -25,6 +25,16 @@ public partial class TikTokIdManagerForm : Form
         SetupBulkListColumns();
     }
 
+    public TikTokIdManagerForm(TkProfile existingProfile) : this()
+    {
+        // Pre-fill the URL textbox for editing
+        txtProfileUrl.Text = $"https://www.tiktok.com/@{existingProfile.Username}";
+        _fetchedProfile = existingProfile;
+        DisplayProfile(existingProfile);
+        btnSave.Enabled = true;
+        Text = "Edit TikTok Profile";
+    }
+
     private void SetupEventHandlers()
     {
         btnFetch.Click += BtnFetch_Click;
