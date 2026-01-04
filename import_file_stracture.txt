@@ -1,0 +1,22 @@
+tiktok (no header)
+--------
+https://www.tiktok.com/@username1
+https://www.tiktok.com/@username2
+@username3
+username4
+
+facebook (no header)
+------------
+https://www.facebook.com/dbcnews.tv,news,media,BD
+https://www.facebook.com/kalaborta,entertainment,page,BD
+https://www.facebook.com/somoytvnews,news,media,BD
+
+news scrap
+--------------
+header
+siteName	siteUrl	latestLinkSelector	titleSelector	bodySelector	Category	Country
+
+body
+siteName	siteUrl	latestLinkSelector	titleSelector	bodySelector	Category	Country
+Prothom Alo	https://www.prothomalo.com	.title-link	h1.title	.story-content	news	BD
+Kaler Kantho	https://www.kalerkantho.com	.headline a	h1	.article-body	news	BD
