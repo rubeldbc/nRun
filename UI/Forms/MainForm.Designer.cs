@@ -173,16 +173,13 @@ partial class MainForm
         toolStripSeparator4 = new ToolStripSeparator();
         lblStatus = new ToolStripLabel();
         statusStrip = new StatusStrip();
-        // News Scraping status items
         statusNewsLabel = new ToolStripStatusLabel();
         statusNewsProgress = new ToolStripProgressBar();
         statusNewsCount = new ToolStripStatusLabel();
         statusSeparator1 = new ToolStripStatusLabel();
-        // TikTok status items
         statusTikTokLabel = new ToolStripStatusLabel();
         statusTikTokSchedule = new ToolStripStatusLabel();
         statusSeparator2 = new ToolStripStatusLabel();
-        // Facebook status items
         statusFacebookLabel = new ToolStripStatusLabel();
         statusFacebookSchedule = new ToolStripStatusLabel();
         timerScheduleCountdown = new System.Windows.Forms.Timer(components);
@@ -250,7 +247,7 @@ partial class MainForm
         tabControlMain.Location = new Point(0, 25);
         tabControlMain.Name = "tabControlMain";
         tabControlMain.SelectedIndex = 0;
-        tabControlMain.Size = new Size(1133, 636);
+        tabControlMain.Size = new Size(1133, 634);
         tabControlMain.TabIndex = 0;
         // 
         // tabPageNewsScrp
@@ -259,7 +256,7 @@ partial class MainForm
         tabPageNewsScrp.Location = new Point(4, 24);
         tabPageNewsScrp.Name = "tabPageNewsScrp";
         tabPageNewsScrp.Padding = new Padding(3);
-        tabPageNewsScrp.Size = new Size(1125, 608);
+        tabPageNewsScrp.Size = new Size(1125, 606);
         tabPageNewsScrp.TabIndex = 0;
         tabPageNewsScrp.Text = "News Scrp";
         tabPageNewsScrp.UseVisualStyleBackColor = true;
@@ -277,7 +274,7 @@ partial class MainForm
         // splitContainerMain.Panel2
         // 
         splitContainerMain.Panel2.Controls.Add(panelRight);
-        splitContainerMain.Size = new Size(1119, 602);
+        splitContainerMain.Size = new Size(1119, 600);
         splitContainerMain.SplitterDistance = 283;
         splitContainerMain.TabIndex = 0;
         // 
@@ -290,7 +287,7 @@ partial class MainForm
         panelLeft.Dock = DockStyle.Fill;
         panelLeft.Location = new Point(0, 0);
         panelLeft.Name = "panelLeft";
-        panelLeft.Size = new Size(283, 602);
+        panelLeft.Size = new Size(283, 600);
         panelLeft.TabIndex = 0;
         // 
         // listBoxSites
@@ -300,7 +297,7 @@ partial class MainForm
         listBoxSites.ItemHeight = 15;
         listBoxSites.Location = new Point(0, 50);
         listBoxSites.Name = "listBoxSites";
-        listBoxSites.Size = new Size(283, 487);
+        listBoxSites.Size = new Size(283, 485);
         listBoxSites.TabIndex = 2;
         // 
         // panelNoScrap
@@ -311,7 +308,7 @@ partial class MainForm
         panelNoScrap.Controls.Add(lblNoScrapEnd);
         panelNoScrap.Controls.Add(dtpNoScrapEnd);
         panelNoScrap.Dock = DockStyle.Bottom;
-        panelNoScrap.Location = new Point(0, 537);
+        panelNoScrap.Location = new Point(0, 535);
         panelNoScrap.Name = "panelNoScrap";
         panelNoScrap.Size = new Size(283, 65);
         panelNoScrap.TabIndex = 3;
@@ -321,7 +318,7 @@ partial class MainForm
         chkNoScrapEnabled.AutoSize = true;
         chkNoScrapEnabled.Location = new Point(10, 5);
         chkNoScrapEnabled.Name = "chkNoScrapEnabled";
-        chkNoScrapEnabled.Size = new Size(149, 19);
+        chkNoScrapEnabled.Size = new Size(150, 19);
         chkNoScrapEnabled.TabIndex = 0;
         chkNoScrapEnabled.Text = "Enable No-Scrape Time";
         chkNoScrapEnabled.UseVisualStyleBackColor = true;
@@ -440,7 +437,7 @@ partial class MainForm
         panelRight.Dock = DockStyle.Fill;
         panelRight.Location = new Point(0, 0);
         panelRight.Name = "panelRight";
-        panelRight.Size = new Size(832, 602);
+        panelRight.Size = new Size(832, 600);
         panelRight.TabIndex = 0;
         // 
         // splitContainerRight
@@ -457,8 +454,8 @@ partial class MainForm
         // splitContainerRight.Panel2
         // 
         splitContainerRight.Panel2.Controls.Add(panelDebug);
-        splitContainerRight.Size = new Size(832, 602);
-        splitContainerRight.SplitterDistance = 420;
+        splitContainerRight.Size = new Size(832, 600);
+        splitContainerRight.SplitterDistance = 418;
         splitContainerRight.TabIndex = 0;
         // 
         // olvArticles
@@ -476,7 +473,7 @@ partial class MainForm
         olvArticles.Location = new Point(0, 0);
         olvArticles.Name = "olvArticles";
         olvArticles.ShowGroups = false;
-        olvArticles.Size = new Size(832, 420);
+        olvArticles.Size = new Size(832, 418);
         olvArticles.TabIndex = 0;
         olvArticles.UseCompatibleStateImageBehavior = false;
         olvArticles.View = View.Details;
@@ -689,7 +686,7 @@ partial class MainForm
         tabPageTiktok.Location = new Point(4, 24);
         tabPageTiktok.Name = "tabPageTiktok";
         tabPageTiktok.Padding = new Padding(3);
-        tabPageTiktok.Size = new Size(1125, 608);
+        tabPageTiktok.Size = new Size(1125, 606);
         tabPageTiktok.TabIndex = 1;
         tabPageTiktok.Text = "Tiktok";
         tabPageTiktok.UseVisualStyleBackColor = true;
@@ -706,7 +703,7 @@ partial class MainForm
         tableLayoutPanel1.Name = "tableLayoutPanel1";
         tableLayoutPanel1.RowCount = 1;
         tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        tableLayoutPanel1.Size = new Size(1119, 602);
+        tableLayoutPanel1.Size = new Size(1119, 600);
         tableLayoutPanel1.TabIndex = 8;
         // 
         // tableLayoutPanel2
@@ -723,7 +720,7 @@ partial class MainForm
         tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
         tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
-        tableLayoutPanel2.Size = new Size(811, 596);
+        tableLayoutPanel2.Size = new Size(811, 594);
         tableLayoutPanel2.TabIndex = 0;
         // 
         // olvTiktokData
@@ -746,7 +743,7 @@ partial class MainForm
         olvTiktokData.Location = new Point(3, 38);
         olvTiktokData.Name = "olvTiktokData";
         olvTiktokData.ShowGroups = false;
-        olvTiktokData.Size = new Size(805, 520);
+        olvTiktokData.Size = new Size(805, 518);
         olvTiktokData.TabIndex = 0;
         olvTiktokData.UseCompatibleStateImageBehavior = false;
         olvTiktokData.View = View.Details;
@@ -926,7 +923,7 @@ partial class MainForm
         tableLayoutPanel4.Controls.Add(lblTkInfo, 1, 0);
         tableLayoutPanel4.Controls.Add(progressBarTk, 2, 0);
         tableLayoutPanel4.Dock = DockStyle.Fill;
-        tableLayoutPanel4.Location = new Point(3, 564);
+        tableLayoutPanel4.Location = new Point(3, 562);
         tableLayoutPanel4.Name = "tableLayoutPanel4";
         tableLayoutPanel4.RowCount = 1;
         tableLayoutPanel4.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -987,7 +984,7 @@ partial class MainForm
         tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
         tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 55F));
         tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 27F));
-        tableLayoutPanel5.Size = new Size(296, 596);
+        tableLayoutPanel5.Size = new Size(296, 594);
         tableLayoutPanel5.TabIndex = 1;
         // 
         // olvTiktokID
@@ -1002,7 +999,7 @@ partial class MainForm
         olvTiktokID.Location = new Point(3, 3);
         olvTiktokID.Name = "olvTiktokID";
         olvTiktokID.ShowGroups = false;
-        olvTiktokID.Size = new Size(290, 236);
+        olvTiktokID.Size = new Size(290, 235);
         olvTiktokID.TabIndex = 1;
         olvTiktokID.UseCompatibleStateImageBehavior = false;
         olvTiktokID.View = View.Details;
@@ -1024,7 +1021,7 @@ partial class MainForm
         lblTkNextSchedule.AutoSize = true;
         lblTkNextSchedule.Dock = DockStyle.Fill;
         lblTkNextSchedule.ForeColor = Color.OliveDrab;
-        lblTkNextSchedule.Location = new Point(3, 568);
+        lblTkNextSchedule.Location = new Point(3, 566);
         lblTkNextSchedule.Name = "lblTkNextSchedule";
         lblTkNextSchedule.Size = new Size(290, 28);
         lblTkNextSchedule.TabIndex = 7;
@@ -1037,7 +1034,7 @@ partial class MainForm
         btnTkStartStop.Dock = DockStyle.Fill;
         btnTkStartStop.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnTkStartStop.ForeColor = Color.White;
-        btnTkStartStop.Location = new Point(0, 513);
+        btnTkStartStop.Location = new Point(0, 511);
         btnTkStartStop.Margin = new Padding(0);
         btnTkStartStop.Name = "btnTkStartStop";
         btnTkStartStop.Size = new Size(296, 55);
@@ -1055,10 +1052,10 @@ partial class MainForm
         olvTiktokSchedule.Dock = DockStyle.Fill;
         olvTiktokSchedule.FullRowSelect = true;
         olvTiktokSchedule.GridLines = true;
-        olvTiktokSchedule.Location = new Point(3, 285);
+        olvTiktokSchedule.Location = new Point(3, 284);
         olvTiktokSchedule.Name = "olvTiktokSchedule";
         olvTiktokSchedule.ShowGroups = false;
-        olvTiktokSchedule.Size = new Size(290, 155);
+        olvTiktokSchedule.Size = new Size(290, 154);
         olvTiktokSchedule.TabIndex = 3;
         olvTiktokSchedule.UseCompatibleStateImageBehavior = false;
         olvTiktokSchedule.View = View.Details;
@@ -1091,7 +1088,7 @@ partial class MainForm
         tableLayoutPanel6.Controls.Add(btnTkDeleteId, 1, 0);
         tableLayoutPanel6.Controls.Add(btnTkAddId, 0, 0);
         tableLayoutPanel6.Dock = DockStyle.Fill;
-        tableLayoutPanel6.Location = new Point(3, 245);
+        tableLayoutPanel6.Location = new Point(3, 244);
         tableLayoutPanel6.Name = "tableLayoutPanel6";
         tableLayoutPanel6.RowCount = 1;
         tableLayoutPanel6.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
@@ -1143,7 +1140,7 @@ partial class MainForm
         tableLayoutPanel7.Controls.Add(btnTkDeleteSchedule, 2, 0);
         tableLayoutPanel7.Controls.Add(btnTkEditSchedule, 1, 0);
         tableLayoutPanel7.Dock = DockStyle.Fill;
-        tableLayoutPanel7.Location = new Point(3, 446);
+        tableLayoutPanel7.Location = new Point(3, 444);
         tableLayoutPanel7.Name = "tableLayoutPanel7";
         tableLayoutPanel7.RowCount = 1;
         tableLayoutPanel7.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1202,7 +1199,7 @@ partial class MainForm
         tableLayoutPanel8.Controls.Add(numTkFrequency, 1, 0);
         tableLayoutPanel8.Controls.Add(lblTkFrequency, 0, 0);
         tableLayoutPanel8.Dock = DockStyle.Fill;
-        tableLayoutPanel8.Location = new Point(3, 484);
+        tableLayoutPanel8.Location = new Point(3, 482);
         tableLayoutPanel8.Name = "tableLayoutPanel8";
         tableLayoutPanel8.RowCount = 1;
         tableLayoutPanel8.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1237,7 +1234,7 @@ partial class MainForm
         tabPageFacebook.Location = new Point(4, 24);
         tabPageFacebook.Name = "tabPageFacebook";
         tabPageFacebook.Padding = new Padding(3);
-        tabPageFacebook.Size = new Size(1125, 608);
+        tabPageFacebook.Size = new Size(1125, 606);
         tabPageFacebook.TabIndex = 2;
         tabPageFacebook.Text = "Facebook";
         tabPageFacebook.UseVisualStyleBackColor = true;
@@ -1254,7 +1251,7 @@ partial class MainForm
         tableLayoutPanelFb1.Name = "tableLayoutPanelFb1";
         tableLayoutPanelFb1.RowCount = 1;
         tableLayoutPanelFb1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        tableLayoutPanelFb1.Size = new Size(1119, 602);
+        tableLayoutPanelFb1.Size = new Size(1119, 600);
         tableLayoutPanelFb1.TabIndex = 0;
         // 
         // tableLayoutPanelFb2
@@ -1271,7 +1268,7 @@ partial class MainForm
         tableLayoutPanelFb2.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
         tableLayoutPanelFb2.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         tableLayoutPanelFb2.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
-        tableLayoutPanelFb2.Size = new Size(811, 596);
+        tableLayoutPanelFb2.Size = new Size(811, 594);
         tableLayoutPanelFb2.TabIndex = 0;
         // 
         // olvFacebookData
@@ -1292,7 +1289,7 @@ partial class MainForm
         olvFacebookData.Location = new Point(3, 38);
         olvFacebookData.Name = "olvFacebookData";
         olvFacebookData.ShowGroups = false;
-        olvFacebookData.Size = new Size(805, 520);
+        olvFacebookData.Size = new Size(805, 518);
         olvFacebookData.TabIndex = 0;
         olvFacebookData.UseCompatibleStateImageBehavior = false;
         olvFacebookData.View = View.Details;
@@ -1460,7 +1457,7 @@ partial class MainForm
         tableLayoutPanelFb4.Controls.Add(lblFbInfo, 1, 0);
         tableLayoutPanelFb4.Controls.Add(progressBarFb, 2, 0);
         tableLayoutPanelFb4.Dock = DockStyle.Fill;
-        tableLayoutPanelFb4.Location = new Point(3, 564);
+        tableLayoutPanelFb4.Location = new Point(3, 562);
         tableLayoutPanelFb4.Name = "tableLayoutPanelFb4";
         tableLayoutPanelFb4.RowCount = 1;
         tableLayoutPanelFb4.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1521,7 +1518,7 @@ partial class MainForm
         tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));
         tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 55F));
         tableLayoutPanelFb5.RowStyles.Add(new RowStyle(SizeType.Absolute, 27F));
-        tableLayoutPanelFb5.Size = new Size(296, 596);
+        tableLayoutPanelFb5.Size = new Size(296, 594);
         tableLayoutPanelFb5.TabIndex = 1;
         // 
         // olvFacebookID
@@ -1537,7 +1534,7 @@ partial class MainForm
         olvFacebookID.Location = new Point(3, 3);
         olvFacebookID.Name = "olvFacebookID";
         olvFacebookID.ShowGroups = false;
-        olvFacebookID.Size = new Size(290, 207);
+        olvFacebookID.Size = new Size(290, 206);
         olvFacebookID.TabIndex = 1;
         olvFacebookID.UseCompatibleStateImageBehavior = false;
         olvFacebookID.View = View.Details;
@@ -1565,7 +1562,7 @@ partial class MainForm
         lblFbNextSchedule.AutoSize = true;
         lblFbNextSchedule.Dock = DockStyle.Fill;
         lblFbNextSchedule.ForeColor = Color.OliveDrab;
-        lblFbNextSchedule.Location = new Point(3, 568);
+        lblFbNextSchedule.Location = new Point(3, 566);
         lblFbNextSchedule.Name = "lblFbNextSchedule";
         lblFbNextSchedule.Size = new Size(290, 28);
         lblFbNextSchedule.TabIndex = 7;
@@ -1578,7 +1575,7 @@ partial class MainForm
         btnFbStartStop.Dock = DockStyle.Fill;
         btnFbStartStop.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnFbStartStop.ForeColor = Color.White;
-        btnFbStartStop.Location = new Point(0, 513);
+        btnFbStartStop.Location = new Point(0, 511);
         btnFbStartStop.Margin = new Padding(0);
         btnFbStartStop.Name = "btnFbStartStop";
         btnFbStartStop.Size = new Size(296, 55);
@@ -1596,10 +1593,10 @@ partial class MainForm
         olvFacebookSchedule.Dock = DockStyle.Fill;
         olvFacebookSchedule.FullRowSelect = true;
         olvFacebookSchedule.GridLines = true;
-        olvFacebookSchedule.Location = new Point(3, 256);
+        olvFacebookSchedule.Location = new Point(3, 255);
         olvFacebookSchedule.Name = "olvFacebookSchedule";
         olvFacebookSchedule.ShowGroups = false;
-        olvFacebookSchedule.Size = new Size(290, 136);
+        olvFacebookSchedule.Size = new Size(290, 135);
         olvFacebookSchedule.TabIndex = 3;
         olvFacebookSchedule.UseCompatibleStateImageBehavior = false;
         olvFacebookSchedule.View = View.Details;
@@ -1632,7 +1629,7 @@ partial class MainForm
         tableLayoutPanelFb6.Controls.Add(btnFbDeleteId, 1, 0);
         tableLayoutPanelFb6.Controls.Add(btnFbAddId, 0, 0);
         tableLayoutPanelFb6.Dock = DockStyle.Fill;
-        tableLayoutPanelFb6.Location = new Point(3, 216);
+        tableLayoutPanelFb6.Location = new Point(3, 215);
         tableLayoutPanelFb6.Name = "tableLayoutPanelFb6";
         tableLayoutPanelFb6.RowCount = 1;
         tableLayoutPanelFb6.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
@@ -1684,7 +1681,7 @@ partial class MainForm
         tableLayoutPanelFb7.Controls.Add(btnFbDeleteSchedule, 2, 0);
         tableLayoutPanelFb7.Controls.Add(btnFbEditSchedule, 1, 0);
         tableLayoutPanelFb7.Dock = DockStyle.Fill;
-        tableLayoutPanelFb7.Location = new Point(3, 398);
+        tableLayoutPanelFb7.Location = new Point(3, 396);
         tableLayoutPanelFb7.Name = "tableLayoutPanelFb7";
         tableLayoutPanelFb7.RowCount = 1;
         tableLayoutPanelFb7.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -1747,7 +1744,7 @@ partial class MainForm
         tableLayoutPanelFb8.Controls.Add(lblFbChunkDelay, 0, 2);
         tableLayoutPanelFb8.Controls.Add(numFbChunkDelay, 1, 2);
         tableLayoutPanelFb8.Dock = DockStyle.Fill;
-        tableLayoutPanelFb8.Location = new Point(3, 436);
+        tableLayoutPanelFb8.Location = new Point(3, 434);
         tableLayoutPanelFb8.Name = "tableLayoutPanelFb8";
         tableLayoutPanelFb8.RowCount = 3;
         tableLayoutPanelFb8.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
@@ -1893,99 +1890,94 @@ partial class MainForm
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(39, 22);
         lblStatus.Text = "Ready";
-        //
+        // 
         // statusStrip
-        //
-        statusStrip.Items.AddRange(new ToolStripItem[] {
-            statusNewsLabel, statusNewsProgress, statusNewsCount, statusSeparator1,
-            statusTikTokLabel, statusTikTokSchedule, statusSeparator2,
-            statusFacebookLabel, statusFacebookSchedule });
-        statusStrip.Location = new Point(0, 661);
+        // 
+        statusStrip.Items.AddRange(new ToolStripItem[] { statusNewsLabel, statusNewsProgress, statusNewsCount, statusSeparator1, statusTikTokLabel, statusTikTokSchedule, statusSeparator2, statusFacebookLabel, statusFacebookSchedule });
+        statusStrip.Location = new Point(0, 659);
         statusStrip.Name = "statusStrip";
         statusStrip.Size = new Size(1133, 24);
         statusStrip.TabIndex = 2;
-        //
-        // statusNewsLabel - News Scraping status (Light Blue) - Spring for responsive width
-        //
+        // 
+        // statusNewsLabel
+        // 
         statusNewsLabel.BackColor = Color.LightCyan;
+        statusNewsLabel.BorderSides = ToolStripStatusLabelBorderSides.Left | ToolStripStatusLabelBorderSides.Top | ToolStripStatusLabelBorderSides.Right | ToolStripStatusLabelBorderSides.Bottom;
+        statusNewsLabel.BorderStyle = Border3DStyle.SunkenOuter;
         statusNewsLabel.Name = "statusNewsLabel";
+        statusNewsLabel.Size = new Size(269, 19);
         statusNewsLabel.Spring = true;
         statusNewsLabel.Text = "News: Ready";
         statusNewsLabel.TextAlign = ContentAlignment.MiddleLeft;
-        statusNewsLabel.BorderSides = ToolStripStatusLabelBorderSides.All;
-        statusNewsLabel.BorderStyle = Border3DStyle.SunkenOuter;
-        //
+        // 
         // statusNewsProgress
-        //
+        // 
         statusNewsProgress.BackColor = Color.LightCyan;
         statusNewsProgress.Name = "statusNewsProgress";
         statusNewsProgress.Size = new Size(80, 18);
         statusNewsProgress.Visible = false;
-        //
+        // 
         // statusNewsCount
-        //
+        // 
+        statusNewsCount.AutoSize = false;
         statusNewsCount.BackColor = Color.LightCyan;
+        statusNewsCount.BorderSides = ToolStripStatusLabelBorderSides.Left | ToolStripStatusLabelBorderSides.Top | ToolStripStatusLabelBorderSides.Right | ToolStripStatusLabelBorderSides.Bottom;
+        statusNewsCount.BorderStyle = Border3DStyle.SunkenOuter;
         statusNewsCount.Name = "statusNewsCount";
         statusNewsCount.Size = new Size(70, 19);
-        statusNewsCount.AutoSize = false;
         statusNewsCount.Text = "0 articles";
-        statusNewsCount.TextAlign = ContentAlignment.MiddleCenter;
-        statusNewsCount.BorderSides = ToolStripStatusLabelBorderSides.All;
-        statusNewsCount.BorderStyle = Border3DStyle.SunkenOuter;
-        //
+        // 
         // statusSeparator1
-        //
+        // 
         statusSeparator1.Name = "statusSeparator1";
-        statusSeparator1.Size = new Size(10, 19);
-        statusSeparator1.Text = "";
-        //
-        // statusTikTokLabel - TikTok status (Light Green) - Spring for responsive width
-        //
+        statusSeparator1.Size = new Size(0, 19);
+        // 
+        // statusTikTokLabel
+        // 
         statusTikTokLabel.BackColor = Color.Honeydew;
+        statusTikTokLabel.BorderSides = ToolStripStatusLabelBorderSides.Left | ToolStripStatusLabelBorderSides.Top | ToolStripStatusLabelBorderSides.Right | ToolStripStatusLabelBorderSides.Bottom;
+        statusTikTokLabel.BorderStyle = Border3DStyle.SunkenOuter;
         statusTikTokLabel.Name = "statusTikTokLabel";
+        statusTikTokLabel.Size = new Size(269, 19);
         statusTikTokLabel.Spring = true;
         statusTikTokLabel.Text = "TikTok: Ready";
         statusTikTokLabel.TextAlign = ContentAlignment.MiddleLeft;
-        statusTikTokLabel.BorderSides = ToolStripStatusLabelBorderSides.All;
-        statusTikTokLabel.BorderStyle = Border3DStyle.SunkenOuter;
-        //
+        // 
         // statusTikTokSchedule
-        //
+        // 
+        statusTikTokSchedule.AutoSize = false;
         statusTikTokSchedule.BackColor = Color.Honeydew;
+        statusTikTokSchedule.BorderSides = ToolStripStatusLabelBorderSides.Left | ToolStripStatusLabelBorderSides.Top | ToolStripStatusLabelBorderSides.Right | ToolStripStatusLabelBorderSides.Bottom;
+        statusTikTokSchedule.BorderStyle = Border3DStyle.SunkenOuter;
         statusTikTokSchedule.Name = "statusTikTokSchedule";
         statusTikTokSchedule.Size = new Size(120, 19);
-        statusTikTokSchedule.AutoSize = false;
         statusTikTokSchedule.Text = "Next: --:--";
-        statusTikTokSchedule.TextAlign = ContentAlignment.MiddleCenter;
-        statusTikTokSchedule.BorderSides = ToolStripStatusLabelBorderSides.All;
-        statusTikTokSchedule.BorderStyle = Border3DStyle.SunkenOuter;
-        //
+        // 
         // statusSeparator2
-        //
+        // 
         statusSeparator2.Name = "statusSeparator2";
-        statusSeparator2.Size = new Size(10, 19);
-        statusSeparator2.Text = "";
-        //
-        // statusFacebookLabel - Facebook status (Light Pink) - Spring for responsive width
-        //
+        statusSeparator2.Size = new Size(0, 19);
+        // 
+        // statusFacebookLabel
+        // 
         statusFacebookLabel.BackColor = Color.MistyRose;
+        statusFacebookLabel.BorderSides = ToolStripStatusLabelBorderSides.Left | ToolStripStatusLabelBorderSides.Top | ToolStripStatusLabelBorderSides.Right | ToolStripStatusLabelBorderSides.Bottom;
+        statusFacebookLabel.BorderStyle = Border3DStyle.SunkenOuter;
         statusFacebookLabel.Name = "statusFacebookLabel";
+        statusFacebookLabel.Size = new Size(269, 19);
         statusFacebookLabel.Spring = true;
         statusFacebookLabel.Text = "Facebook: Ready";
         statusFacebookLabel.TextAlign = ContentAlignment.MiddleLeft;
-        statusFacebookLabel.BorderSides = ToolStripStatusLabelBorderSides.All;
-        statusFacebookLabel.BorderStyle = Border3DStyle.SunkenOuter;
-        //
+        // 
         // statusFacebookSchedule
-        //
+        // 
+        statusFacebookSchedule.AutoSize = false;
         statusFacebookSchedule.BackColor = Color.MistyRose;
+        statusFacebookSchedule.BorderSides = ToolStripStatusLabelBorderSides.Left | ToolStripStatusLabelBorderSides.Top | ToolStripStatusLabelBorderSides.Right | ToolStripStatusLabelBorderSides.Bottom;
+        statusFacebookSchedule.BorderStyle = Border3DStyle.SunkenOuter;
         statusFacebookSchedule.Name = "statusFacebookSchedule";
         statusFacebookSchedule.Size = new Size(120, 19);
-        statusFacebookSchedule.AutoSize = false;
         statusFacebookSchedule.Text = "Next: --:--";
-        statusFacebookSchedule.TextAlign = ContentAlignment.MiddleCenter;
-        statusFacebookSchedule.BorderSides = ToolStripStatusLabelBorderSides.All;
-        statusFacebookSchedule.BorderStyle = Border3DStyle.SunkenOuter;
         // 
         // timerScheduleCountdown
         // 

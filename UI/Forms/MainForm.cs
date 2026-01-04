@@ -1262,12 +1262,24 @@ public partial class MainForm : Form
         }
         else
         {
+            // Check if there are any active schedules
+            var activeSchedules = _tikTokSchedules.Where(s => s.IsActive).ToList();
+            if (activeSchedules.Count == 0)
+            {
+                MessageBox.Show("Please add and enable at least one schedule first.", "No Active Schedules",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // Clear data list when starting new fetch
             ClearTikTokDataList();
 
             // Update settings before starting
             _tikTokCollector.UpdateDelaySeconds((int)numTkFrequency.Value);
             _tikTokCollector.UpdateSchedules(_tikTokSchedules);
+
+            // Set flag to skip immediate collection - wait for next schedule
+            _tikTokCollector.SkipInitialCollection = true;
             _tikTokCollector.Start();
         }
     }
@@ -1899,6 +1911,15 @@ public partial class MainForm : Form
         }
         else
         {
+            // Check if there are any active schedules
+            var activeSchedules = _facebookSchedules.Where(s => s.IsActive).ToList();
+            if (activeSchedules.Count == 0)
+            {
+                MessageBox.Show("Please add and enable at least one schedule first.", "No Active Schedules",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // Clear data list when starting new fetch
             ClearFacebookDataList();
 
@@ -1906,6 +1927,9 @@ public partial class MainForm : Form
             _facebookCollector.UpdateDelaySeconds((int)numFbFrequency.Value);
             _facebookCollector.UpdateChunkSettings((int)numFbChunkSize.Value, (int)numFbChunkDelay.Value);
             _facebookCollector.UpdateSchedules(_facebookSchedules);
+
+            // Set flag to skip immediate collection - wait for next schedule
+            _facebookCollector.SkipInitialCollection = true;
             _facebookCollector.Start();
         }
     }

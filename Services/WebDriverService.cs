@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Net.Http;
+using System.Net.Sockets;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Interactions;
@@ -211,7 +213,7 @@ public class WebDriverService : IDisposable
                 ReapplyAntiDetection();
                 return; // Success
             }
-            catch (WebDriverException ex)
+            catch (Exception ex) when (ex is WebDriverException || IsNetworkException(ex))
             {
                 lastException = ex;
 
@@ -219,7 +221,14 @@ public class WebDriverService : IDisposable
                 var isRendererTimeout = ex is WebDriverTimeoutException
                     || (ex.Message != null && ex.Message.Contains("Timed out receiving message from renderer", StringComparison.OrdinalIgnoreCase));
 
-                if (isRendererTimeout)
+                // Detect connection/network errors that require driver reset
+                var isConnectionError = IsNetworkException(ex)
+                    || (ex.Message != null && (
+                        ex.Message.Contains("connection was forcibly closed", StringComparison.OrdinalIgnoreCase) ||
+                        ex.Message.Contains("An error occurred while sending the request", StringComparison.OrdinalIgnoreCase) ||
+                        ex.Message.Contains("The HTTP request to the remote WebDriver", StringComparison.OrdinalIgnoreCase)));
+
+                if (isRendererTimeout && !isConnectionError)
                 {
                     try
                     {
@@ -588,6 +597,26 @@ return new List<IWebElement>();
         {
             // Ignore if simulation fails
         }
+    }
+
+    /// <summary>
+    /// Checks if the exception is a network-related exception (SocketException, HttpRequestException, etc.)
+    /// </summary>
+    private static bool IsNetworkException(Exception ex)
+    {
+        if (ex is SocketException || ex is HttpRequestException)
+            return true;
+
+        // Check inner exceptions recursively
+        var inner = ex.InnerException;
+        while (inner != null)
+        {
+            if (inner is SocketException || inner is HttpRequestException)
+                return true;
+            inner = inner.InnerException;
+        }
+
+        return false;
     }
 
     /// <summary>

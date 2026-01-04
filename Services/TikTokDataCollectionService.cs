@@ -17,6 +17,7 @@ public class TikTokDataCollectionService : IDisposable
     private List<TkSchedule> _schedules = new();
 
     public bool IsRunning { get; private set; }
+    public bool SkipInitialCollection { get; set; }
 
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<(int current, int total)>? ProgressChanged;
@@ -97,16 +98,26 @@ public class TikTokDataCollectionService : IDisposable
 
     private async Task RunCollectionLoop(CancellationToken ct)
     {
-        // Fetch data immediately on start
-        try
+        // Fetch data immediately on start unless SkipInitialCollection is set
+        if (!SkipInitialCollection)
         {
-            OnStatusChanged("Running initial data collection...");
-            await RunDataCollection(ct).ConfigureAwait(false);
+            try
+            {
+                OnStatusChanged("Running initial data collection...");
+                await RunDataCollection(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                OnStatusChanged($"Error in initial collection: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            OnStatusChanged($"Error in initial collection: {ex.Message}");
+            OnStatusChanged("Waiting for scheduled time...");
         }
+
+        // Reset the flag for future starts
+        SkipInitialCollection = false;
 
         // Then wait for scheduled times
         while (!ct.IsCancellationRequested)
