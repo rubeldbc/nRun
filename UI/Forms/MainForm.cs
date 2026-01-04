@@ -10,6 +10,9 @@ public partial class MainForm : Form
     private BackgroundScraperService? _backgroundScraper;
     private List<NewsInfo> _articles = new();
     private const int MaxLogLines = 5000;
+    private bool _noScrapAutoStopped = false; // Track if scraping was auto-stopped due to no-scrap window
+    private bool _userWantsScraping = false; // Track if user wants scraping to be active
+    private bool _waitingForNoScrapEnd = false; // Track if waiting for no-scrap window to end
 
     // TikTok related fields
     private TikTokDataCollectionService? _tikTokCollector;
@@ -106,6 +109,11 @@ public partial class MainForm : Form
         btnApplyFilter.Click += BtnApplyFilter_Click;
         btnClearFilter.Click += BtnClearFilter_Click;
 
+        // No-Scrape time window events
+        chkNoScrapEnabled.CheckedChanged += NoScrapSettings_Changed;
+        dtpNoScrapStart.ValueChanged += NoScrapSettings_Changed;
+        dtpNoScrapEnd.ValueChanged += NoScrapSettings_Changed;
+
         // Schedule checkbox handling
         olvTiktokSchedule.SubItemChecking += OlvTiktokSchedule_SubItemChecking;
 
@@ -192,6 +200,9 @@ public partial class MainForm : Form
         LoadFacebookSettings();
         LoadFacebookProfiles();
         InitializeFbFilterControls();
+
+        // Load No-Scrape settings
+        LoadNoScrapSettings();
     }
 
     private void LoadTikTokSettings()
@@ -303,6 +314,11 @@ public partial class MainForm : Form
             // Unsubscribe from list events
             olvTiktokData.FormatCell -= OlvTiktokData_FormatCell;
             olvTiktokSchedule.SubItemChecking -= OlvTiktokSchedule_SubItemChecking;
+
+            // Unsubscribe from no-scrap events
+            chkNoScrapEnabled.CheckedChanged -= NoScrapSettings_Changed;
+            dtpNoScrapStart.ValueChanged -= NoScrapSettings_Changed;
+            dtpNoScrapEnd.ValueChanged -= NoScrapSettings_Changed;
 
             // Stop and dispose background scraper
             _backgroundScraper?.Stop();
@@ -446,7 +462,7 @@ public partial class MainForm : Form
     private void UpdateArticleCount()
     {
         var count = ServiceContainer.Database.GetNewsCount();
-        statusArticleCount.Text = $"{count} articles";
+        statusNewsCount.Text = $"{count} articles";
     }
 
     private void UpdateMemuraiButtonState()
@@ -599,13 +615,49 @@ public partial class MainForm : Form
             return;
         }
 
-        if (_backgroundScraper.IsRunning)
+        if (_userWantsScraping)
         {
-            _backgroundScraper.Stop();
+            // User wants to stop
+            _userWantsScraping = false;
+            _waitingForNoScrapEnd = false;
+            _noScrapAutoStopped = false;
+
+            if (_backgroundScraper.IsRunning)
+            {
+                _backgroundScraper.Stop();
+            }
+
+            LogDebug("Scraping stopped by user", "INFO");
+            UpdateNoScrapStatus();
+            UpdateScraperButtonState(false);
         }
         else
         {
-            _backgroundScraper.Start();
+            // User wants to start
+            _userWantsScraping = true;
+
+            if (IsInNoScrapWindow())
+            {
+                // In no-scrap window - don't start, but set button to Stop state
+                _waitingForNoScrapEnd = true;
+                var remaining = GetNoScrapRemainingTime();
+                LogDebug($"═══════════════════════════════════════════════════", "WARNING");
+                LogDebug($"NO-SCRAPE WINDOW ACTIVE", "WARNING");
+                LogDebug($"Window: {dtpNoScrapStart.Value:HH:mm} - {dtpNoScrapEnd.Value:HH:mm}", "WARNING");
+                LogDebug($"Time remaining: {remaining:hh\\:mm\\:ss}", "WARNING");
+                LogDebug($"Scraping will automatically start when window ends", "INFO");
+                LogDebug($"WebDriver will NOT be initialized during this time", "WARNING");
+                LogDebug($"═══════════════════════════════════════════════════", "WARNING");
+                UpdateNoScrapStatus();
+                UpdateScraperButtonState(true);
+            }
+            else
+            {
+                // Not in no-scrap window - start normally
+                _waitingForNoScrapEnd = false;
+                _backgroundScraper.Start();
+                LogDebug("Scraping started", "INFO");
+            }
         }
     }
 
@@ -616,6 +668,20 @@ public partial class MainForm : Form
         if (!ServiceContainer.Database.IsConnected)
         {
             MessageBox.Show("Please configure database connection first.", "Not Connected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // Block during no-scrap window
+        if (IsInNoScrapWindow())
+        {
+            var remaining = GetNoScrapRemainingTime();
+            MessageBox.Show(
+                $"Scraping is disabled during No-Scrape time window.\n\n" +
+                $"Window: {dtpNoScrapStart.Value:HH:mm} - {dtpNoScrapEnd.Value:HH:mm}\n" +
+                $"Time remaining: {remaining:hh\\:mm\\:ss}",
+                "No-Scrape Active",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             return;
         }
 
@@ -631,8 +697,8 @@ public partial class MainForm : Form
         LogDebug($" Article Selector: {selectedSite.ArticleLinkSelector}", "INFO");
 
         btnScrapeNow.Enabled = false;
-        statusProgress.Visible = true;
-        statusProgress.Value = 0;
+        statusNewsProgress.Visible = true;
+        statusNewsProgress.Value = 0;
 
         try
         {
@@ -647,7 +713,7 @@ public partial class MainForm : Form
         finally
         {
             btnScrapeNow.Enabled = true;
-            statusProgress.Visible = false;
+            statusNewsProgress.Visible = false;
         }
     }
 
@@ -692,13 +758,13 @@ public partial class MainForm : Form
             return;
         }
 
-        statusProgress.Visible = true;
-        statusProgress.Maximum = progress.total;
-        statusProgress.Value = progress.current;
+        statusNewsProgress.Visible = true;
+        statusNewsProgress.Maximum = progress.total;
+        statusNewsProgress.Value = progress.current;
 
         if (progress.current >= progress.total)
         {
-            statusProgress.Visible = false;
+            statusNewsProgress.Visible = false;
         }
     }
 
@@ -710,8 +776,9 @@ public partial class MainForm : Form
             return;
         }
 
-        btnStartStop.Text = isRunning ? "Stop" : "Start";
-        btnStartStop.ForeColor = isRunning ? Color.Red : Color.Green;
+        // Use _userWantsScraping to determine button state
+        // This ensures button shows "Stop" when waiting for no-scrap window to end
+        UpdateScraperButtonState(_userWantsScraping);
     }
 
     #endregion
@@ -928,7 +995,7 @@ public partial class MainForm : Form
             return;
         }
 
-        statusLabel.Text = message;
+        statusNewsLabel.Text = $"News: {message}";
         lblStatus.Text = message;
 
         // Determine log level based on message content
@@ -1241,12 +1308,22 @@ public partial class MainForm : Form
         if (isRunning)
         {
             UpdateNextScheduleLabel();
-            timerScheduleCountdown.Start();
+            // Start timer if not already running (Facebook might have it running)
+            if (!timerScheduleCountdown.Enabled)
+            {
+                timerScheduleCountdown.Start();
+            }
         }
         else
         {
-            timerScheduleCountdown.Stop();
             lblTkNextSchedule.Text = "Next: --:-- (stopped)";
+            statusTikTokSchedule.Text = "(stopped)";
+            statusTikTokLabel.Text = "TikTok: Stopped";
+            // Only stop timer if Facebook is also not running
+            if (_facebookCollector == null || !_facebookCollector.IsRunning)
+            {
+                timerScheduleCountdown.Stop();
+            }
         }
     }
 
@@ -1290,6 +1367,7 @@ public partial class MainForm : Form
         }
 
         lblTkStatus.Text = message;
+        statusTikTokLabel.Text = $"TikTok: {message}";
     }
 
     private void UpdateTkInfo()
@@ -1305,7 +1383,20 @@ public partial class MainForm : Form
 
     private void TimerScheduleCountdown_Tick(object? sender, EventArgs e)
     {
-        UpdateNextScheduleLabel();
+        // Update TikTok countdown if running
+        if (_tikTokCollector != null && _tikTokCollector.IsRunning)
+        {
+            UpdateNextScheduleLabel();
+        }
+
+        // Update Facebook countdown if running
+        if (_facebookCollector != null && _facebookCollector.IsRunning)
+        {
+            UpdateFbNextScheduleLabel();
+        }
+
+        // Check if we're in the no-scrape time window
+        CheckNoScrapWindow();
     }
 
     private void UpdateNextScheduleLabel()
@@ -1318,6 +1409,7 @@ public partial class MainForm : Form
         if (activeSchedules.Count == 0)
         {
             lblTkNextSchedule.Text = "Next: No active schedules";
+            statusTikTokSchedule.Text = "No schedules";
             return;
         }
 
@@ -1353,6 +1445,7 @@ public partial class MainForm : Form
             var scheduleTimeStr = DateTime.Today.Add(nextScheduleTime.Value).ToString("HH:mm");
             var countdownStr = FormatCountdown(minDiff);
             lblTkNextSchedule.Text = $"Next: {scheduleTimeStr} ({countdownStr})";
+            statusTikTokSchedule.Text = $"{scheduleTimeStr} ({countdownStr})";
         }
     }
 
@@ -1369,6 +1462,56 @@ public partial class MainForm : Form
         else
         {
             return $"{diff.Seconds}s";
+        }
+    }
+
+    private void UpdateFbNextScheduleLabel()
+    {
+        var now = DateTime.Now;
+        var currentTime = now.TimeOfDay;
+
+        // Get active schedules
+        var activeSchedules = _facebookSchedules.Where(s => s.IsActive).ToList();
+        if (activeSchedules.Count == 0)
+        {
+            lblFbNextSchedule.Text = "Next: No active schedules";
+            statusFacebookSchedule.Text = "No schedules";
+            return;
+        }
+
+        // Find the next schedule time
+        TimeSpan? nextScheduleTime = null;
+        TimeSpan minDiff = TimeSpan.MaxValue;
+
+        foreach (var schedule in activeSchedules)
+        {
+            var scheduleTime = schedule.Timing;
+            TimeSpan diff;
+
+            if (scheduleTime > currentTime)
+            {
+                // Schedule is later today
+                diff = scheduleTime - currentTime;
+            }
+            else
+            {
+                // Schedule is tomorrow (already passed today)
+                diff = TimeSpan.FromDays(1) - currentTime + scheduleTime;
+            }
+
+            if (diff < minDiff)
+            {
+                minDiff = diff;
+                nextScheduleTime = scheduleTime;
+            }
+        }
+
+        if (nextScheduleTime.HasValue)
+        {
+            var scheduleTimeStr = DateTime.Today.Add(nextScheduleTime.Value).ToString("HH:mm");
+            var countdownStr = FormatCountdown(minDiff);
+            lblFbNextSchedule.Text = $"Next: {scheduleTimeStr} ({countdownStr})";
+            statusFacebookSchedule.Text = $"{scheduleTimeStr} ({countdownStr})";
         }
     }
 
@@ -1427,6 +1570,182 @@ public partial class MainForm : Form
 
         ServiceContainer.Settings.SaveSettings(settings);
     }
+
+    #region No-Scrape Time Window
+
+    private void LoadNoScrapSettings()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+
+        chkNoScrapEnabled.Checked = settings.NoScrapEnabled;
+        dtpNoScrapStart.Value = DateTime.Today.AddHours(settings.NoScrapStartHour).AddMinutes(settings.NoScrapStartMinute);
+        dtpNoScrapEnd.Value = DateTime.Today.AddHours(settings.NoScrapEndHour).AddMinutes(settings.NoScrapEndMinute);
+    }
+
+    private void SaveNoScrapSettings()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+
+        settings.NoScrapEnabled = chkNoScrapEnabled.Checked;
+        settings.NoScrapStartHour = dtpNoScrapStart.Value.Hour;
+        settings.NoScrapStartMinute = dtpNoScrapStart.Value.Minute;
+        settings.NoScrapEndHour = dtpNoScrapEnd.Value.Hour;
+        settings.NoScrapEndMinute = dtpNoScrapEnd.Value.Minute;
+
+        ServiceContainer.Settings.SaveSettings(settings);
+    }
+
+    private void NoScrapSettings_Changed(object? sender, EventArgs e)
+    {
+        SaveNoScrapSettings();
+
+        // If no-scrap is disabled and user wants scraping but was waiting, start now
+        if (!chkNoScrapEnabled.Checked && _userWantsScraping && _waitingForNoScrapEnd && _backgroundScraper != null)
+        {
+            _waitingForNoScrapEnd = false;
+            _noScrapAutoStopped = false;
+            _backgroundScraper.Start();
+            LogDebug("No-Scrape disabled, starting scraping", "INFO");
+        }
+        // If no-scrap is disabled and scraping was auto-stopped, restart it
+        else if (!chkNoScrapEnabled.Checked && _noScrapAutoStopped && _backgroundScraper != null)
+        {
+            _noScrapAutoStopped = false;
+            _backgroundScraper.Start();
+            LogDebug("No-Scrape disabled, resuming scraping", "INFO");
+        }
+    }
+
+    private bool IsInNoScrapWindow()
+    {
+        if (!chkNoScrapEnabled.Checked)
+            return false;
+
+        var now = DateTime.Now.TimeOfDay;
+        var start = dtpNoScrapStart.Value.TimeOfDay;
+        var end = dtpNoScrapEnd.Value.TimeOfDay;
+
+        // Handle overnight window (e.g., 22:00 to 06:00)
+        if (start <= end)
+        {
+            // Same day window (e.g., 01:00 to 06:00)
+            return now >= start && now < end;
+        }
+        else
+        {
+            // Overnight window (e.g., 22:00 to 06:00)
+            return now >= start || now < end;
+        }
+    }
+
+    private void CheckNoScrapWindow()
+    {
+        if (_backgroundScraper == null) return;
+
+        bool inNoScrapWindow = IsInNoScrapWindow();
+
+        // If scraping is running and we enter no-scrap window
+        if (inNoScrapWindow && _backgroundScraper.IsRunning && _userWantsScraping)
+        {
+            // Stop scraping during no-scrap window
+            _backgroundScraper.Stop();
+            _waitingForNoScrapEnd = true;
+            _noScrapAutoStopped = true;
+            LogDebug($"═══════════════════════════════════════════════════", "WARNING");
+            LogDebug($"ENTERING NO-SCRAPE WINDOW", "WARNING");
+            LogDebug($"Window: {dtpNoScrapStart.Value:HH:mm} - {dtpNoScrapEnd.Value:HH:mm}", "WARNING");
+            LogDebug($"Scraping paused - WebDriver stopped", "WARNING");
+            LogDebug($"═══════════════════════════════════════════════════", "WARNING");
+        }
+        // If user wants scraping and we're waiting for no-scrap to end
+        else if (!inNoScrapWindow && _userWantsScraping && (_waitingForNoScrapEnd || _noScrapAutoStopped))
+        {
+            // Resume scraping after no-scrap window ends
+            _waitingForNoScrapEnd = false;
+            _noScrapAutoStopped = false;
+            _backgroundScraper.Start();
+            LogDebug($"═══════════════════════════════════════════════════", "INFO");
+            LogDebug($"NO-SCRAPE WINDOW ENDED", "INFO");
+            LogDebug($"Automatically starting scraping", "INFO");
+            LogDebug($"═══════════════════════════════════════════════════", "INFO");
+        }
+
+        // Update status with countdown if waiting
+        if (_userWantsScraping && _waitingForNoScrapEnd && inNoScrapWindow)
+        {
+            UpdateNoScrapStatus();
+        }
+    }
+
+    private TimeSpan GetNoScrapRemainingTime()
+    {
+        var now = DateTime.Now.TimeOfDay;
+        var end = dtpNoScrapEnd.Value.TimeOfDay;
+        var start = dtpNoScrapStart.Value.TimeOfDay;
+
+        TimeSpan remaining;
+
+        if (start <= end)
+        {
+            // Same day window
+            remaining = end - now;
+        }
+        else
+        {
+            // Overnight window
+            if (now >= start)
+            {
+                // We're in the evening part (e.g., after 22:00)
+                remaining = TimeSpan.FromDays(1) - now + end;
+            }
+            else
+            {
+                // We're in the morning part (e.g., before 06:00)
+                remaining = end - now;
+            }
+        }
+
+        return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+    }
+
+    private void UpdateNoScrapStatus()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => UpdateNoScrapStatus());
+            return;
+        }
+
+        if (_userWantsScraping && _waitingForNoScrapEnd && IsInNoScrapWindow())
+        {
+            var remaining = GetNoScrapRemainingTime();
+            var statusText = $"No-Scrape: Resumes in {remaining:hh\\:mm\\:ss}";
+            statusNewsLabel.Text = $"News: {statusText}";
+            lblStatus.Text = statusText;
+        }
+    }
+
+    private void UpdateScraperButtonState(bool showAsRunning)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => UpdateScraperButtonState(showAsRunning));
+            return;
+        }
+
+        if (showAsRunning)
+        {
+            btnStartStop.Text = "Stop";
+            btnStartStop.BackColor = Color.IndianRed;
+        }
+        else
+        {
+            btnStartStop.Text = "Start";
+            btnStartStop.BackColor = Color.MediumSeaGreen;
+        }
+    }
+
+    #endregion
 
     private void LoadFacebookProfiles()
     {
@@ -1560,14 +1879,32 @@ public partial class MainForm : Form
     {
         if (_facebookCollector == null) return;
 
+        if (!ServiceContainer.Database.IsConnected)
+        {
+            MessageBox.Show("Please configure database connection first.", "Not Connected",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        if (_facebookProfiles.Count == 0)
+        {
+            MessageBox.Show("Please add at least one Facebook Page first.", "No Pages",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
         if (_facebookCollector.IsRunning)
         {
             _facebookCollector.Stop();
         }
         else
         {
+            // Clear data list when starting new fetch
+            ClearFacebookDataList();
+
             // Update settings before starting
             _facebookCollector.UpdateDelaySeconds((int)numFbFrequency.Value);
+            _facebookCollector.UpdateChunkSettings((int)numFbChunkSize.Value, (int)numFbChunkDelay.Value);
             _facebookCollector.UpdateSchedules(_facebookSchedules);
             _facebookCollector.Start();
         }
@@ -1599,6 +1936,13 @@ public partial class MainForm : Form
         dtpFbFilterTo.Value = DateTime.Now;
         dtpFbFilterFrom.Value = DateTime.Today.AddDays(-30);
         LoadFacebookData();
+    }
+
+    private void ClearFacebookDataList()
+    {
+        _facebookData.Clear();
+        olvFacebookData.SetObjects(_facebookData);
+        UpdateFbInfo();
     }
 
     private void InitializeFbFilterControls()
@@ -1660,10 +2004,40 @@ public partial class MainForm : Form
         btnFbStartStop.Text = isRunning ? "Stop" : "Start";
         btnFbStartStop.BackColor = isRunning ? Color.FromArgb(180, 0, 0) : Color.FromArgb(0, 120, 0);
 
-        if (!isRunning)
+        // Disable/enable filter controls during fetching
+        SetFacebookFilterEnabled(!isRunning);
+
+        // Start/stop countdown timer
+        if (isRunning)
+        {
+            UpdateFbNextScheduleLabel();
+            // Start timer if not already running (TikTok might have it running)
+            if (!timerScheduleCountdown.Enabled)
+            {
+                timerScheduleCountdown.Start();
+            }
+        }
+        else
         {
             progressBarFb.Value = 0;
+            lblFbNextSchedule.Text = "Next: --:-- (stopped)";
+            statusFacebookSchedule.Text = "(stopped)";
+            statusFacebookLabel.Text = "Facebook: Stopped";
+            // Only stop timer if TikTok is also not running
+            if (_tikTokCollector == null || !_tikTokCollector.IsRunning)
+            {
+                timerScheduleCountdown.Stop();
+            }
         }
+    }
+
+    private void SetFacebookFilterEnabled(bool enabled)
+    {
+        cboFbFilterUsername.Enabled = enabled;
+        dtpFbFilterFrom.Enabled = enabled;
+        dtpFbFilterTo.Enabled = enabled;
+        btnFbApplyFilter.Enabled = enabled;
+        btnFbClearFilter.Enabled = enabled;
     }
 
     private void FacebookCollector_DataCollected(object? sender, FbData data)
@@ -1696,6 +2070,7 @@ public partial class MainForm : Form
         }
 
         lblFbStatus.Text = message;
+        statusFacebookLabel.Text = $"Facebook: {message}";
     }
 
     private void UpdateFbInfo()

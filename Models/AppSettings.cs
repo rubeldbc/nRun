@@ -15,6 +15,13 @@ public class AppSettings
     public int BrowserTimeoutSeconds { get; set; } = 30;
     public bool AutoStartScraping { get; set; } = false;
 
+    // No Scrape Time Window Settings
+    public bool NoScrapEnabled { get; set; } = false;
+    public int NoScrapStartHour { get; set; } = 0;
+    public int NoScrapStartMinute { get; set; } = 0;
+    public int NoScrapEndHour { get; set; } = 6;
+    public int NoScrapEndMinute { get; set; } = 0;
+
     // Display Settings
     public int MaxDisplayedArticles { get; set; } = 100;
 

@@ -23,6 +23,12 @@ partial class MainForm
         splitContainerMain = new SplitContainer();
         panelLeft = new Panel();
         listBoxSites = new ListBox();
+        panelNoScrap = new Panel();
+        chkNoScrapEnabled = new CheckBox();
+        lblNoScrapStart = new Label();
+        dtpNoScrapStart = new DateTimePicker();
+        lblNoScrapEnd = new Label();
+        dtpNoScrapEnd = new DateTimePicker();
         toolStripSites = new ToolStrip();
         btnAddSite = new ToolStripButton();
         btnEditSite = new ToolStripButton();
@@ -167,9 +173,18 @@ partial class MainForm
         toolStripSeparator4 = new ToolStripSeparator();
         lblStatus = new ToolStripLabel();
         statusStrip = new StatusStrip();
-        statusLabel = new ToolStripStatusLabel();
-        statusProgress = new ToolStripProgressBar();
-        statusArticleCount = new ToolStripStatusLabel();
+        // News Scraping status items
+        statusNewsLabel = new ToolStripStatusLabel();
+        statusNewsProgress = new ToolStripProgressBar();
+        statusNewsCount = new ToolStripStatusLabel();
+        statusSeparator1 = new ToolStripStatusLabel();
+        // TikTok status items
+        statusTikTokLabel = new ToolStripStatusLabel();
+        statusTikTokSchedule = new ToolStripStatusLabel();
+        statusSeparator2 = new ToolStripStatusLabel();
+        // Facebook status items
+        statusFacebookLabel = new ToolStripStatusLabel();
+        statusFacebookSchedule = new ToolStripStatusLabel();
         timerScheduleCountdown = new System.Windows.Forms.Timer(components);
         tabControlMain.SuspendLayout();
         tabPageNewsScrp.SuspendLayout();
@@ -178,6 +193,7 @@ partial class MainForm
         splitContainerMain.Panel2.SuspendLayout();
         splitContainerMain.SuspendLayout();
         panelLeft.SuspendLayout();
+        panelNoScrap.SuspendLayout();
         toolStripSites.SuspendLayout();
         panelRight.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)splitContainerRight).BeginInit();
@@ -268,6 +284,7 @@ partial class MainForm
         // panelLeft
         // 
         panelLeft.Controls.Add(listBoxSites);
+        panelLeft.Controls.Add(panelNoScrap);
         panelLeft.Controls.Add(toolStripSites);
         panelLeft.Controls.Add(lblSitesHeader);
         panelLeft.Dock = DockStyle.Fill;
@@ -283,8 +300,69 @@ partial class MainForm
         listBoxSites.ItemHeight = 15;
         listBoxSites.Location = new Point(0, 50);
         listBoxSites.Name = "listBoxSites";
-        listBoxSites.Size = new Size(283, 552);
+        listBoxSites.Size = new Size(283, 487);
         listBoxSites.TabIndex = 2;
+        // 
+        // panelNoScrap
+        // 
+        panelNoScrap.Controls.Add(chkNoScrapEnabled);
+        panelNoScrap.Controls.Add(lblNoScrapStart);
+        panelNoScrap.Controls.Add(dtpNoScrapStart);
+        panelNoScrap.Controls.Add(lblNoScrapEnd);
+        panelNoScrap.Controls.Add(dtpNoScrapEnd);
+        panelNoScrap.Dock = DockStyle.Bottom;
+        panelNoScrap.Location = new Point(0, 537);
+        panelNoScrap.Name = "panelNoScrap";
+        panelNoScrap.Size = new Size(283, 65);
+        panelNoScrap.TabIndex = 3;
+        // 
+        // chkNoScrapEnabled
+        // 
+        chkNoScrapEnabled.AutoSize = true;
+        chkNoScrapEnabled.Location = new Point(10, 5);
+        chkNoScrapEnabled.Name = "chkNoScrapEnabled";
+        chkNoScrapEnabled.Size = new Size(149, 19);
+        chkNoScrapEnabled.TabIndex = 0;
+        chkNoScrapEnabled.Text = "Enable No-Scrape Time";
+        chkNoScrapEnabled.UseVisualStyleBackColor = true;
+        // 
+        // lblNoScrapStart
+        // 
+        lblNoScrapStart.AutoSize = true;
+        lblNoScrapStart.Location = new Point(10, 35);
+        lblNoScrapStart.Name = "lblNoScrapStart";
+        lblNoScrapStart.Size = new Size(34, 15);
+        lblNoScrapStart.TabIndex = 1;
+        lblNoScrapStart.Text = "Start:";
+        // 
+        // dtpNoScrapStart
+        // 
+        dtpNoScrapStart.CustomFormat = "HH:mm";
+        dtpNoScrapStart.Format = DateTimePickerFormat.Custom;
+        dtpNoScrapStart.Location = new Point(50, 32);
+        dtpNoScrapStart.Name = "dtpNoScrapStart";
+        dtpNoScrapStart.ShowUpDown = true;
+        dtpNoScrapStart.Size = new Size(70, 23);
+        dtpNoScrapStart.TabIndex = 2;
+        // 
+        // lblNoScrapEnd
+        // 
+        lblNoScrapEnd.AutoSize = true;
+        lblNoScrapEnd.Location = new Point(135, 35);
+        lblNoScrapEnd.Name = "lblNoScrapEnd";
+        lblNoScrapEnd.Size = new Size(30, 15);
+        lblNoScrapEnd.TabIndex = 3;
+        lblNoScrapEnd.Text = "End:";
+        // 
+        // dtpNoScrapEnd
+        // 
+        dtpNoScrapEnd.CustomFormat = "HH:mm";
+        dtpNoScrapEnd.Format = DateTimePickerFormat.Custom;
+        dtpNoScrapEnd.Location = new Point(170, 32);
+        dtpNoScrapEnd.Name = "dtpNoScrapEnd";
+        dtpNoScrapEnd.ShowUpDown = true;
+        dtpNoScrapEnd.Size = new Size(70, 23);
+        dtpNoScrapEnd.TabIndex = 4;
         // 
         // toolStripSites
         // 
@@ -1815,34 +1893,99 @@ partial class MainForm
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(39, 22);
         lblStatus.Text = "Ready";
-        // 
+        //
         // statusStrip
-        // 
-        statusStrip.Items.AddRange(new ToolStripItem[] { statusLabel, statusProgress, statusArticleCount });
+        //
+        statusStrip.Items.AddRange(new ToolStripItem[] {
+            statusNewsLabel, statusNewsProgress, statusNewsCount, statusSeparator1,
+            statusTikTokLabel, statusTikTokSchedule, statusSeparator2,
+            statusFacebookLabel, statusFacebookSchedule });
         statusStrip.Location = new Point(0, 661);
         statusStrip.Name = "statusStrip";
-        statusStrip.Size = new Size(1133, 22);
+        statusStrip.Size = new Size(1133, 24);
         statusStrip.TabIndex = 2;
-        // 
-        // statusLabel
-        // 
-        statusLabel.Name = "statusLabel";
-        statusLabel.Size = new Size(1065, 17);
-        statusLabel.Spring = true;
-        statusLabel.Text = "Ready";
-        statusLabel.TextAlign = ContentAlignment.MiddleLeft;
-        // 
-        // statusProgress
-        // 
-        statusProgress.Name = "statusProgress";
-        statusProgress.Size = new Size(100, 16);
-        statusProgress.Visible = false;
-        // 
-        // statusArticleCount
-        // 
-        statusArticleCount.Name = "statusArticleCount";
-        statusArticleCount.Size = new Size(53, 17);
-        statusArticleCount.Text = "0 articles";
+        //
+        // statusNewsLabel - News Scraping status (Light Blue) - Spring for responsive width
+        //
+        statusNewsLabel.BackColor = Color.LightCyan;
+        statusNewsLabel.Name = "statusNewsLabel";
+        statusNewsLabel.Spring = true;
+        statusNewsLabel.Text = "News: Ready";
+        statusNewsLabel.TextAlign = ContentAlignment.MiddleLeft;
+        statusNewsLabel.BorderSides = ToolStripStatusLabelBorderSides.All;
+        statusNewsLabel.BorderStyle = Border3DStyle.SunkenOuter;
+        //
+        // statusNewsProgress
+        //
+        statusNewsProgress.BackColor = Color.LightCyan;
+        statusNewsProgress.Name = "statusNewsProgress";
+        statusNewsProgress.Size = new Size(80, 18);
+        statusNewsProgress.Visible = false;
+        //
+        // statusNewsCount
+        //
+        statusNewsCount.BackColor = Color.LightCyan;
+        statusNewsCount.Name = "statusNewsCount";
+        statusNewsCount.Size = new Size(70, 19);
+        statusNewsCount.AutoSize = false;
+        statusNewsCount.Text = "0 articles";
+        statusNewsCount.TextAlign = ContentAlignment.MiddleCenter;
+        statusNewsCount.BorderSides = ToolStripStatusLabelBorderSides.All;
+        statusNewsCount.BorderStyle = Border3DStyle.SunkenOuter;
+        //
+        // statusSeparator1
+        //
+        statusSeparator1.Name = "statusSeparator1";
+        statusSeparator1.Size = new Size(10, 19);
+        statusSeparator1.Text = "";
+        //
+        // statusTikTokLabel - TikTok status (Light Green) - Spring for responsive width
+        //
+        statusTikTokLabel.BackColor = Color.Honeydew;
+        statusTikTokLabel.Name = "statusTikTokLabel";
+        statusTikTokLabel.Spring = true;
+        statusTikTokLabel.Text = "TikTok: Ready";
+        statusTikTokLabel.TextAlign = ContentAlignment.MiddleLeft;
+        statusTikTokLabel.BorderSides = ToolStripStatusLabelBorderSides.All;
+        statusTikTokLabel.BorderStyle = Border3DStyle.SunkenOuter;
+        //
+        // statusTikTokSchedule
+        //
+        statusTikTokSchedule.BackColor = Color.Honeydew;
+        statusTikTokSchedule.Name = "statusTikTokSchedule";
+        statusTikTokSchedule.Size = new Size(120, 19);
+        statusTikTokSchedule.AutoSize = false;
+        statusTikTokSchedule.Text = "Next: --:--";
+        statusTikTokSchedule.TextAlign = ContentAlignment.MiddleCenter;
+        statusTikTokSchedule.BorderSides = ToolStripStatusLabelBorderSides.All;
+        statusTikTokSchedule.BorderStyle = Border3DStyle.SunkenOuter;
+        //
+        // statusSeparator2
+        //
+        statusSeparator2.Name = "statusSeparator2";
+        statusSeparator2.Size = new Size(10, 19);
+        statusSeparator2.Text = "";
+        //
+        // statusFacebookLabel - Facebook status (Light Pink) - Spring for responsive width
+        //
+        statusFacebookLabel.BackColor = Color.MistyRose;
+        statusFacebookLabel.Name = "statusFacebookLabel";
+        statusFacebookLabel.Spring = true;
+        statusFacebookLabel.Text = "Facebook: Ready";
+        statusFacebookLabel.TextAlign = ContentAlignment.MiddleLeft;
+        statusFacebookLabel.BorderSides = ToolStripStatusLabelBorderSides.All;
+        statusFacebookLabel.BorderStyle = Border3DStyle.SunkenOuter;
+        //
+        // statusFacebookSchedule
+        //
+        statusFacebookSchedule.BackColor = Color.MistyRose;
+        statusFacebookSchedule.Name = "statusFacebookSchedule";
+        statusFacebookSchedule.Size = new Size(120, 19);
+        statusFacebookSchedule.AutoSize = false;
+        statusFacebookSchedule.Text = "Next: --:--";
+        statusFacebookSchedule.TextAlign = ContentAlignment.MiddleCenter;
+        statusFacebookSchedule.BorderSides = ToolStripStatusLabelBorderSides.All;
+        statusFacebookSchedule.BorderStyle = Border3DStyle.SunkenOuter;
         // 
         // timerScheduleCountdown
         // 
@@ -1869,6 +2012,8 @@ partial class MainForm
         splitContainerMain.ResumeLayout(false);
         panelLeft.ResumeLayout(false);
         panelLeft.PerformLayout();
+        panelNoScrap.ResumeLayout(false);
+        panelNoScrap.PerformLayout();
         toolStripSites.ResumeLayout(false);
         toolStripSites.PerformLayout();
         panelRight.ResumeLayout(false);
@@ -1941,6 +2086,12 @@ partial class MainForm
     private System.Windows.Forms.Panel panelLeft;
     private System.Windows.Forms.Panel panelRight;
     private System.Windows.Forms.Panel panelDebug;
+    private System.Windows.Forms.Panel panelNoScrap;
+    private System.Windows.Forms.CheckBox chkNoScrapEnabled;
+    private System.Windows.Forms.Label lblNoScrapStart;
+    private System.Windows.Forms.DateTimePicker dtpNoScrapStart;
+    private System.Windows.Forms.Label lblNoScrapEnd;
+    private System.Windows.Forms.DateTimePicker dtpNoScrapEnd;
     private System.Windows.Forms.ListBox listBoxSites;
     private System.Windows.Forms.ToolStrip toolStripSites;
     private System.Windows.Forms.ToolStripButton btnAddSite;
@@ -1976,9 +2127,18 @@ partial class MainForm
     private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
     private System.Windows.Forms.ToolStripLabel lblStatus;
     private System.Windows.Forms.StatusStrip statusStrip;
-    private System.Windows.Forms.ToolStripStatusLabel statusLabel;
-    private System.Windows.Forms.ToolStripProgressBar statusProgress;
-    private System.Windows.Forms.ToolStripStatusLabel statusArticleCount;
+    // News Scraping status bar items
+    private System.Windows.Forms.ToolStripStatusLabel statusNewsLabel;
+    private System.Windows.Forms.ToolStripProgressBar statusNewsProgress;
+    private System.Windows.Forms.ToolStripStatusLabel statusNewsCount;
+    private System.Windows.Forms.ToolStripStatusLabel statusSeparator1;
+    // TikTok status bar items
+    private System.Windows.Forms.ToolStripStatusLabel statusTikTokLabel;
+    private System.Windows.Forms.ToolStripStatusLabel statusTikTokSchedule;
+    private System.Windows.Forms.ToolStripStatusLabel statusSeparator2;
+    // Facebook status bar items
+    private System.Windows.Forms.ToolStripStatusLabel statusFacebookLabel;
+    private System.Windows.Forms.ToolStripStatusLabel statusFacebookSchedule;
     private System.Windows.Forms.ContextMenuStrip contextMenuArticles;
     private System.Windows.Forms.ToolStripMenuItem menuItemOpenUrl;
     private System.Windows.Forms.ToolStripMenuItem menuItemCopyUrl;
