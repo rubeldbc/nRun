@@ -6,6 +6,9 @@ namespace nRun.UI.Forms;
 
 public partial class DatabaseConnectionForm : Form
 {
+    // Static event to notify MainForm when database connection changes
+    public static event Action? DatabaseChanged;
+
     public DatabaseConnectionForm()
     {
         InitializeComponent();
@@ -21,6 +24,7 @@ public partial class DatabaseConnectionForm : Form
         btnDeleteDatabase.Click += BtnDeleteDatabase_Click;
         btnCreateFbTables.Click += BtnCreateFbTables_Click;
         btnDeleteFbTables.Click += BtnDeleteFbTables_Click;
+        btnDatabaseStructure.Click += BtnDatabaseStructure_Click;
         btnSave.Click += BtnSave_Click;
     }
 
@@ -129,8 +133,25 @@ public partial class DatabaseConnectionForm : Form
                 LogMessage($"Connected to database '{settings.Database}'");
             }
 
+            // Save settings and update DatabaseService
+            var appSettings = ServiceContainer.Settings.LoadSettings();
+            appSettings.DbHost = settings.Host;
+            appSettings.DbPort = settings.Port;
+            appSettings.DbName = settings.Database;
+            appSettings.DbUser = settings.Username;
+            appSettings.DbPassword = settings.Password;
+            ServiceContainer.Settings.SaveSettings(appSettings);
+
+            // Update DatabaseService connection string
+            ServiceContainer.Database.UpdateConnectionString(appSettings.GetConnectionString());
+
+            LogMessage("Settings saved and database connection updated");
+
             UpdateStatus("Connected", Color.Green);
             btnCreateTables.Enabled = true;
+
+            // Notify MainForm to refresh lists
+            DatabaseChanged?.Invoke();
         }
         catch (Exception ex)
         {
@@ -568,6 +589,26 @@ public partial class DatabaseConnectionForm : Form
             LogMessage($"  {colName}: {dataType}{maxLength} {nullable}{defaultVal}");
         }
         LogMessage("");
+    }
+
+    private void BtnDatabaseStructure_Click(object? sender, EventArgs e)
+    {
+        var settings = GetConnectionSettings();
+
+        // Validate that we have connection settings
+        if (string.IsNullOrWhiteSpace(settings.Host) ||
+            string.IsNullOrWhiteSpace(settings.Database) ||
+            string.IsNullOrWhiteSpace(settings.Username))
+        {
+            MessageBox.Show("Please fill in all connection settings first.", "Missing Settings",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var connectionString = settings.GetConnectionString();
+
+        using var structureForm = new DatabaseStructureForm(connectionString);
+        structureForm.ShowDialog(this);
     }
 
     private void BtnSave_Click(object? sender, EventArgs e)

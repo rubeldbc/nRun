@@ -171,11 +171,52 @@ public partial class MainForm : Form
             _facebookCollector.RunningStateChanged += FacebookCollector_RunningStateChanged;
             _facebookCollector.DataCollected += FacebookCollector_DataCollected;
         }
+
+        // Database connection change event
+        DatabaseConnectionForm.DatabaseChanged += OnDatabaseChanged;
+    }
+
+    private void OnDatabaseChanged()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(OnDatabaseChanged);
+            return;
+        }
+
+        // Update form title with new host/database names
+        UpdateFormTitle();
+
+        // Reload all data from the new database
+        if (ServiceContainer.Database.IsConnected)
+        {
+            // Reload news scraper data
+            LoadSites();
+            LoadArticles();
+            UpdateArticleCount();
+
+            // Reload TikTok data
+            LoadTikTokProfiles();
+            InitializeFilterControls();
+            ClearTikTokDataList();
+
+            // Reload Facebook data
+            LoadFacebookProfiles();
+            InitializeFbFilterControls();
+            ClearFacebookDataList();
+
+            LogDebug("Database changed - all lists refreshed", "INFO");
+            UpdateStatus("Database connected - lists refreshed");
+            lblStatus.ForeColor = SystemColors.ControlText;
+        }
     }
 
     private void MainForm_Load(object? sender, EventArgs e)
     {
         LogDebug("Application started", "INFO");
+
+        // Update form title with host names
+        UpdateFormTitle();
 
         // Check database connection
         if (!ServiceContainer.Database.IsConnected)
@@ -323,6 +364,9 @@ public partial class MainForm : Form
             // Unsubscribe from Memurai service events
             ServiceContainer.Memurai.StatusChanged -= Memurai_StatusChanged;
             ServiceContainer.Memurai.RunningStateChanged -= Memurai_RunningStateChanged;
+
+            // Unsubscribe from database connection change event
+            DatabaseConnectionForm.DatabaseChanged -= OnDatabaseChanged;
 
             // Stop and dispose timer
             timerScheduleCountdown.Stop();
@@ -761,12 +805,27 @@ public partial class MainForm : Form
         {
             _backgroundScraper?.UpdateInterval();
 
-            // Reload if database connection changed
+            // Always update title to reflect new host/database settings
+            UpdateFormTitle();
+
+            // Reload all data if database connection changed
             if (ServiceContainer.Database.IsConnected)
             {
+                // Reload news scraper data
                 LoadSites();
                 LoadArticles();
                 UpdateArticleCount();
+
+                // Reload TikTok data
+                LoadTikTokProfiles();
+                InitializeFilterControls();
+                ClearTikTokDataList();
+
+                // Reload Facebook data
+                LoadFacebookProfiles();
+                InitializeFbFilterControls();
+                ClearFacebookDataList();
+
                 UpdateStatus("Ready");
                 lblStatus.ForeColor = SystemColors.ControlText;
             }
@@ -1029,6 +1088,15 @@ public partial class MainForm : Form
     #endregion
 
     #region Helpers
+
+    private void UpdateFormTitle()
+    {
+        var settings = ServiceContainer.Settings.LoadSettings();
+        var dbHost = settings.DbHost;
+        var dbName = settings.DbName;
+        var memuraiHost = settings.MemuraiHost;
+        this.Text = $"nRun - News Scraper | PostgreSQL: {dbHost}/{dbName} | Memurai: {memuraiHost}";
+    }
 
     private void UpdateStatus(string message)
     {

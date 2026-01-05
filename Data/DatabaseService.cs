@@ -52,6 +52,9 @@ public class DatabaseService : IDatabaseService
         _connectionString = connectionString;
         try
         {
+            // Clear all cached data from previous database
+            ServiceContainer.Cache.Clear();
+
             using var conn = GetConnection();
             EnsureTablesExist(conn);
 

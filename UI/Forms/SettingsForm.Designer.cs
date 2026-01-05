@@ -358,23 +358,26 @@ partial class SettingsForm
         lblMemuraiSyncSeconds.Size = new Size(24, 15);
         lblMemuraiSyncSeconds.TabIndex = 8;
         lblMemuraiSyncSeconds.Text = "sec";
-        // 
+        //
         // btnTestMemurai
-        // 
-        btnTestMemurai.Location = new Point(80, 90);
+        //
+        btnTestMemurai.Location = new Point(15, 90);
         btnTestMemurai.Name = "btnTestMemurai";
-        btnTestMemurai.Size = new Size(130, 28);
+        btnTestMemurai.Size = new Size(120, 28);
         btnTestMemurai.TabIndex = 9;
         btnTestMemurai.Text = "Test Connection";
         btnTestMemurai.UseVisualStyleBackColor = true;
-        // 
+        //
         // lblMemuraiStatus
-        // 
-        lblMemuraiStatus.AutoSize = true;
-        lblMemuraiStatus.Location = new Point(125, 97);
+        //
+        lblMemuraiStatus.Anchor = AnchorStyles.Left;
+        lblMemuraiStatus.Location = new Point(145, 90);
         lblMemuraiStatus.Name = "lblMemuraiStatus";
-        lblMemuraiStatus.Size = new Size(0, 15);
+        lblMemuraiStatus.Size = new Size(240, 28);
         lblMemuraiStatus.TabIndex = 10;
+        lblMemuraiStatus.Text = "Not tested";
+        lblMemuraiStatus.ForeColor = Color.Gray;
+        lblMemuraiStatus.TextAlign = ContentAlignment.MiddleLeft;
         // 
         // groupBoxChrome
         // 
