@@ -125,6 +125,7 @@ public partial class MainForm : Form
         menuItemTkDeleteId.Click += MenuItemTkDeleteId_Click;
         menuItemTkRefresh.Click += MenuItemTkRefresh_Click;
         menuItemTkFetch.Click += MenuItemTkFetch_Click;
+        menuItemTkExportLogos.Click += MenuItemTkExportLogos_Click;
 
         // Facebook ID status checkbox and context menu
         olvFacebookID.SubItemChecking += OlvFacebookID_SubItemChecking;
@@ -133,6 +134,7 @@ public partial class MainForm : Form
         menuItemFbDeleteId.Click += MenuItemFbDeleteId_Click;
         menuItemFbRefresh.Click += MenuItemFbRefresh_Click;
         menuItemFbFetch.Click += MenuItemFbFetch_Click;
+        menuItemFbExportLogos.Click += MenuItemFbExportLogos_Click;
 
         // TikTok data list formatting for change columns
         olvTiktokData.FormatCell += OlvTiktokData_FormatCell;
@@ -1374,6 +1376,20 @@ public partial class MainForm : Form
         await FetchTikTokProfileAsync(profile);
     }
 
+    private void MenuItemTkExportLogos_Click(object? sender, EventArgs e)
+    {
+        var selectedProfiles = olvTiktokID.SelectedObjects.Cast<TkProfile>().ToList();
+        if (selectedProfiles.Count == 0)
+        {
+            MessageBox.Show("Please select one or more profiles to export logos.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new LogoExportForm(selectedProfiles, Services.LogoExportPlatform.TikTok);
+        form.ShowDialog(this);
+    }
+
     private async Task FetchTikTokProfileAsync(TkProfile profile)
     {
         try
@@ -1990,6 +2006,20 @@ public partial class MainForm : Form
         }
 
         await FetchFacebookProfileAsync(profile);
+    }
+
+    private void MenuItemFbExportLogos_Click(object? sender, EventArgs e)
+    {
+        var selectedProfiles = olvFacebookID.SelectedObjects.Cast<FbProfile>().ToList();
+        if (selectedProfiles.Count == 0)
+        {
+            MessageBox.Show("Please select one or more profiles to export logos.", "No Selection",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        using var form = new LogoExportForm(selectedProfiles, Services.LogoExportPlatform.Facebook);
+        form.ShowDialog(this);
     }
 
     private async Task FetchFacebookProfileAsync(FbProfile profile)

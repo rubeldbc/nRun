@@ -101,6 +101,8 @@ partial class MainForm
         menuItemTkSeparator1 = new ToolStripSeparator();
         menuItemTkRefresh = new ToolStripMenuItem();
         menuItemTkFetch = new ToolStripMenuItem();
+        menuItemTkSeparator2 = new ToolStripSeparator();
+        menuItemTkExportLogos = new ToolStripMenuItem();
         lblTkNextSchedule = new Label();
         btnTkStartStop = new Button();
         olvTiktokSchedule = new BrightIdeasSoftware.ObjectListView();
@@ -155,6 +157,8 @@ partial class MainForm
         menuItemFbSeparator1 = new ToolStripSeparator();
         menuItemFbRefresh = new ToolStripMenuItem();
         menuItemFbFetch = new ToolStripMenuItem();
+        menuItemFbSeparator2 = new ToolStripSeparator();
+        menuItemFbExportLogos = new ToolStripMenuItem();
         lblFbNextSchedule = new Label();
         btnFbStartStop = new Button();
         olvFacebookSchedule = new BrightIdeasSoftware.ObjectListView();
@@ -337,7 +341,7 @@ partial class MainForm
         chkNoScrapEnabled.AutoSize = true;
         chkNoScrapEnabled.Location = new Point(10, 5);
         chkNoScrapEnabled.Name = "chkNoScrapEnabled";
-        chkNoScrapEnabled.Size = new Size(149, 19);
+        chkNoScrapEnabled.Size = new Size(150, 19);
         chkNoScrapEnabled.TabIndex = 0;
         chkNoScrapEnabled.Text = "Enable No-Scrape Time";
         chkNoScrapEnabled.UseVisualStyleBackColor = true;
@@ -1048,9 +1052,9 @@ partial class MainForm
         // 
         // contextMenuTiktokID
         // 
-        contextMenuTiktokID.Items.AddRange(new ToolStripItem[] { menuItemTkAddId, menuItemTkEditId, menuItemTkDeleteId, menuItemTkSeparator1, menuItemTkRefresh, menuItemTkFetch });
+        contextMenuTiktokID.Items.AddRange(new ToolStripItem[] { menuItemTkAddId, menuItemTkEditId, menuItemTkDeleteId, menuItemTkSeparator1, menuItemTkRefresh, menuItemTkFetch, menuItemTkSeparator2, menuItemTkExportLogos });
         contextMenuTiktokID.Name = "contextMenuTiktokID";
-        contextMenuTiktokID.Size = new Size(151, 120);
+        contextMenuTiktokID.Size = new Size(151, 148);
         // 
         // menuItemTkAddId
         // 
@@ -1086,6 +1090,17 @@ partial class MainForm
         menuItemTkFetch.Name = "menuItemTkFetch";
         menuItemTkFetch.Size = new Size(150, 22);
         menuItemTkFetch.Text = "Fetch Selected";
+        // 
+        // menuItemTkSeparator2
+        // 
+        menuItemTkSeparator2.Name = "menuItemTkSeparator2";
+        menuItemTkSeparator2.Size = new Size(147, 6);
+        // 
+        // menuItemTkExportLogos
+        // 
+        menuItemTkExportLogos.Name = "menuItemTkExportLogos";
+        menuItemTkExportLogos.Size = new Size(150, 22);
+        menuItemTkExportLogos.Text = "Export Logos";
         // 
         // lblTkNextSchedule
         // 
@@ -1634,9 +1649,9 @@ partial class MainForm
         // 
         // contextMenuFacebookID
         // 
-        contextMenuFacebookID.Items.AddRange(new ToolStripItem[] { menuItemFbAddId, menuItemFbEditId, menuItemFbDeleteId, menuItemFbSeparator1, menuItemFbRefresh, menuItemFbFetch });
+        contextMenuFacebookID.Items.AddRange(new ToolStripItem[] { menuItemFbAddId, menuItemFbEditId, menuItemFbDeleteId, menuItemFbSeparator1, menuItemFbRefresh, menuItemFbFetch, menuItemFbSeparator2, menuItemFbExportLogos });
         contextMenuFacebookID.Name = "contextMenuFacebookID";
-        contextMenuFacebookID.Size = new Size(151, 120);
+        contextMenuFacebookID.Size = new Size(151, 148);
         // 
         // menuItemFbAddId
         // 
@@ -1672,6 +1687,17 @@ partial class MainForm
         menuItemFbFetch.Name = "menuItemFbFetch";
         menuItemFbFetch.Size = new Size(150, 22);
         menuItemFbFetch.Text = "Fetch Selected";
+        // 
+        // menuItemFbSeparator2
+        // 
+        menuItemFbSeparator2.Name = "menuItemFbSeparator2";
+        menuItemFbSeparator2.Size = new Size(147, 6);
+        // 
+        // menuItemFbExportLogos
+        // 
+        menuItemFbExportLogos.Name = "menuItemFbExportLogos";
+        menuItemFbExportLogos.Size = new Size(150, 22);
+        menuItemFbExportLogos.Text = "Export Logos";
         // 
         // lblFbNextSchedule
         // 
@@ -2285,6 +2311,8 @@ partial class MainForm
     private System.Windows.Forms.ToolStripSeparator menuItemTkSeparator1;
     private System.Windows.Forms.ToolStripMenuItem menuItemTkRefresh;
     private System.Windows.Forms.ToolStripMenuItem menuItemTkFetch;
+    private System.Windows.Forms.ToolStripSeparator menuItemTkSeparator2;
+    private System.Windows.Forms.ToolStripMenuItem menuItemTkExportLogos;
     private BrightIdeasSoftware.ObjectListView olvTiktokSchedule;
     private BrightIdeasSoftware.OLVColumn olvColScheduleSL;
     private BrightIdeasSoftware.OLVColumn olvColScheduleTiming;
@@ -2353,6 +2381,8 @@ partial class MainForm
     private System.Windows.Forms.ToolStripSeparator menuItemFbSeparator1;
     private System.Windows.Forms.ToolStripMenuItem menuItemFbRefresh;
     private System.Windows.Forms.ToolStripMenuItem menuItemFbFetch;
+    private System.Windows.Forms.ToolStripSeparator menuItemFbSeparator2;
+    private System.Windows.Forms.ToolStripMenuItem menuItemFbExportLogos;
     private BrightIdeasSoftware.ObjectListView olvFacebookSchedule;
     private BrightIdeasSoftware.OLVColumn olvColFbScheduleSL;
     private BrightIdeasSoftware.OLVColumn olvColFbScheduleTiming;
