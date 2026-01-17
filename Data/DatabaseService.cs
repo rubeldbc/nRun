@@ -437,6 +437,47 @@ public class DatabaseService : IDatabaseService
         }
     }
 
+    /// <summary>
+    /// Gets the title of an existing news article by URL
+    /// </summary>
+    public string? GetNewsTitleByUrl(string newsUrl)
+    {
+        if (!IsConnected) return null;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT news_title FROM news_info WHERE news_url = @url";
+            cmd.Parameters.AddWithValue("url", newsUrl);
+            var result = cmd.ExecuteScalar();
+            return result as string;
+        }
+    }
+
+    /// <summary>
+    /// Updates the title and text of an existing news article by URL.
+    /// Used to fix articles that were saved with Cloudflare placeholder titles.
+    /// </summary>
+    public bool UpdateNewsByUrl(string newsUrl, string newTitle, string newText)
+    {
+        if (!IsConnected) return false;
+
+        lock (_lock)
+        {
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                UPDATE news_info
+                SET news_title = @title, news_text = @text
+                WHERE news_url = @url";
+            cmd.Parameters.AddWithValue("title", newTitle);
+            cmd.Parameters.AddWithValue("text", newText);
+            cmd.Parameters.AddWithValue("url", newsUrl);
+            return cmd.ExecuteNonQuery() > 0;
+        }
+    }
+
     public long AddNews(NewsInfo news)
     {
         if (!IsConnected) throw new InvalidOperationException("Database not connected");

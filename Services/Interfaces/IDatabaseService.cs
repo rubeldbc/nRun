@@ -24,6 +24,8 @@ public interface IDatabaseService
 
     // News operations
     bool NewsExists(string newsUrl);
+    string? GetNewsTitleByUrl(string newsUrl);
+    bool UpdateNewsByUrl(string newsUrl, string newTitle, string newText);
     long AddNews(NewsInfo news);
     List<NewsInfo> GetRecentNews(int limit = 100);
     Task<List<NewsInfo>> GetRecentNewsAsync(int limit = 100, CancellationToken cancellationToken = default);

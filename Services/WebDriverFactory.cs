@@ -55,6 +55,29 @@ public static class WebDriverFactory
     }
 
     /// <summary>
+    /// Creates a visible (non-headless) WebDriver for bypassing Cloudflare detection.
+    /// Does NOT use the user's Chrome profile to avoid conflicts with existing Chrome windows.
+    /// Instead uses anti-detection measures to appear as a real browser.
+    /// </summary>
+    public static WebDriverService CreateWithUserProfile(int timeoutSeconds)
+    {
+        var driver = new WebDriverService
+        {
+            UseHeadless = false,
+            TimeoutSeconds = timeoutSeconds,
+            UseUserProfile = false  // Don't use user profile - avoids conflict with existing Chrome
+        };
+
+        lock (_lock)
+        {
+            _activeDrivers[driver.InstanceId] = new WeakReference<WebDriverService>(driver);
+            CleanupDeadReferences();
+        }
+
+        return driver;
+    }
+
+    /// <summary>
     /// Safely disposes a driver and removes it from tracking
     /// </summary>
     public static void SafeDispose(WebDriverService? driver)

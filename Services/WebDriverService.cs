@@ -26,6 +26,12 @@ public class WebDriverService : IDisposable
     public int MaxRetryAttempts { get; set; } = 3;
 
     /// <summary>
+    /// When true, uses the user's default Chrome profile with cookies, history, etc.
+    /// This makes the browser appear as a real human-used browser.
+    /// </summary>
+    public bool UseUserProfile { get; set; } = false;
+
+    /// <summary>
     /// Unique identifier for this driver instance (useful for tracking/debugging)
     /// </summary>
     public Guid InstanceId => _instanceId;
@@ -51,37 +57,96 @@ public class WebDriverService : IDisposable
     {
         var options = new ChromeOptions();
 
-        // New Headless Mode (--headless=new, NOT old --headless flag)
-        if (UseHeadless)
+        // ===== USE USER'S DEFAULT CHROME PROFILE =====
+        // This makes the browser appear exactly like the user's real Chrome
+        if (UseUserProfile)
         {
-            options.AddArgument("--headless=new");
+            var userDataDir = GetChromeUserDataDirectory();
+            if (!string.IsNullOrEmpty(userDataDir) && Directory.Exists(userDataDir))
+            {
+                options.AddArgument($"--user-data-dir={userDataDir}");
+                options.AddArgument("--profile-directory=Default");
+            }
+
+            // Don't use headless when using user profile
+            // Don't disable extensions - keep user's extensions
+            options.AddArgument("--start-maximized");
+            options.AddArgument("--disable-blink-features=AutomationControlled");
+            options.AddExcludedArgument("enable-automation");
+            options.AddAdditionalOption("useAutomationExtension", false);
+            options.PageLoadStrategy = PageLoadStrategy.Normal;
         }
+        else
+        {
+            // ===== STANDARD MODE (headless or automation) =====
 
-        // Standard window size: 1920x1080 (NOT default 800x600)
-        options.AddArgument("--window-size=1920,1080");
+            // New Headless Mode (--headless=new, NOT old --headless flag)
+            if (UseHeadless)
+            {
+                options.AddArgument("--headless=new");
+            }
 
-        // User-Agent: Latest Chrome on Windows 10 (must NOT contain "HeadlessChrome")
-        options.AddArgument($"--user-agent={LatestUserAgent}");
+            // Standard window size: 1920x1080 (NOT default 800x600)
+            options.AddArgument("--window-size=1920,1080");
 
-        // Anti-detection: Disable automation flags
-        options.AddArgument("--disable-blink-features=AutomationControlled");
-        options.AddExcludedArgument("enable-automation");
-        options.AddAdditionalOption("useAutomationExtension", false);
+            // User-Agent: Latest Chrome on Windows 10 (must NOT contain "HeadlessChrome")
+            options.AddArgument($"--user-agent={LatestUserAgent}");
 
-        // Standard browser arguments
-        options.AddArgument("--disable-infobars");
-        options.AddArgument("--disable-extensions");
-        options.AddArgument("--disable-gpu");
-        options.AddArgument("--no-sandbox");
-        options.AddArgument("--disable-dev-shm-usage");
-        options.AddArgument("--lang=en-US");
+            // ===== ANTI-DETECTION: Make browser appear as real human browser =====
 
-        // Additional stability options
-        options.AddArgument("--disable-software-rasterizer");
-        options.AddArgument("--disable-background-timer-throttling");
-        options.AddArgument("--disable-backgrounding-occluded-windows");
-        options.AddArgument("--disable-renderer-backgrounding");
-        options.PageLoadStrategy = PageLoadStrategy.Normal;
+            // Disable automation flags (critical for Cloudflare bypass)
+            options.AddArgument("--disable-blink-features=AutomationControlled");
+            options.AddExcludedArgument("enable-automation");
+            options.AddAdditionalOption("useAutomationExtension", false);
+
+            // Disable webdriver mode completely
+            options.AddArgument("--disable-web-security");
+            options.AddArgument("--allow-running-insecure-content");
+
+            // Make browser fingerprint look real
+            options.AddArgument("--disable-features=IsolateOrigins,site-per-process");
+            options.AddArgument("--flag-switches-begin");
+            options.AddArgument("--flag-switches-end");
+
+            // Realistic browser settings
+            options.AddArgument("--start-maximized");
+            options.AddArgument("--disable-popup-blocking");
+            options.AddArgument("--ignore-certificate-errors");
+            options.AddArgument("--disable-default-apps");
+            options.AddArgument("--disable-notifications");
+            options.AddArgument("--disable-hang-monitor");
+            options.AddArgument("--disable-prompt-on-repost");
+            options.AddArgument("--disable-sync");
+            options.AddArgument("--disable-translate");
+            options.AddArgument("--metrics-recording-only");
+            options.AddArgument("--no-first-run");
+            options.AddArgument("--safebrowsing-disable-auto-update");
+
+            // Prevent detection via navigator properties
+            options.AddArgument("--disable-plugins-discovery");
+            options.AddArgument("--disable-bundled-ppapi-flash");
+
+            // Standard browser arguments
+            options.AddArgument("--disable-infobars");
+            options.AddArgument("--disable-extensions");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("--no-sandbox");
+            options.AddArgument("--disable-dev-shm-usage");
+            options.AddArgument("--lang=en-US,en;q=0.9");
+
+            // Additional stability options
+            options.AddArgument("--disable-software-rasterizer");
+            options.AddArgument("--disable-background-timer-throttling");
+            options.AddArgument("--disable-backgrounding-occluded-windows");
+            options.AddArgument("--disable-renderer-backgrounding");
+            options.AddArgument("--disable-background-networking");
+            options.AddArgument("--disable-client-side-phishing-detection");
+            options.AddArgument("--disable-component-update");
+            options.AddArgument("--disable-domain-reliability");
+            options.AddArgument("--disable-features=TranslateUI");
+
+            options.PageLoadStrategy = PageLoadStrategy.Normal;
+        }
 
         // Check for local ChromeDriver path
         var localDriverPath = ChromeVersionService.GetLocalChromeDriverPath();
@@ -103,7 +168,32 @@ public class WebDriverService : IDisposable
 
         // Use a slightly larger command timeout than PageLoad to avoid default 30s remote timeouts
         var commandTimeout = TimeSpan.FromSeconds(Math.Max(TimeoutSeconds * 2, 60));
-        var driver = new ChromeDriver(_driverService, options, commandTimeout);
+        
+        ChromeDriver driver;
+        try
+        {
+            driver = new ChromeDriver(_driverService, options, commandTimeout);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("session not created") || ex.Message.Contains("Chrome instance exited"))
+        {
+            // If using user profile and Chrome is already running, retry without user profile
+            if (UseUserProfile)
+            {
+                _driverService?.Dispose();
+                _driverService = null;
+                
+                // Recreate without user profile - fall back to standard mode
+                UseUserProfile = false;
+                return CreateDriver();
+            }
+            
+            throw new InvalidOperationException(
+                "Failed to create Chrome session. This may occur if:\n" +
+                "1. Chrome browser is not installed\n" +
+                "2. ChromeDriver version doesn't match Chrome version\n" +
+                "3. Chrome is already running with the same profile\n" +
+                "Original error: " + ex.Message, ex);
+        }
 
         // Track the ChromeDriver process for cleanup
         try
@@ -118,14 +208,19 @@ public class WebDriverService : IDisposable
         driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);
         driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(30);
 
-        // Hide navigator.webdriver flag using JavaScript injection
+        // CRITICAL: Use CDP to inject stealth script BEFORE any page loads
+        // This runs before Cloudflare can detect webdriver
+        InjectStealthViaCDP(driver);
+
+        // Hide navigator.webdriver flag using JavaScript injection (backup)
         HideWebDriverFlag(driver);
 
         return driver;
     }
 
     /// <summary>
-    /// Hides the navigator.webdriver flag to avoid detection
+    /// Comprehensive stealth script to make browser appear as real human browser.
+    /// This bypasses Cloudflare and other bot detection systems.
     /// </summary>
     private static void HideWebDriverFlag(IWebDriver driver)
     {
@@ -133,47 +228,245 @@ public class WebDriverService : IDisposable
         {
             var js = (IJavaScriptExecutor)driver;
 
-            // Remove webdriver property
+            // Comprehensive stealth script - mimics puppeteer-extra-plugin-stealth
             js.ExecuteScript(@"
+                // 1. Remove webdriver property completely
                 Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
+                    get: () => undefined,
+                    configurable: true
                 });
-            ");
+                delete navigator.__proto__.webdriver;
 
-            // Override navigator.plugins to appear more like a real browser
-            js.ExecuteScript(@"
+                // 2. Fix navigator.plugins to look like real Chrome
                 Object.defineProperty(navigator, 'plugins', {
-                    get: () => [1, 2, 3, 4, 5]
+                    get: () => {
+                        const plugins = [
+                            { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                            { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                            { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+                        ];
+                        plugins.length = 3;
+                        plugins.item = (i) => plugins[i];
+                        plugins.namedItem = (name) => plugins.find(p => p.name === name);
+                        plugins.refresh = () => {};
+                        return plugins;
+                    },
+                    configurable: true
                 });
-            ");
 
-            // Override navigator.languages
-            js.ExecuteScript(@"
+                // 3. Fix navigator.languages
                 Object.defineProperty(navigator, 'languages', {
-                    get: () => ['en-US', 'en']
+                    get: () => ['en-US', 'en'],
+                    configurable: true
                 });
-            ");
 
-            // Hide automation-related chrome properties
-            js.ExecuteScript(@"
+                // 4. Fix navigator.platform
+                Object.defineProperty(navigator, 'platform', {
+                    get: () => 'Win32',
+                    configurable: true
+                });
+
+                // 5. Fix navigator.hardwareConcurrency (CPU cores)
+                Object.defineProperty(navigator, 'hardwareConcurrency', {
+                    get: () => 8,
+                    configurable: true
+                });
+
+                // 6. Fix navigator.deviceMemory
+                Object.defineProperty(navigator, 'deviceMemory', {
+                    get: () => 8,
+                    configurable: true
+                });
+
+                // 7. Fix navigator.maxTouchPoints
+                Object.defineProperty(navigator, 'maxTouchPoints', {
+                    get: () => 0,
+                    configurable: true
+                });
+
+                // 8. Fix screen properties
+                Object.defineProperty(screen, 'availWidth', { get: () => 1920, configurable: true });
+                Object.defineProperty(screen, 'availHeight', { get: () => 1040, configurable: true });
+                Object.defineProperty(screen, 'width', { get: () => 1920, configurable: true });
+                Object.defineProperty(screen, 'height', { get: () => 1080, configurable: true });
+                Object.defineProperty(screen, 'colorDepth', { get: () => 24, configurable: true });
+                Object.defineProperty(screen, 'pixelDepth', { get: () => 24, configurable: true });
+
+                // 9. Fix window.outerWidth/Height
+                Object.defineProperty(window, 'outerWidth', { get: () => 1920, configurable: true });
+                Object.defineProperty(window, 'outerHeight', { get: () => 1080, configurable: true });
+
+                // 10. Create realistic chrome object
                 window.chrome = {
-                    runtime: {}
+                    app: {
+                        isInstalled: false,
+                        InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+                        RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' }
+                    },
+                    runtime: {
+                        OnInstalledReason: { CHROME_UPDATE: 'chrome_update', INSTALL: 'install', SHARED_MODULE_UPDATE: 'shared_module_update', UPDATE: 'update' },
+                        OnRestartRequiredReason: { APP_UPDATE: 'app_update', OS_UPDATE: 'os_update', PERIODIC: 'periodic' },
+                        PlatformArch: { ARM: 'arm', ARM64: 'arm64', MIPS: 'mips', MIPS64: 'mips64', X86_32: 'x86-32', X86_64: 'x86-64' },
+                        PlatformNaclArch: { ARM: 'arm', MIPS: 'mips', MIPS64: 'mips64', X86_32: 'x86-32', X86_64: 'x86-64' },
+                        PlatformOs: { ANDROID: 'android', CROS: 'cros', LINUX: 'linux', MAC: 'mac', OPENBSD: 'openbsd', WIN: 'win' },
+                        RequestUpdateCheckStatus: { NO_UPDATE: 'no_update', THROTTLED: 'throttled', UPDATE_AVAILABLE: 'update_available' },
+                        id: undefined,
+                        connect: function() {},
+                        sendMessage: function() {}
+                    },
+                    csi: function() {},
+                    loadTimes: function() {}
                 };
-            ");
 
-            // Override permissions query to avoid detection
-            js.ExecuteScript(@"
+                // 11. Fix permissions API
                 const originalQuery = window.navigator.permissions.query;
                 window.navigator.permissions.query = (parameters) => (
                     parameters.name === 'notifications' ?
                         Promise.resolve({ state: Notification.permission }) :
                         originalQuery(parameters)
                 );
+
+                // 12. Fix WebGL vendor and renderer
+                const getParameterProxyHandler = {
+                    apply: function(target, ctx, args) {
+                        const param = args[0];
+                        if (param === 37445) return 'Google Inc. (NVIDIA)';
+                        if (param === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                        return Reflect.apply(target, ctx, args);
+                    }
+                };
+                try {
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const originalGetParameter = gl.getParameter.bind(gl);
+                        gl.getParameter = new Proxy(originalGetParameter, getParameterProxyHandler);
+                    }
+                } catch(e) {}
+
+                // 13. Remove Selenium/WebDriver traces
+                delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+                delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+                delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+                delete document.$cdc_asdjflasutopfhvcZLmcfl_;
+                delete document.__webdriver_script_fn;
+                delete document.__driver_evaluate;
+                delete document.__webdriver_evaluate;
+                delete document.__selenium_evaluate;
+                delete document.__fxdriver_evaluate;
+                delete document.__driver_unwrapped;
+                delete document.__webdriver_unwrapped;
+                delete document.__selenium_unwrapped;
+                delete document.__fxdriver_unwrapped;
+                delete document.__webdriver_script_function;
+                delete document.documentElement.getAttribute;
+
+                // 14. Fix toString to hide modifications
+                const originalToString = Function.prototype.toString;
+                Function.prototype.toString = function() {
+                    if (this === window.navigator.permissions.query) {
+                        return 'function query() { [native code] }';
+                    }
+                    return originalToString.call(this);
+                };
+
+                // 15. Add realistic Notification API
+                if (!window.Notification) {
+                    window.Notification = {
+                        permission: 'default',
+                        requestPermission: () => Promise.resolve('default')
+                    };
+                }
+
+                // 16. Fix iframe contentWindow
+                Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+                    get: function() {
+                        return window;
+                    }
+                });
             ");
         }
         catch
         {
             // Ignore errors - page might not be loaded yet
+        }
+    }
+
+    /// <summary>
+    /// Injects stealth script via Chrome DevTools Protocol BEFORE any page loads.
+    /// This is critical for bypassing Cloudflare because it runs before page scripts.
+    /// </summary>
+    private static void InjectStealthViaCDP(ChromeDriver driver)
+    {
+        try
+        {
+            // Stealth script that runs before every page load
+            var stealthScript = @"
+                // Remove webdriver flag immediately
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                    configurable: true
+                });
+
+                // Delete webdriver from prototype
+                if (navigator.__proto__) {
+                    delete navigator.__proto__.webdriver;
+                }
+
+                // Fix plugins
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => {
+                        const p = [
+                            { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                            { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                            { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+                        ];
+                        p.length = 3;
+                        return p;
+                    },
+                    configurable: true
+                });
+
+                // Fix languages
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en'],
+                    configurable: true
+                });
+
+                // Fix platform
+                Object.defineProperty(navigator, 'platform', {
+                    get: () => 'Win32',
+                    configurable: true
+                });
+
+                // Create chrome object
+                window.chrome = {
+                    app: { isInstalled: false },
+                    runtime: { id: undefined, connect: function(){}, sendMessage: function(){} },
+                    csi: function(){},
+                    loadTimes: function(){}
+                };
+
+                // Remove Selenium traces
+                const props = ['cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise',
+                               'cdc_adoQpoasnfa76pfcZLmcfl_Symbol', '$cdc_asdjflasutopfhvcZLmcfl_'];
+                for (const prop of props) {
+                    delete window[prop];
+                    delete document[prop];
+                }
+            ";
+
+            // Use CDP to add script that runs before every document
+            var parameters = new Dictionary<string, object>
+            {
+                { "source", stealthScript }
+            };
+
+            driver.ExecuteCdpCommand("Page.addScriptToEvaluateOnNewDocument", parameters);
+        }
+        catch
+        {
+            // CDP might not be available in some configurations
         }
     }
 
@@ -280,7 +573,30 @@ public class WebDriverService : IDisposable
 
     public string GetPageSource()
     {
-        return GetDriver().PageSource;
+        try
+        {
+            var driver = GetDriver();
+            return driver?.PageSource ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Gets the current page title from the browser tab (after JavaScript execution)
+    /// </summary>
+    public string GetPageTitle()
+    {
+        try
+        {
+            return GetDriver().Title ?? "";
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     public List<IWebElement> FindElements(string cssSelector)
@@ -367,9 +683,20 @@ return new List<IWebElement>();
         {
             return await Task.Run(() =>
             {
-                var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
-                wait.Until(d => d.FindElements(By.CssSelector(cssSelector)).Count > 0);
-                return true;
+                try
+                {
+                    var wait = new WebDriverWait(GetDriver(), TimeSpan.FromSeconds(timeoutSeconds));
+                    wait.Until(d => d.FindElements(By.CssSelector(cssSelector)).Count > 0);
+                    return true;
+                }
+                catch (WebDriverTimeoutException)
+                {
+                    return false;
+                }
+                catch (WebDriverException)
+                {
+                    return false;
+                }
             }, cancellationToken);
         }
         catch (OperationCanceledException)
@@ -620,6 +947,31 @@ return new List<IWebElement>();
     }
 
     /// <summary>
+    /// Gets the Chrome user data directory path for the current user.
+    /// This contains the user's profile with cookies, history, extensions, etc.
+    /// </summary>
+    private static string? GetChromeUserDataDirectory()
+    {
+        try
+        {
+            // Windows: C:\Users\{username}\AppData\Local\Google\Chrome\User Data
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var chromeUserData = Path.Combine(localAppData, "Google", "Chrome", "User Data");
+
+            if (Directory.Exists(chromeUserData))
+            {
+                return chromeUserData;
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Re-applies webdriver flag hiding after navigation (recommended after each page load)
     /// </summary>
     public void ReapplyAntiDetection()
@@ -716,6 +1068,55 @@ return new List<IWebElement>();
             {
                 process.Kill(true); // Kill entire process tree
             }
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Aggressively kills Chrome processes spawned by this driver using taskkill.
+    /// This ensures the browser is fully closed even if graceful quit fails.
+    /// DOES NOT try graceful close methods as they can hang on Cloudflare pages.
+    /// </summary>
+    public void ForceKillChrome()
+    {
+        // Get process ID before any cleanup attempts
+        var processId = _chromeDriverProcessId;
+
+        // Kill by ChromeDriver process ID FIRST (kills entire process tree including Chrome)
+        if (processId > 0)
+        {
+            RunTaskKill($"/F /T /PID {processId}");
+        }
+
+        // Set driver to null to prevent further operations
+        try
+        {
+            _driver = null;
+            _driverService?.Dispose();
+            _driverService = null;
+            _chromeDriverProcessId = 0;
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Runs taskkill with the specified arguments
+    /// </summary>
+    private static void RunTaskKill(string arguments)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "taskkill",
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var proc = Process.Start(startInfo);
+            proc?.WaitForExit(5000);
         }
         catch { }
     }
