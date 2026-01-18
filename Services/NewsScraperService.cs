@@ -129,11 +129,27 @@ public class NewsScraperService
             StatusChanged?.Invoke(this, $"Finding first article on: {site.SiteName}");
             var firstLink = webDriver.GetFirstLink(site.ArticleLinkSelector);
 
+            // If no link found, treat as blocked - try visible browser fallback
             if (string.IsNullOrEmpty(firstLink))
             {
-                StatusChanged?.Invoke(this, $"No article found on: {site.SiteName}");
-                ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
-                return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
+                StatusChanged?.Invoke(this, $"Link not found with selector, trying visible browser fallback...");
+
+                // Close headless browser first
+                webDriver.ForceKillChrome();
+                await Task.Delay(1000, cancellationToken);
+
+                // Try to find link with visible browser
+                firstLink = await FindLinkWithVisibleBrowserAsync(site, cancellationToken);
+
+                if (string.IsNullOrEmpty(firstLink))
+                {
+                    StatusChanged?.Invoke(this, $"No article found on: {site.SiteName}");
+                    ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
+                    return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
+                }
+
+                // Create a new visible browser for article scraping (since we closed the previous one)
+                webDriver = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: 10);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -304,12 +320,12 @@ public class NewsScraperService
                 }
             }
 
-            // FALLBACK: If body is still empty, use timestamp as body text
+            // FALLBACK: If body is still empty, use title as body text
             var createdAt = DateTime.Now;
             if (string.IsNullOrEmpty(body))
             {
-                StatusChanged?.Invoke(this, $"Body empty, using timestamp as fallback");
-                body = createdAt.ToString("yyyy-MM-dd HH:mm:ss");
+                StatusChanged?.Invoke(this, $"Body empty, using title as fallback");
+                body = title;
             }
 
             if (string.IsNullOrEmpty(title) || IsCloudflareTitle(title))
@@ -542,7 +558,7 @@ public class NewsScraperService
             var createdAt = DateTime.Now;
             if (string.IsNullOrEmpty(body))
             {
-                body = createdAt.ToString("yyyy-MM-dd HH:mm:ss");
+                body = title; // Use title as fallback for empty body
             }
 
             var elapsed = (DateTime.Now - startTime).TotalSeconds;
@@ -575,6 +591,184 @@ public class NewsScraperService
                 StatusChanged?.Invoke(this, $"Closing browser...");
                 userBrowser.ForceKillChrome();
             }
+        }
+    }
+
+    /// <summary>
+    /// Fallback method to find article links using a visible browser when headless browser fails.
+    /// Opens visible browser, loads page, tries selector first, then broader search.
+    /// Closes browser immediately when link is found.
+    /// </summary>
+    private async Task<string?> FindLinkWithVisibleBrowserAsync(SiteInfo site, CancellationToken cancellationToken)
+    {
+        WebDriverService? browser = null;
+        try
+        {
+            StatusChanged?.Invoke(this, $"Opening visible browser to find links...");
+
+            // Create visible browser
+            browser = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: 10);
+
+            // Use 5-second timeout for finding links
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            // Navigate to the main page
+            StatusChanged?.Invoke(this, $"Loading: {site.SiteLink}");
+            await browser.NavigateToAsync(site.SiteLink, linkedCts.Token);
+
+            string? foundLink = null;
+
+            // Poll for links - try every 500ms for up to 5 seconds
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                linkedCts.Token.ThrowIfCancellationRequested();
+
+                // First try the configured selector
+                foundLink = browser.GetFirstLink(site.ArticleLinkSelector);
+                if (!string.IsNullOrEmpty(foundLink))
+                {
+                    StatusChanged?.Invoke(this, $"Link found with selector: {foundLink.Substring(0, Math.Min(50, foundLink.Length))}...");
+                    return NormalizeUrl(foundLink, site.SiteLink);
+                }
+
+                // Broader search - look for common article link patterns in page source
+                var pageSource = browser.GetPageSource();
+                if (!string.IsNullOrEmpty(pageSource) && pageSource.Length > 1000)
+                {
+                    foundLink = ExtractFirstArticleLinkFromSource(pageSource, site.SiteLink);
+                    if (!string.IsNullOrEmpty(foundLink))
+                    {
+                        StatusChanged?.Invoke(this, $"Link found with broader search: {foundLink.Substring(0, Math.Min(50, foundLink.Length))}...");
+                        return foundLink;
+                    }
+                }
+
+                await Task.Delay(500, linkedCts.Token);
+            }
+
+            StatusChanged?.Invoke(this, $"Could not find article links");
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            StatusChanged?.Invoke(this, $"Timeout finding links");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            StatusChanged?.Invoke(this, $"Error finding links: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            // Close browser immediately
+            if (browser != null)
+            {
+                StatusChanged?.Invoke(this, $"Closing browser...");
+                browser.ForceKillChrome();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extracts the first article-like link from HTML source using common patterns.
+    /// Looks for links that appear to be news articles based on URL patterns.
+    /// </summary>
+    private static string? ExtractFirstArticleLinkFromSource(string pageSource, string baseUrl)
+    {
+        try
+        {
+            var doc = new HtmlAgilityPack.HtmlDocument();
+            doc.LoadHtml(pageSource);
+
+            // Get base domain for filtering
+            var baseUri = new Uri(baseUrl);
+            var baseDomain = baseUri.Host;
+
+            // Find all anchor tags with href
+            var links = doc.DocumentNode.SelectNodes("//a[@href]");
+            if (links == null) return null;
+
+            foreach (var link in links)
+            {
+                var href = link.GetAttributeValue("href", "");
+                if (string.IsNullOrEmpty(href)) continue;
+
+                // Normalize the URL
+                var absoluteUrl = NormalizeUrl(href, baseUrl);
+                if (string.IsNullOrEmpty(absoluteUrl)) continue;
+
+                // Check if it looks like an article URL (common patterns)
+                if (IsLikelyArticleUrl(absoluteUrl, baseDomain))
+                {
+                    return absoluteUrl;
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Checks if a URL looks like a news article based on common patterns.
+    /// </summary>
+    private static bool IsLikelyArticleUrl(string url, string baseDomain)
+    {
+        try
+        {
+            var uri = new Uri(url);
+
+            // Must be same domain
+            if (!uri.Host.Contains(baseDomain) && !baseDomain.Contains(uri.Host))
+                return false;
+
+            var path = uri.AbsolutePath.ToLowerInvariant();
+
+            // Skip common non-article paths
+            var skipPatterns = new[] {
+                "/about", "/contact", "/privacy", "/terms", "/login", "/register",
+                "/search", "/category", "/tag", "/author", "/page/", "/wp-admin",
+                "/feed", "/rss", ".xml", ".json", ".css", ".js", ".png", ".jpg",
+                "/cdn-cgi/", "/static/", "/assets/", "/images/"
+            };
+            foreach (var skip in skipPatterns)
+            {
+                if (path.Contains(skip)) return false;
+            }
+
+            // Look for article-like patterns (numbers in URL often indicate article IDs)
+            var articlePatterns = new[] {
+                "/news/", "/article/", "/story/", "/post/", "/blog/",
+                "/national/", "/international/", "/sports/", "/entertainment/",
+                "/politics/", "/business/", "/technology/", "/health/",
+                "/world/", "/local/", "/latest/"
+            };
+
+            // Check if URL contains article patterns
+            foreach (var pattern in articlePatterns)
+            {
+                if (path.Contains(pattern)) return true;
+            }
+
+            // Check if URL has numeric ID (common for articles)
+            if (System.Text.RegularExpressions.Regex.IsMatch(path, @"/\d{4,}"))
+                return true;
+
+            // Check if path has multiple segments (likely content, not homepage)
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length >= 2)
+                return true;
+
+            return false;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -651,10 +845,10 @@ public class NewsScraperService
                             body = bodyNode?.InnerText?.Trim();
                         }
 
-                        // Fallback: Use timestamp as body
+                        // Fallback: Use title as body
                         if (string.IsNullOrEmpty(body))
                         {
-                            body = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                            body = title;
                         }
                     }
                 }
