@@ -126,6 +126,14 @@ public class BackgroundScraperService : IDisposable
 
     public async Task RunOnceAsync()
     {
+        // Check No Scrap Window
+        if (ServiceContainer.NoScrapWindow.IsInNoScrapWindow())
+        {
+            var remaining = ServiceContainer.NoScrapWindow.GetRemainingTime();
+            StatusChanged?.Invoke(this, $"No-Scrap Window active. Resumes in {remaining:hh\\:mm\\:ss}");
+            return;
+        }
+
         var scraper = new NewsScraperService();
         scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
         scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
@@ -134,6 +142,7 @@ public class BackgroundScraperService : IDisposable
         try
         {
             await scraper.ScrapeAllSitesAsync(_cts?.Token ?? CancellationToken.None);
+            StatusChanged?.Invoke(this, "Scrape cycle completed.");
         }
         finally
         {
@@ -147,6 +156,14 @@ public class BackgroundScraperService : IDisposable
     /// </summary>
     public async Task RunSiteOnceAsync(SiteInfo site)
     {
+        // Check No Scrap Window
+        if (ServiceContainer.NoScrapWindow.IsInNoScrapWindow())
+        {
+            var remaining = ServiceContainer.NoScrapWindow.GetRemainingTime();
+            StatusChanged?.Invoke(this, $"No-Scrap Window active. Resumes in {remaining:hh\\:mm\\:ss}");
+            return;
+        }
+
         var scraper = new NewsScraperService();
         scraper.ArticleScraped += (s, e) => ArticleScraped?.Invoke(this, e);
         scraper.StatusChanged += (s, e) => StatusChanged?.Invoke(this, e);
@@ -156,6 +173,7 @@ public class BackgroundScraperService : IDisposable
         {
             ProgressChanged?.Invoke(this, (1, 1));
             await scraper.ScrapeSiteAsync(site, _cts?.Token ?? CancellationToken.None);
+            StatusChanged?.Invoke(this, "Site scrape completed.");
         }
         finally
         {
@@ -176,6 +194,14 @@ public class BackgroundScraperService : IDisposable
         _isExecuting = true;
         try
         {
+            // Check No Scrap Window - skip scraping if within blocked time
+            if (ServiceContainer.NoScrapWindow.IsInNoScrapWindow())
+            {
+                var remaining = ServiceContainer.NoScrapWindow.GetRemainingTime();
+                StatusChanged?.Invoke(this, $"No-Scrap Window active. Resumes in {remaining:hh\\:mm\\:ss}");
+                return;
+            }
+
             StatusChanged?.Invoke(this, "Starting scheduled scrape...");
 
             var scraper = new NewsScraperService();
@@ -184,6 +210,8 @@ public class BackgroundScraperService : IDisposable
             scraper.ProgressChanged += (s, e) => ProgressChanged?.Invoke(this, e);
 
             await scraper.ScrapeAllSitesAsync(_cts.Token);
+
+            StatusChanged?.Invoke(this, "Scrape cycle completed. Waiting for next interval...");
         }
         catch (OperationCanceledException)
         {

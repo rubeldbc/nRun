@@ -36,8 +36,9 @@ partial class SiteEditForm
         this.txtTitleSelector = new System.Windows.Forms.TextBox();
         this.txtBodySelector = new System.Windows.Forms.TextBox();
 
-        // Checkbox
+        // Checkboxes
         this.chkIsActive = new System.Windows.Forms.CheckBox();
+        this.chkCloudflareBypass = new System.Windows.Forms.CheckBox();
 
         // Buttons
         this.btnTestSelectors = new System.Windows.Forms.Button();
@@ -119,6 +120,7 @@ partial class SiteEditForm
         this.panelMain.Controls.Add(this.lblCountry);
         this.panelMain.Controls.Add(this.txtCountry);
         this.panelMain.Controls.Add(this.chkIsActive);
+        this.panelMain.Controls.Add(this.chkCloudflareBypass);
         this.panelMain.Controls.Add(this.lblSelectorInfo);
         this.panelMain.Controls.Add(this.lblArticleSelector);
         this.panelMain.Controls.Add(this.txtArticleSelector);
@@ -223,6 +225,16 @@ partial class SiteEditForm
         this.chkIsActive.Size = new System.Drawing.Size(59, 19);
         this.chkIsActive.TabIndex = 8;
         this.chkIsActive.Text = "Active";
+
+        //
+        // chkCloudflareBypass
+        //
+        this.chkCloudflareBypass.AutoSize = true;
+        this.chkCloudflareBypass.Location = new System.Drawing.Point(220, 102);
+        this.chkCloudflareBypass.Name = "chkCloudflareBypass";
+        this.chkCloudflareBypass.Size = new System.Drawing.Size(150, 19);
+        this.chkCloudflareBypass.TabIndex = 9;
+        this.chkCloudflareBypass.Text = "Allow Cloudflare Bypass";
 
         //
         // lblSelectorInfo
@@ -415,6 +427,7 @@ partial class SiteEditForm
     private System.Windows.Forms.TextBox txtTitleSelector;
     private System.Windows.Forms.TextBox txtBodySelector;
     private System.Windows.Forms.CheckBox chkIsActive;
+    private System.Windows.Forms.CheckBox chkCloudflareBypass;
     private System.Windows.Forms.Button btnTestSelectors;
     private System.Windows.Forms.Button btnSave;
     private System.Windows.Forms.Button btnCancel;

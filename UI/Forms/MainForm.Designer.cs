@@ -23,6 +23,8 @@ partial class MainForm
         splitContainerMain = new SplitContainer();
         panelLeft = new Panel();
         listBoxSites = new ListBox();
+        contextMenuSites = new ContextMenuStrip(components);
+        menuItemAllowCloudflareBypass = new ToolStripMenuItem();
         panelNoScrap = new Panel();
         chkNoScrapEnabled = new CheckBox();
         lblNoScrapStart = new Label();
@@ -211,6 +213,7 @@ partial class MainForm
         splitContainerMain.Panel2.SuspendLayout();
         splitContainerMain.SuspendLayout();
         panelLeft.SuspendLayout();
+        contextMenuSites.SuspendLayout();
         panelNoScrap.SuspendLayout();
         toolStripSites.SuspendLayout();
         panelRight.SuspendLayout();
@@ -312,16 +315,31 @@ partial class MainForm
         panelLeft.Name = "panelLeft";
         panelLeft.Size = new Size(283, 600);
         panelLeft.TabIndex = 0;
-        // 
+        //
         // listBoxSites
-        // 
+        //
+        listBoxSites.ContextMenuStrip = contextMenuSites;
         listBoxSites.Dock = DockStyle.Fill;
+        listBoxSites.DrawMode = DrawMode.OwnerDrawFixed;
         listBoxSites.FormattingEnabled = true;
-        listBoxSites.ItemHeight = 15;
+        listBoxSites.ItemHeight = 18;
         listBoxSites.Location = new Point(0, 50);
         listBoxSites.Name = "listBoxSites";
         listBoxSites.Size = new Size(283, 485);
         listBoxSites.TabIndex = 2;
+        //
+        // contextMenuSites
+        //
+        contextMenuSites.Items.AddRange(new ToolStripItem[] { menuItemAllowCloudflareBypass });
+        contextMenuSites.Name = "contextMenuSites";
+        contextMenuSites.Size = new Size(200, 26);
+        //
+        // menuItemAllowCloudflareBypass
+        //
+        menuItemAllowCloudflareBypass.CheckOnClick = true;
+        menuItemAllowCloudflareBypass.Name = "menuItemAllowCloudflareBypass";
+        menuItemAllowCloudflareBypass.Size = new Size(199, 22);
+        menuItemAllowCloudflareBypass.Text = "Allow cloudflare bypass";
         // 
         // panelNoScrap
         // 
@@ -2159,6 +2177,7 @@ partial class MainForm
         splitContainerMain.ResumeLayout(false);
         panelLeft.ResumeLayout(false);
         panelLeft.PerformLayout();
+        contextMenuSites.ResumeLayout(false);
         panelNoScrap.ResumeLayout(false);
         panelNoScrap.PerformLayout();
         toolStripSites.ResumeLayout(false);
@@ -2242,6 +2261,8 @@ partial class MainForm
     private System.Windows.Forms.Label lblNoScrapEnd;
     private System.Windows.Forms.DateTimePicker dtpNoScrapEnd;
     private System.Windows.Forms.ListBox listBoxSites;
+    private System.Windows.Forms.ContextMenuStrip contextMenuSites;
+    private System.Windows.Forms.ToolStripMenuItem menuItemAllowCloudflareBypass;
     private System.Windows.Forms.ToolStrip toolStripSites;
     private System.Windows.Forms.ToolStripButton btnAddSite;
     private System.Windows.Forms.ToolStripButton btnEditSite;

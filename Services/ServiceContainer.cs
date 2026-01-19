@@ -16,6 +16,7 @@ public static class ServiceContainer
     private static IScheduleCalculationService? _scheduleCalculation;
     private static IBulkImportService? _bulkImport;
     private static CacheService? _cache;
+    private static CloudflareBypassSettingsManager? _cloudflareBypass;
 
     public static IDatabaseService Database => _database ?? throw new InvalidOperationException("ServiceContainer not initialized. Call Initialize() first.");
     public static ISettingsManager Settings => _settings ?? throw new InvalidOperationException("ServiceContainer not initialized. Call Initialize() first.");
@@ -25,6 +26,7 @@ public static class ServiceContainer
     public static IScheduleCalculationService ScheduleCalculation => _scheduleCalculation ?? throw new InvalidOperationException("ServiceContainer not initialized. Call Initialize() first.");
     public static IBulkImportService BulkImport => _bulkImport ?? throw new InvalidOperationException("ServiceContainer not initialized. Call Initialize() first.");
     public static CacheService Cache => _cache ?? throw new InvalidOperationException("ServiceContainer not initialized. Call Initialize() first.");
+    public static CloudflareBypassSettingsManager CloudflareBypass => _cloudflareBypass ?? throw new InvalidOperationException("ServiceContainer not initialized. Call Initialize() first.");
 
     /// <summary>
     /// Initialize all services. Call this at application startup.
@@ -39,6 +41,7 @@ public static class ServiceContainer
         _noScrapWindow = new NoScrapWindowService(_settings);
         _scheduleCalculation = new ScheduleCalculationService();
         _bulkImport = new BulkImportService();
+        _cloudflareBypass = new CloudflareBypassSettingsManager();
     }
 
     /// <summary>
@@ -54,5 +57,6 @@ public static class ServiceContainer
         _noScrapWindow = new NoScrapWindowService(settings);
         _scheduleCalculation = new ScheduleCalculationService();
         _bulkImport = new BulkImportService();
+        _cloudflareBypass = new CloudflareBypassSettingsManager();
     }
 }

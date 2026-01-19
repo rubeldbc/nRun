@@ -77,10 +77,12 @@ public partial class SiteEditForm : Form
             txtTitleSelector.Text = _existingSite.TitleSelector;
             txtBodySelector.Text = _existingSite.BodySelector;
             chkIsActive.Checked = _existingSite.IsActive;
+            chkCloudflareBypass.Checked = ServiceContainer.CloudflareBypass.IsEnabled(_existingSite.SiteId);
         }
         else
         {
             this.Text = "Add News Source";
+            chkCloudflareBypass.Checked = false;
         }
     }
 
@@ -128,7 +130,8 @@ public partial class SiteEditForm : Form
                 txtArticleSelector.Text.Trim() != _existingSite.ArticleLinkSelector ||
                 txtTitleSelector.Text.Trim() != _existingSite.TitleSelector ||
                 txtBodySelector.Text.Trim() != _existingSite.BodySelector ||
-                chkIsActive.Checked != _existingSite.IsActive;
+                chkIsActive.Checked != _existingSite.IsActive ||
+                chkCloudflareBypass.Checked != ServiceContainer.CloudflareBypass.IsEnabled(_existingSite.SiteId);
 
             if (hasChanges)
             {
@@ -222,6 +225,10 @@ public partial class SiteEditForm : Form
                 _existingSite.IsActive = chkIsActive.Checked;
 
                 ServiceContainer.Database.UpdateSite(_existingSite);
+
+                // Save cloudflare bypass setting
+                ServiceContainer.CloudflareBypass.SetEnabled(_existingSite.SiteId, chkCloudflareBypass.Checked);
+
                 Log($"Updated: {_existingSite.SiteName}");
             }
             else
@@ -241,6 +248,10 @@ public partial class SiteEditForm : Form
                 };
 
                 ServiceContainer.Database.AddSite(newSite);
+
+                // Save cloudflare bypass setting for new site
+                ServiceContainer.CloudflareBypass.SetEnabled(newSite.SiteId, chkCloudflareBypass.Checked);
+
                 _existingSite = newSite;
                 _isEditMode = true;
                 Log($"Added: {newSite.SiteName}");
@@ -269,6 +280,10 @@ public partial class SiteEditForm : Form
 
         btnTestSelectors.Enabled = false;
         Log("Testing selectors...");
+        if (chkCloudflareBypass.Checked)
+        {
+            Log("Cloudflare bypass: ENABLED");
+        }
 
         try
         {
@@ -278,7 +293,8 @@ public partial class SiteEditForm : Form
                 txtUrl.Text.Trim(),
                 txtArticleSelector.Text.Trim(),
                 txtTitleSelector.Text.Trim(),
-                txtBodySelector.Text.Trim()
+                txtBodySelector.Text.Trim(),
+                chkCloudflareBypass.Checked
             );
 
             // Article links result

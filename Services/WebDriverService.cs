@@ -501,25 +501,55 @@ public class WebDriverService : IDisposable
 
             try
             {
-                await Task.Run(() => GetDriver().Navigate().GoToUrl(uri), cancellationToken);
+                var navigationException = await Task.Run(() =>
+                {
+                    try
+                    {
+                        GetDriver().Navigate().GoToUrl(uri);
+                        return (Exception?)null;
+                    }
+                    catch (Exception navEx)
+                    {
+                        return navEx;
+                    }
+                }, cancellationToken);
+
+                if (navigationException != null)
+                {
+                    throw navigationException;
+                }
+
                 // Re-apply anti-detection measures after navigation
                 ReapplyAntiDetection();
                 return; // Success
             }
-            catch (Exception ex) when (ex is WebDriverException || IsNetworkException(ex))
+            catch (OperationCanceledException)
             {
-                lastException = ex;
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Unwrap AggregateException if needed
+                var actualException = ex is AggregateException agg ? agg.InnerException ?? ex : ex;
+                
+                // Check if it's a WebDriver or network exception
+                if (!(actualException is WebDriverException || IsNetworkException(actualException)))
+                {
+                    throw;
+                }
+                
+                lastException = actualException;
 
                 // Detect renderer timeout / page load timeout and try to stop the page load and proceed
-                var isRendererTimeout = ex is WebDriverTimeoutException
-                    || (ex.Message != null && ex.Message.Contains("Timed out receiving message from renderer", StringComparison.OrdinalIgnoreCase));
+                var isRendererTimeout = actualException is WebDriverTimeoutException
+                    || (actualException.Message != null && actualException.Message.Contains("Timed out receiving message from renderer", StringComparison.OrdinalIgnoreCase));
 
                 // Detect connection/network errors that require driver reset
-                var isConnectionError = IsNetworkException(ex)
-                    || (ex.Message != null && (
-                        ex.Message.Contains("connection was forcibly closed", StringComparison.OrdinalIgnoreCase) ||
-                        ex.Message.Contains("An error occurred while sending the request", StringComparison.OrdinalIgnoreCase) ||
-                        ex.Message.Contains("The HTTP request to the remote WebDriver", StringComparison.OrdinalIgnoreCase)));
+                var isConnectionError = IsNetworkException(actualException)
+                    || (actualException.Message != null && (
+                        actualException.Message.Contains("connection was forcibly closed", StringComparison.OrdinalIgnoreCase) ||
+                        actualException.Message.Contains("An error occurred while sending the request", StringComparison.OrdinalIgnoreCase) ||
+                        actualException.Message.Contains("The HTTP request to the remote WebDriver", StringComparison.OrdinalIgnoreCase)));
 
                 if (isRendererTimeout && !isConnectionError)
                 {
@@ -689,12 +719,13 @@ return new List<IWebElement>();
                     wait.Until(d => d.FindElements(By.CssSelector(cssSelector)).Count > 0);
                     return true;
                 }
-                catch (WebDriverTimeoutException)
+                catch (Exception ex) when (ex is WebDriverTimeoutException || ex is WebDriverException || IsNetworkException(ex))
                 {
                     return false;
                 }
-                catch (WebDriverException)
+                catch
                 {
+                    // Catch any other unexpected exceptions
                     return false;
                 }
             }, cancellationToken);

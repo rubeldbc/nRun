@@ -151,12 +151,13 @@ public class ScrapingCoordinator : IDisposable
         string articleLinkSelector,
         string titleSelector,
         string bodySelector,
+        bool cloudflareBypassEnabled = false,
         CancellationToken cancellationToken = default)
     {
         try
         {
             return await _oneTimeScraper.TestSelectorsAsync(
-                url, articleLinkSelector, titleSelector, bodySelector, cancellationToken);
+                url, articleLinkSelector, titleSelector, bodySelector, cloudflareBypassEnabled, cancellationToken);
         }
         catch (Exception ex)
         {

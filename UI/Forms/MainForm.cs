@@ -63,6 +63,10 @@ public partial class MainForm : Form
         btnRefreshSites.Click += BtnRefreshSites_Click;
         btnManageSites.Click += BtnManageSites_Click;
         listBoxSites.DoubleClick += ListBoxSites_DoubleClick;
+        listBoxSites.DrawItem += ListBoxSites_DrawItem;
+        listBoxSites.MouseDown += ListBoxSites_MouseDown;
+        contextMenuSites.Opening += ContextMenuSites_Opening;
+        menuItemAllowCloudflareBypass.Click += MenuItemAllowCloudflareBypass_Click;
 
         // Article list events
         olvArticles.DoubleClick += OlvArticles_DoubleClick;
@@ -512,6 +516,99 @@ public partial class MainForm : Form
             LoadSites();
             LoadArticles();
             UpdateArticleCount();
+        }
+    }
+
+    private void ListBoxSites_DrawItem(object? sender, DrawItemEventArgs e)
+    {
+        if (e.Index < 0) return;
+
+        // Get the item
+        var item = listBoxSites.Items[e.Index];
+        if (item is not SiteInfo site) return;
+
+        // Check if cloudflare bypass is enabled for this site
+        bool isCloudflareBypassEnabled = ServiceContainer.CloudflareBypass.IsEnabled(site.SiteId);
+
+        // Determine background color
+        Color backColor;
+        if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+        {
+            // Selected item - use system highlight color
+            backColor = SystemColors.Highlight;
+        }
+        else if (isCloudflareBypassEnabled)
+        {
+            // Cloudflare bypass enabled - use a light blue/cyan tint
+            backColor = Color.FromArgb(220, 240, 255);
+        }
+        else
+        {
+            // Normal item
+            backColor = SystemColors.Window;
+        }
+
+        // Draw background
+        using (var brush = new SolidBrush(backColor))
+        {
+            e.Graphics.FillRectangle(brush, e.Bounds);
+        }
+
+        // Determine text color
+        Color textColor = (e.State & DrawItemState.Selected) == DrawItemState.Selected
+            ? SystemColors.HighlightText
+            : SystemColors.WindowText;
+
+        // Draw the text
+        using (var brush = new SolidBrush(textColor))
+        {
+            var text = site.SiteName;
+            e.Graphics.DrawString(text, e.Font ?? listBoxSites.Font, brush,
+                new PointF(e.Bounds.X + 2, e.Bounds.Y + 1));
+        }
+
+        // Draw focus rectangle if needed
+        e.DrawFocusRectangle();
+    }
+
+    private void ListBoxSites_MouseDown(object? sender, MouseEventArgs e)
+    {
+        // Select item on right-click for context menu
+        if (e.Button == MouseButtons.Right)
+        {
+            int index = listBoxSites.IndexFromPoint(e.Location);
+            if (index >= 0)
+            {
+                listBoxSites.SelectedIndex = index;
+            }
+        }
+    }
+
+    private void ContextMenuSites_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        // Update the check state based on the selected site
+        if (listBoxSites.SelectedItem is SiteInfo site)
+        {
+            menuItemAllowCloudflareBypass.Checked = ServiceContainer.CloudflareBypass.IsEnabled(site.SiteId);
+        }
+        else
+        {
+            e.Cancel = true; // Don't show context menu if no item selected
+        }
+    }
+
+    private void MenuItemAllowCloudflareBypass_Click(object? sender, EventArgs e)
+    {
+        if (listBoxSites.SelectedItem is SiteInfo site)
+        {
+            // Toggle the setting
+            bool newValue = ServiceContainer.CloudflareBypass.Toggle(site.SiteId);
+
+            // Refresh the list to update the background color
+            listBoxSites.Invalidate();
+
+            // Log the change
+            LogDebug($"Cloudflare bypass {(newValue ? "enabled" : "disabled")} for: {site.SiteName}", "INFO");
         }
     }
 

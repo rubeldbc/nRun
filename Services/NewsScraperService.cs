@@ -57,14 +57,18 @@ public class NewsScraperService
         int newCount = 0, skippedCount = 0;
         var startTime = DateTime.Now;
 
-        // Create WebDriver for this scrape operation - will be disposed at the end
+        // Check if cloudflare bypass is enabled for this site
+        bool cloudflareBypassEnabled = ServiceContainer.CloudflareBypass.IsEnabled(site.SiteId);
+
+        // Create headless WebDriver to find the article link (fast)
         WebDriverService? webDriver = null;
         try
         {
+            // STEP 1: Use headless browser to find the article link (selector-based, fast)
             webDriver = WebDriverFactory.Create();
             StatusChanged?.Invoke(this, $"Loading: {site.SiteLink}");
 
-            // Navigate to site using async method
+            // Navigate to site
             await webDriver.NavigateToAsync(site.SiteLink, cancellationToken);
 
             // Wait for page to fully load
@@ -79,78 +83,37 @@ public class NewsScraperService
             // Wait for JavaScript content to render
             await Task.Delay(2000, cancellationToken);
 
-            // Check for Cloudflare IMMEDIATELY on main page - if detected, switch to user browser
-            var mainPageTitle = webDriver.GetPageTitle();
-            if (IsCloudflareTitle(mainPageTitle))
-            {
-                StatusChanged?.Invoke(this, $"Cloudflare detected on main page! Switching to user browser...");
-
-                // Force close browser - ForceKillChrome uses taskkill to kill process tree
-                webDriver.ForceKillChrome();
-
-                // Wait for Chrome to fully terminate
-                await Task.Delay(2000, cancellationToken);
-
-                // Create user browser instead
-                var settings = ServiceContainer.Settings.LoadSettings();
-                webDriver = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: settings.BrowserTimeoutSeconds);
-
-                // Navigate to site with user browser
-                StatusChanged?.Invoke(this, $"Loading with user browser: {site.SiteLink}");
-                await webDriver.NavigateToAsync(site.SiteLink, cancellationToken);
-
-                try
-                {
-                    await webDriver.WaitForPageLoadAsync(30, cancellationToken);
-                }
-                catch (OperationCanceledException) { throw; }
-                catch { }
-
-                await Task.Delay(2000, cancellationToken);
-            }
-
-            // Scroll to trigger dynamic content loading
-            StatusChanged?.Invoke(this, $"Triggering dynamic content: {site.SiteName}");
-            await webDriver.ScrollAndWaitAsync(2, 300, cancellationToken);
-
-            // Wait for article element to appear
-            StatusChanged?.Invoke(this, $"Waiting for element: {site.SiteName}");
-            var elementFound = await webDriver.TryWaitForElementAsync(site.ArticleLinkSelector, 10, cancellationToken);
-
-            if (!elementFound)
-            {
-                StatusChanged?.Invoke(this, $"Element not found, retrying: {site.SiteName}");
-                // Retry with more scrolling
-                await webDriver.ScrollAndWaitAsync(3, 500, cancellationToken);
-                await Task.Delay(1000, cancellationToken);
-            }
-
             // Find the first article link
             StatusChanged?.Invoke(this, $"Finding first article on: {site.SiteName}");
             var firstLink = webDriver.GetFirstLink(site.ArticleLinkSelector);
 
-            // If no link found, treat as blocked - try visible browser fallback
+            // If not found, try with scroll
             if (string.IsNullOrEmpty(firstLink))
             {
-                StatusChanged?.Invoke(this, $"Link not found with selector, trying visible browser fallback...");
+                StatusChanged?.Invoke(this, $"Scrolling to find content: {site.SiteName}");
+                await webDriver.ScrollAndWaitAsync(2, 300, cancellationToken);
 
-                // Close headless browser first
-                webDriver.ForceKillChrome();
-                await Task.Delay(1000, cancellationToken);
+                // Wait for element to appear
+                var elementFound = await webDriver.TryWaitForElementAsync(site.ArticleLinkSelector, 10, cancellationToken);
 
-                // Try to find link with visible browser
-                firstLink = await FindLinkWithVisibleBrowserAsync(site, cancellationToken);
-
-                if (string.IsNullOrEmpty(firstLink))
+                if (!elementFound)
                 {
-                    StatusChanged?.Invoke(this, $"No article found on: {site.SiteName}");
-                    ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
-                    return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
+                    await webDriver.ScrollAndWaitAsync(2, 500, cancellationToken);
+                    await Task.Delay(500, cancellationToken);
                 }
 
-                // Create a new visible browser for article scraping (since we closed the previous one)
-                webDriver = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: 10);
+                firstLink = webDriver.GetFirstLink(site.ArticleLinkSelector);
             }
+
+            // If still no link found
+            if (string.IsNullOrEmpty(firstLink))
+            {
+                StatusChanged?.Invoke(this, $"No article link found on: {site.SiteName}");
+                ServiceContainer.Database.UpdateSiteStats(site.SiteId, true);
+                return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
+            }
+
+            StatusChanged?.Invoke(this, $"Link found: {firstLink.Substring(0, Math.Min(60, firstLink.Length))}...");
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -163,9 +126,22 @@ public class NewsScraperService
                 return ScrapeResult.Succeeded(articles, newCount, skippedCount, DateTime.Now - startTime);
             }
 
-            // Fetch article content (using the same WebDriver instance)
-            StatusChanged?.Invoke(this, $"Fetching article details...");
-            var article = await ScrapeArticleInternalAsync(webDriver, site, articleUrl, cancellationToken);
+            // STEP 2: Close headless browser - we're done finding the link
+            webDriver.ForceKillChrome();
+            webDriver = null;
+
+            // STEP 3: Fetch article title
+            NewsInfo? article;
+            if (cloudflareBypassEnabled)
+            {
+                // Use visible browser to get title quickly from browser tab
+                article = await GetArticleTitleWithVisibleBrowserAsync(site, articleUrl, cancellationToken);
+            }
+            else
+            {
+                // Use headless browser with selector
+                article = await GetArticleTitleWithHeadlessBrowserAsync(site, articleUrl, cancellationToken);
+            }
 
             if (article == null)
             {
@@ -175,7 +151,6 @@ public class NewsScraperService
             }
 
             // Log article info for debugging
-            StatusChanged?.Invoke(this, $"Link: {articleUrl}");
             StatusChanged?.Invoke(this, $"Title: {article.NewsTitle}");
 
             // Check if article already exists
@@ -240,6 +215,198 @@ public class NewsScraperService
     }
 
     /// <summary>
+    /// Gets article title using visible browser - fast method for bypass mode.
+    /// Opens browser, navigates to URL, captures title from browser tab, closes browser.
+    /// </summary>
+    private async Task<NewsInfo?> GetArticleTitleWithVisibleBrowserAsync(
+        SiteInfo site,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        WebDriverService? browser = null;
+        try
+        {
+            StatusChanged?.Invoke(this, $"[Bypass] Opening visible browser for article...");
+
+            // Create visible browser
+            browser = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: 10);
+
+            // Navigate to article
+            await browser.NavigateToAsync(url, cancellationToken);
+
+            // Quick capture - try to get title from browser tab as soon as possible
+            string? title = null;
+            for (int attempt = 0; attempt < 10; attempt++) // Max 5 seconds (10 * 500ms)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                title = browser.GetPageTitle();
+                if (!string.IsNullOrEmpty(title) && !IsCloudflareTitle(title) && title.Length > 5)
+                {
+                    StatusChanged?.Invoke(this, $"[Bypass] Title captured: {title.Substring(0, Math.Min(50, title.Length))}...");
+                    break;
+                }
+
+                await Task.Delay(500, cancellationToken);
+            }
+
+            if (string.IsNullOrEmpty(title) || IsCloudflareTitle(title))
+            {
+                StatusChanged?.Invoke(this, $"[Bypass] Could not capture title");
+                return null;
+            }
+
+            // Get body if selector is provided (quick attempt)
+            string body = "";
+            if (!string.IsNullOrEmpty(site.BodySelector))
+            {
+                try
+                {
+                    body = browser.GetElementText(site.BodySelector) ?? "";
+                }
+                catch { }
+            }
+
+            if (string.IsNullOrEmpty(body))
+            {
+                body = title; // Use title as fallback
+            }
+
+            return new NewsInfo
+            {
+                SiteId = site.SiteId,
+                SiteName = site.SiteName,
+                SiteLogo = site.SiteLogo,
+                NewsTitle = CleanText(title),
+                NewsUrl = url,
+                NewsText = CleanText(body),
+                CreatedAt = DateTime.Now
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            StatusChanged?.Invoke(this, $"[Bypass] Error: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            if (browser != null)
+            {
+                StatusChanged?.Invoke(this, $"[Bypass] Closing browser...");
+                browser.ForceKillChrome();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets article title using headless browser with CSS selector.
+    /// </summary>
+    private async Task<NewsInfo?> GetArticleTitleWithHeadlessBrowserAsync(
+        SiteInfo site,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        WebDriverService? browser = null;
+        try
+        {
+            StatusChanged?.Invoke(this, $"Loading article...");
+
+            browser = WebDriverFactory.Create();
+
+            // Navigate to article
+            await browser.NavigateToAsync(url, cancellationToken);
+
+            // Wait for page to load
+            try
+            {
+                await browser.WaitForPageLoadAsync(15, cancellationToken);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch { }
+
+            await Task.Delay(2000, cancellationToken);
+
+            // Check for Cloudflare
+            var pageTitle = browser.GetPageTitle();
+            if (IsCloudflareTitle(pageTitle))
+            {
+                StatusChanged?.Invoke(this, $"Cloudflare detected on article page (bypass not enabled)");
+                return null;
+            }
+
+            // Extract title
+            var pageSource = browser.GetPageSource();
+            string title = ExtractTitle(browser, site.TitleSelector, pageSource);
+
+            // Fallback to browser tab title
+            if (string.IsNullOrEmpty(title))
+            {
+                title = pageTitle ?? "";
+            }
+
+            if (string.IsNullOrEmpty(title) || IsCloudflareTitle(title))
+            {
+                StatusChanged?.Invoke(this, $"Could not extract title");
+                return null;
+            }
+
+            // Extract body
+            string body = "";
+            if (!string.IsNullOrEmpty(site.BodySelector))
+            {
+                body = browser.GetElementText(site.BodySelector) ?? "";
+
+                if (string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(pageSource))
+                {
+                    var doc = new HtmlAgilityPack.HtmlDocument();
+                    doc.LoadHtml(pageSource);
+                    var bodyNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.BodySelector));
+                    body = bodyNode?.InnerText?.Trim() ?? "";
+                }
+            }
+
+            if (string.IsNullOrEmpty(body))
+            {
+                body = title;
+            }
+
+            StatusChanged?.Invoke(this, $"Title: {title.Substring(0, Math.Min(50, title.Length))}...");
+
+            return new NewsInfo
+            {
+                SiteId = site.SiteId,
+                SiteName = site.SiteName,
+                SiteLogo = site.SiteLogo,
+                NewsTitle = CleanText(title),
+                NewsUrl = url,
+                NewsText = CleanText(body),
+                CreatedAt = DateTime.Now
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            StatusChanged?.Invoke(this, $"Error: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            if (browser != null)
+            {
+                StatusChanged?.Invoke(this, $"Closing browser...");
+                WebDriverFactory.SafeDispose(browser);
+            }
+        }
+    }
+
+    /// <summary>
     /// Internal method to scrape article using an existing WebDriver instance
     /// </summary>
     private async Task<NewsInfo?> ScrapeArticleInternalAsync(
@@ -247,76 +414,119 @@ public class NewsScraperService
         SiteInfo site,
         string url,
         CancellationToken cancellationToken,
-        bool isUserBrowserRetry = false)
+        bool isUserBrowserRetry = false,
+        bool cloudflareBypassEnabled = false)
     {
         try
         {
+            bool isUsingVisibleBrowser = webDriver.UseUserProfile;
+
             // Navigate to article (skip if already loaded in user's browser)
             if (!isUserBrowserRetry)
             {
                 StatusChanged?.Invoke(this, $"Navigating to article: {url}");
                 await webDriver.NavigateToAsync(url, cancellationToken);
 
-                // Wait for page to load
+                // Wait for page to load (shorter timeout for visible browser)
                 StatusChanged?.Invoke(this, $"Waiting for article page load...");
                 try
                 {
-                    await webDriver.WaitForPageLoadAsync(15, cancellationToken);
+                    await webDriver.WaitForPageLoadAsync(isUsingVisibleBrowser ? 8 : 15, cancellationToken);
                 }
                 catch (OperationCanceledException) { throw; }
                 catch { }
 
-                await Task.Delay(2000, cancellationToken);
+                // Shorter delay for visible browser (already bypassed Cloudflare)
+                await Task.Delay(isUsingVisibleBrowser ? 500 : 2000, cancellationToken);
 
-                // Check for Cloudflare IMMEDIATELY - if detected, switch to visible browser right away
-                // Skip if already using user browser (from main page detection)
-                var browserTitle = webDriver.GetPageTitle();
-                if (IsCloudflareTitle(browserTitle) && !webDriver.UseUserProfile)
+                // Check for Cloudflare only if NOT using visible browser
+                if (!isUsingVisibleBrowser)
                 {
-                    StatusChanged?.Invoke(this, $"Cloudflare detected! Opening your Chrome browser...");
-                    return await RetryWithUserBrowserAsync(site, url, cancellationToken, webDriver);
+                    var browserTitle = webDriver.GetPageTitle();
+                    if (IsCloudflareTitle(browserTitle))
+                    {
+                        if (cloudflareBypassEnabled)
+                        {
+                            StatusChanged?.Invoke(this, $"Cloudflare detected! Opening your Chrome browser...");
+                            return await RetryWithUserBrowserAsync(site, url, cancellationToken, webDriver);
+                        }
+                        else
+                        {
+                            StatusChanged?.Invoke(this, $"Cloudflare detected but bypass is disabled for: {site.SiteName}");
+                            return null;
+                        }
+                    }
                 }
             }
-
-            var pageSource = webDriver.GetPageSource();
-            StatusChanged?.Invoke(this, $"Page source length: {pageSource?.Length ?? 0} chars");
 
             string title = "";
             string body = "";
 
-            // Extract title using multiple methods
-            title = ExtractTitle(webDriver, site.TitleSelector, pageSource);
-
-            // If title extraction failed completely and this is user's browser, try browser tab title
-            if (string.IsNullOrEmpty(title) && (isUserBrowserRetry || webDriver.UseUserProfile))
+            // OPTIMIZATION: For visible browser, try browser tab title FIRST (fastest)
+            if (isUsingVisibleBrowser || isUserBrowserRetry)
             {
-                // Try browser tab title as last resort
                 title = webDriver.GetPageTitle();
                 if (!string.IsNullOrEmpty(title) && !IsCloudflareTitle(title))
                 {
                     StatusChanged?.Invoke(this, $"Title from browser tab: {title.Substring(0, Math.Min(50, title.Length))}...");
                 }
+                else
+                {
+                    title = "";
+                }
             }
 
-            // Still no title from headless browser - try visible browser
-            // Skip if already using user browser (from main page detection or retry)
-            if ((string.IsNullOrEmpty(title) || IsCloudflareTitle(title)) && !isUserBrowserRetry && !webDriver.UseUserProfile)
+            // If browser tab title didn't work, try selector-based extraction
+            if (string.IsNullOrEmpty(title))
             {
-                StatusChanged?.Invoke(this, $"Cannot get title, trying visible browser...");
-                return await RetryWithUserBrowserAsync(site, url, cancellationToken, webDriver);
+                var pageSource = webDriver.GetPageSource();
+                title = ExtractTitle(webDriver, site.TitleSelector, pageSource);
+
+                // Extract body content if selector is provided
+                if (!string.IsNullOrEmpty(site.BodySelector) && !string.IsNullOrEmpty(pageSource))
+                {
+                    body = webDriver.GetElementText(site.BodySelector) ?? "";
+
+                    if (string.IsNullOrEmpty(body))
+                    {
+                        var doc = new HtmlAgilityPack.HtmlDocument();
+                        doc.LoadHtml(pageSource);
+                        var bodyNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.BodySelector));
+                        body = bodyNode?.InnerText?.Trim() ?? "";
+                    }
+                }
             }
 
-            // Extract body content if selector is provided
-            if (!string.IsNullOrEmpty(site.BodySelector))
+            // Still no title - try visible browser if bypass is enabled and not already using one
+            if ((string.IsNullOrEmpty(title) || IsCloudflareTitle(title)) && !isUserBrowserRetry && !isUsingVisibleBrowser)
+            {
+                if (cloudflareBypassEnabled)
+                {
+                    StatusChanged?.Invoke(this, $"Cannot get title, trying visible browser...");
+                    return await RetryWithUserBrowserAsync(site, url, cancellationToken, webDriver);
+                }
+                else
+                {
+                    StatusChanged?.Invoke(this, $"Cannot get title and bypass is disabled for: {site.SiteName}");
+                    return null;
+                }
+            }
+
+            // Extract body if not already extracted and selector is provided
+            if (string.IsNullOrEmpty(body) && !string.IsNullOrEmpty(site.BodySelector))
             {
                 body = webDriver.GetElementText(site.BodySelector) ?? "";
 
                 if (string.IsNullOrEmpty(body))
                 {
-                    var doc = new HtmlAgilityPack.HtmlDocument();
-                    doc.LoadHtml(pageSource);
-                    var bodyNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.BodySelector));
-                    body = bodyNode?.InnerText?.Trim() ?? "";
+                    var pageSource = webDriver.GetPageSource();
+                    if (!string.IsNullOrEmpty(pageSource))
+                    {
+                        var doc = new HtmlAgilityPack.HtmlDocument();
+                        doc.LoadHtml(pageSource);
+                        var bodyNode = doc.DocumentNode.SelectSingleNode(ConvertCssToXPath(site.BodySelector));
+                        body = bodyNode?.InnerText?.Trim() ?? "";
+                    }
                 }
             }
 
@@ -780,6 +990,7 @@ public class NewsScraperService
         string articleLinkSelector,
         string titleSelector,
         string bodySelector,
+        bool cloudflareBypassEnabled = false,
         CancellationToken cancellationToken = default)
     {
         var links = new List<string>();
@@ -795,10 +1006,53 @@ public class NewsScraperService
             await webDriver.NavigateToAsync(url, cancellationToken);
             await Task.Delay(1000, cancellationToken);
 
+            // Check for Cloudflare on main page
+            var mainPageTitle = webDriver.GetPageTitle();
+            if (IsCloudflareTitle(mainPageTitle))
+            {
+                if (cloudflareBypassEnabled)
+                {
+                    StatusChanged?.Invoke(this, "Cloudflare detected! Switching to visible browser...");
+
+                    // Close headless browser and switch to visible browser
+                    webDriver.ForceKillChrome();
+                    await Task.Delay(2000, cancellationToken);
+
+                    var settings = ServiceContainer.Settings.LoadSettings();
+                    webDriver = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: settings.BrowserTimeoutSeconds);
+
+                    await webDriver.NavigateToAsync(url, cancellationToken);
+                    await Task.Delay(2000, cancellationToken);
+                }
+                else
+                {
+                    StatusChanged?.Invoke(this, "Cloudflare detected but bypass is disabled");
+                    return (links, null, null);
+                }
+            }
+
             // Test article link selector
             if (!string.IsNullOrEmpty(articleLinkSelector))
             {
                 links = webDriver.GetAllLinks(articleLinkSelector);
+            }
+
+            // If no links found and bypass enabled, try visible browser
+            if (links.Count == 0 && cloudflareBypassEnabled && !webDriver.UseUserProfile)
+            {
+                StatusChanged?.Invoke(this, "No links found, trying visible browser...");
+
+                webDriver.ForceKillChrome();
+                await Task.Delay(1000, cancellationToken);
+
+                webDriver = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: 10);
+                await webDriver.NavigateToAsync(url, cancellationToken);
+                await Task.Delay(2000, cancellationToken);
+
+                if (!string.IsNullOrEmpty(articleLinkSelector))
+                {
+                    links = webDriver.GetAllLinks(articleLinkSelector);
+                }
             }
 
             // If we found links, navigate to first one to test title/body selectors
@@ -809,6 +1063,20 @@ public class NewsScraperService
                 {
                     await webDriver.NavigateToAsync(firstLink, cancellationToken);
                     await Task.Delay(500, cancellationToken);
+
+                    // Check for Cloudflare on article page
+                    var articlePageTitle = webDriver.GetPageTitle();
+                    if (IsCloudflareTitle(articlePageTitle) && cloudflareBypassEnabled && !webDriver.UseUserProfile)
+                    {
+                        StatusChanged?.Invoke(this, "Cloudflare detected on article! Switching to visible browser...");
+
+                        webDriver.ForceKillChrome();
+                        await Task.Delay(2000, cancellationToken);
+
+                        webDriver = WebDriverFactory.CreateWithUserProfile(timeoutSeconds: 10);
+                        await webDriver.NavigateToAsync(firstLink, cancellationToken);
+                        await Task.Delay(2000, cancellationToken);
+                    }
 
                     var pageSource = webDriver.GetPageSource();
 
